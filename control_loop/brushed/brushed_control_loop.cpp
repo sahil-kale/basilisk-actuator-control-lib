@@ -1,7 +1,5 @@
 #include "brushed_control_loop.hpp"
 
-#include "param_service.hpp"
-
 namespace control_loop {
 
 BrushedControlLoop::BrushedControlLoop() {}

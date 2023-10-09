@@ -3,7 +3,6 @@
 #include "mock_bridge_3phase.hpp"
 #include "mock_hal_adc.hpp"
 #include "mock_hal_clock.hpp"
-#include "param_service.hpp"
 
 namespace control_loop {
 using namespace ::testing;
