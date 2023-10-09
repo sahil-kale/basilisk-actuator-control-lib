@@ -1,7 +1,10 @@
 #include "rotor_estimator.hpp"
 
+#include "bridge_3phase.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "math_util.hpp"
+#include "mock_bridge_3phase.hpp"
 #include "mock_hal_clock.hpp"
 #include "mock_rotor_estimator.hpp"
 
@@ -27,8 +30,8 @@ TEST(RotorEstimatorTest, test_angle_one_for_one) {
     rotor_estimator.init(&params);
 
     // Expect a call to get the sector position and ensure the reference is updated to return 3
-    EXPECT_CALL(sector_sensor, get_sector(_))  // _ allowing any param
-        .WillOnce(DoAll(SetArgReferee<0>(1), Return(APP_HAL_OK)));
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(1 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
     // Update the rotor position
     rotor_estimator.update(500);
@@ -69,8 +72,8 @@ TEST(RotorEstimatorTest, test_angle_underflow) {
     rotor_estimator.init(&params);
 
     // Expect a call to get the sector position and ensure the reference is updated to return 3
-    EXPECT_CALL(sector_sensor, get_sector(_))  // _ allowing any param
-        .WillOnce(DoAll(SetArgReferee<0>(5), Return(APP_HAL_OK)));
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(5 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
     // Update the rotor position
     rotor_estimator.update(500);
@@ -111,8 +114,8 @@ TEST(RotorEstimatorTest, test_angle_interpolation_disabled) {
     rotor_estimator.init(&params);
 
     // Expect a call to get the sector position and ensure the reference is updated to return 3
-    EXPECT_CALL(sector_sensor, get_sector(_))  // _ allowing any param
-        .WillOnce(DoAll(SetArgReferee<0>(1), Return(APP_HAL_OK)));
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(1 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
     // Update the rotor position
     rotor_estimator.update(500);
@@ -122,8 +125,8 @@ TEST(RotorEstimatorTest, test_angle_interpolation_disabled) {
 
     EXPECT_FLOAT_EQ(rotor_position, 1.0f * 2.0f * M_PI / 6.0f);
 
-    EXPECT_CALL(sector_sensor, get_sector(_))  // _ allowing any param
-        .WillOnce(DoAll(SetArgReferee<0>(1), Return(APP_HAL_OK)));
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(1 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
     // Update the rotor position
     rotor_estimator.update(1000);
@@ -131,6 +134,129 @@ TEST(RotorEstimatorTest, test_angle_interpolation_disabled) {
     rotor_estimator.get_rotor_position(rotor_position);
 
     EXPECT_FLOAT_EQ(rotor_position, 1.0f * 2.0f * M_PI / 6.0f);
+}
+
+class SensorlessRotorSectorSensor : public BldcSensorlessRotorSectorSensor {
+   public:
+    SensorlessRotorSectorSensor(hwbridge::Bridge3Phase& bridge, basilisk_hal::HAL_CLOCK& mock_clock)
+        : BldcSensorlessRotorSectorSensor(bridge, mock_clock) {}
+
+    float estimated_electrical_angle_ = 0.0f;
+
+    // Make the protected functions public for testing
+    using BldcSensorlessRotorSectorSensor::get_electrical_angle;
+    using BldcSensorlessRotorSectorSensor::reset;
+    using BldcSensorlessRotorSectorSensor::zero_crossing_detected;
+};
+
+// Test the sensorless sector estimator zero crossing detected function
+TEST(RotorEstimatorTest, test_zero_crossing_detection) {
+    // Make a mock bridge
+    hwbridge::MOCK_BRIDGE_3PHASE mock_bridge;
+    basilisk_hal::MOCK_HAL_CLOCK mock_clock;
+    SensorlessRotorSectorSensor sensorless_sensor(mock_bridge, mock_clock);
+
+    // Test the zero crossing detection for commutation step 4
+    // We expect HIGH, LOW, Z_FALLING
+
+    // Make a fake bemf voltage struct
+    hwbridge::Bridge3Phase::bemf_voltage_t bemf_voltage = {0.0f, 0.0f, 0.0f};
+
+    // Load the bemf with a voltage of 1.0f, 0.0f, and 1.0f
+    bemf_voltage.u = 1.0f;
+    bemf_voltage.v = 0.0f;
+    bemf_voltage.w = 1.0f;
+
+    // With this, we should not detect a zero crossing
+    EXPECT_FALSE(
+        sensorless_sensor.zero_crossing_detected(bemf_voltage, control_loop::Bldc6StepCommutationTypes::commutation_steps[4]));
+
+    // Load the bemf with a voltage of 1.0f, 0.0f, and 0.51f
+    bemf_voltage.w = 0.51f;
+
+    // With this, we should not detect a zero crossing
+    EXPECT_FALSE(
+        sensorless_sensor.zero_crossing_detected(bemf_voltage, control_loop::Bldc6StepCommutationTypes::commutation_steps[4]));
+
+    // Load the bemf with a voltage of 1.0f, 0.0f, and 0.49f
+
+    bemf_voltage.w = 0.49f;
+
+    // With this, we should detect a zero crossing
+    EXPECT_TRUE(
+        sensorless_sensor.zero_crossing_detected(bemf_voltage, control_loop::Bldc6StepCommutationTypes::commutation_steps[4]));
+}
+
+// Test the sensorless sector estimator reporting a sector change for the same duration of time as when a zero crossing was
+// detected
+TEST(RotorEstimatorTest, sensorless_estimator_timing_switch) {
+    // Make a mock bridge
+    hwbridge::MOCK_BRIDGE_3PHASE mock_bridge;
+    basilisk_hal::MOCK_HAL_CLOCK mock_clock;
+    SensorlessRotorSectorSensor sensorless_sensor(mock_bridge, mock_clock);
+
+    // Expect a call for the clock time, set to 1
+    EXPECT_CALL(mock_clock, get_time_us()).WillOnce(Return(1));
+    // Reset the sensorless sensor
+    sensorless_sensor.reset();
+
+    // We should be in commutation step 0
+    // Make a fake bemf voltage struct
+    hwbridge::Bridge3Phase::bemf_voltage_t bemf_voltage = {0.0f, 0.0f, 0.0f};
+
+    // In sector 0, we expect Z_FALLING, HIGH, LOW
+    bemf_voltage.u = 1.0f;
+    bemf_voltage.v = 1.0f;
+    bemf_voltage.w = 0.0f;
+
+    // Expect a call to the bridge to get the bemf voltage
+    EXPECT_CALL(mock_bridge, read_bemf(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(bemf_voltage), Return(APP_HAL_OK)));
+
+    // Expect a call for the clock time, set to 1
+    EXPECT_CALL(mock_clock, get_time_us()).WillOnce(Return(1));
+
+    float electrical_angle = 0.0f;
+    sensorless_sensor.get_electrical_angle(electrical_angle);
+    EXPECT_FLOAT_EQ(electrical_angle, 0.0f);
+
+    // Now, set the bemf voltage to 0.49, 0.0, 1.0
+    bemf_voltage.u = 0.49f;
+    bemf_voltage.v = 0.0f;
+    bemf_voltage.w = 1.0f;
+
+    // Expect a call to the bridge to get the bemf voltage
+    EXPECT_CALL(mock_bridge, read_bemf(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(bemf_voltage), Return(APP_HAL_OK)));
+
+    // Expect a call for the clock time, set to 500
+    EXPECT_CALL(mock_clock, get_time_us()).WillOnce(Return(501));
+
+    // Expect the sector to be 0
+    sensorless_sensor.get_electrical_angle(electrical_angle);
+    EXPECT_FLOAT_EQ(electrical_angle, 0.0f);
+
+    // Expect a call to the bridge to get the bemf voltage
+    EXPECT_CALL(mock_bridge, read_bemf(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(bemf_voltage), Return(APP_HAL_OK)));
+
+    // Expect a call for the clock time, set to 999
+    EXPECT_CALL(mock_clock, get_time_us()).WillOnce(Return(1000));
+
+    // Expect the sector to be 0
+    sensorless_sensor.get_electrical_angle(electrical_angle);
+    EXPECT_FLOAT_EQ(electrical_angle, 0.0f);
+
+    // Expect a call to the bridge to get the bemf voltage
+    EXPECT_CALL(mock_bridge, read_bemf(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(bemf_voltage), Return(APP_HAL_OK)));
+
+    // Expect a call for the clock time, set to 1000
+    EXPECT_CALL(mock_clock, get_time_us()).WillOnce(Return(1001));
+
+    // Expect the sector to be 1
+    sensorless_sensor.get_electrical_angle(electrical_angle);
+    EXPECT_FLOAT_EQ(electrical_angle, 1.0 * math::M_PI_FLOAT / 3.0);
 }
 
 }  // namespace bldc_rotor_estimator

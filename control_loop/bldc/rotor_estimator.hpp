@@ -1,6 +1,7 @@
 #ifndef ROTOR_ESTIMATOR_HPP
 #define ROTOR_ESTIMATOR_HPP
 #include "bridge_3phase.hpp"
+#include "brushless_6step_commutation.hpp"
 #include "hal_clock.hpp"
 
 namespace bldc_rotor_estimator {
@@ -43,12 +44,41 @@ class BldcRotorSectorSensor {
     BldcRotorSectorSensor() = default;
     virtual ~BldcRotorSectorSensor() = default;
 
-    // Define a virtual function to initialize the sensor
-    virtual app_hal_status_E init() = 0;
+    /**
+     * @brief Reset the rotor sector sensor
+     * @return app_hal_status_E the status of the reset
+     */
+    virtual app_hal_status_E reset() = 0;
 
-    // Define a virtual function to get the sector
-    // @RETURNS the sector (0-5)
-    virtual app_hal_status_E get_sector(uint8_t& sector) = 0;
+    /**
+     * @brief Get the sector of the rotor
+     * @param sector The electrical angle of the rotor (radians), though this is discretized with 6 sectors
+     * @return app_hal_status_E the status of the operation
+     */
+    virtual app_hal_status_E get_electrical_angle(float& angle) = 0;
+};
+
+class BldcSensorlessRotorSectorSensor : public BldcRotorSectorSensor {
+   public:
+    BldcSensorlessRotorSectorSensor(hwbridge::Bridge3Phase& bridge, basilisk_hal::HAL_CLOCK& clock_)
+        : BldcRotorSectorSensor(), bridge_(bridge), clock_(clock_) {}
+
+    /**
+     * @brief initialize the rotor sector sensor
+     */
+    void init();
+    app_hal_status_E reset() override;
+    app_hal_status_E get_electrical_angle(float& angle) override;
+
+   protected:
+    bool zero_crossing_detected(const hwbridge::Bridge3Phase::bemf_voltage_t& bemf_voltage,
+                                control_loop::Bldc6StepCommutationTypes::commutation_step_t current_commutation_step);
+    hwbridge::Bridge3Phase& bridge_;
+    float estimated_electrical_angle_ = 0.0f;
+    basilisk_hal::HAL_CLOCK& clock_;
+
+    utime_t time_of_last_zero_crossing_ = 0;
+    utime_t time_of_last_commutation_ = 0;
 };
 
 class BldcElectricalRotorPositionEstimatorFromHall : public BldcElectricalRotorPositionEstimator {
@@ -128,5 +158,6 @@ class BldcElectricalRotorPositionEstimatorFromHall : public BldcElectricalRotorP
     uint64_t number_of_hall_updates_ = 0;
     BldcElectricalRotorPositionEstimatorFromHallParams_t* params_ = nullptr;
 };
+
 }  // namespace bldc_rotor_estimator
 #endif
