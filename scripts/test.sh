@@ -2,6 +2,9 @@
 
 set -exo pipefail
 
+# make a build directory if it doesn't exist
+mkdir -p build
+
 # Change to the build directory
 cd build
 
@@ -25,5 +28,5 @@ then
 else
   # If no argument is specified, build and run the tests
   cmake .. -DCMAKE_BUILD_TYPE=Debug -G "Unix Makefiles"
-    make all && ./test/tests
+    make all && ./tests
 fi

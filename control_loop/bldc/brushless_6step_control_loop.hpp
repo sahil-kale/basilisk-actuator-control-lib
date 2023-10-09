@@ -35,7 +35,7 @@ class Brushless6StepControlLoop : public ControlLoop {
             CommutationSignal u;
             CommutationSignal v;
             CommutationSignal w;
-        };
+        } phase_commutation_signals;
     } commutation_step_t;
 
     static constexpr uint8_t num_commutation_steps = 6;

@@ -1,34 +1,63 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.14)
 
-set(This MAINS)
+set(This tests)
+
 set(BINARY ${CMAKE_PROJECT_NAME})
 
 project(${This} C CXX)
 
-set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_C_STANDARD 99)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_GMOCK ON)
 
-# enable Werror
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
+#enable Werror, Wextra, Wall, pedantic, and pedantic-errors
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wextra -Wall")
 
+# enable testing
 enable_testing()
 
-# add the googletest subdirectory, located in the lib folder tree that is one level above this one
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/libs/googletest ${CMAKE_CURRENT_BINARY_DIR}/googletest)
 
-# set the HEADERS as everything in the inc folder, as well as test *.hpp files
-file(GLOB HEADERS "inc/*.hpp")
+# Glob recurse the headers inside hal/
+file(GLOB_RECURSE HAL_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/hal/*.hpp)
 
-# set the SOURCES as everything in the src folder
-file(GLOB SOURCES "src/*.cpp")
+# Glob recurse the headers inside hwbridge/
+file(GLOB_RECURSE HWBRIDGE_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/hwbridge/*.hpp)
 
-# add_executable(${BINARY}_run ${SOURCES})
-add_library(${This} STATIC ${SOURCES} ${HEADERS})
+# Glob recurse the headers inside control_loop/
+file(GLOB_RECURSE CONTROL_LOOP_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/control_loop/*.hpp)
+# Glob recurse the sources inside control_loop/
+file(GLOB_RECURSE CONTROL_LOOP_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/control_loop/*.cpp)
 
-add_subdirectory(test)
+# Glob recurse the headers inside utils/
+file(GLOB_RECURSE UTILS_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/util/*.hpp)
+# Glob recurse the sources inside utils/
+file(GLOB_RECURSE UTILS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/util/*.cpp)
 
-# To find the tests, this is rquired
-include_directories(inc)
-include_directories(src)
+# Add a compiler definition -DUNITTEST to the compiler
+add_definitions(-DUNIT_TEST)
+
+# Glob recurse the headers inside test/
+file(GLOB_RECURSE TEST_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/test/*.hpp)
+# Glob recurse the sources inside test/
+file(GLOB_RECURSE TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp)
+
+# Include the headers in the above paths and also do so recursively as there is a hierarchy
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/hal)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/hwbridge/3phase)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/hwbridge/h_bridge)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/control_loop)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/control_loop/brushed)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/control_loop/bldc)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/control_loop/stepper)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/util/pid)
+
+# Mocks
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/test/mocks)
+
+# Add an executable with the above sources
+add_executable(${This} ${CONTROL_LOOP_SOURCES} ${UTILS_SOURCES} ${TEST_SOURCES})
+
+# Link the executable with the GoogleTest libraries
+target_link_libraries(${This} PUBLIC gtest gtest_main gmock)

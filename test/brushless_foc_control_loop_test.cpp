@@ -8,7 +8,6 @@
 #include "mock_hal_adc.hpp"
 #include "mock_hal_clock.hpp"
 #include "mock_hal_timer.hpp"
-#include "param_service.hpp"
 
 namespace control_loop {
 using namespace ::testing;

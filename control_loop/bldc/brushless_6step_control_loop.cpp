@@ -2,8 +2,6 @@
 
 #include <math.h>
 
-#include "param_service.hpp"
-
 namespace control_loop {
 
 Brushless6StepControlLoop::Brushless6StepControlLoopState Brushless6StepControlLoop::get_desired_state(utime_t current_time_us,

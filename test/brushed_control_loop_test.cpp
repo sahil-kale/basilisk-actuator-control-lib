@@ -3,7 +3,6 @@
 #include "brushed_control_loop.hpp"
 
 #include "gmock/gmock.h"
-#include "param_service.hpp"
 
 namespace control_loop {
 
