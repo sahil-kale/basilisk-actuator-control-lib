@@ -17,7 +17,23 @@ class BrushedControlLoop : public ControlLoop {
    public:
     BrushedControlLoop();
 
-    // Define a run method that overrides the run method in ControlLoop
+    // Define a class for the brushed motor params
+    class BrushedControlLoopParams {
+       public:
+        bool brake_mode_enabled;  // Whether brake mode is enabled or not (TODO: Make this an enum between high side or low side)
+        utime_t h_bridge_dead_time_us;  // Amount of time to wait between switching the high and low pins of the H bridge
+    };
+
+    /**
+     * @brief Initialize the control loop with the params
+     * @param params Pointer to the params
+     */
+    void init(BrushedControlLoopParams* params);
+
+    /**
+     * @brief Run the control loop
+     * @param speed The desired speed of the motor (-1.0f->1.0f)
+     */
     void run(float speed) override;
 
     // Function to register a timer with the control loop
@@ -46,6 +62,7 @@ class BrushedControlLoop : public ControlLoop {
     utime_t last_speed_dir_change_time_us_{0};
     float last_motor_speed_{0.0f};
     basilisk_hal::HAL_CLOCK* clock_{nullptr};
+    BrushedControlLoopParams* params_{nullptr};
 
 #ifdef UNIT_TEST
     friend class BrushedControlLoopTest;

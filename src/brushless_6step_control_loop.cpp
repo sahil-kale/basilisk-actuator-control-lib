@@ -13,16 +13,15 @@ Brushless6StepControlLoop::Brushless6StepControlLoopState Brushless6StepControlL
         Brushless6StepControlLoop::Brushless6StepControlLoopState::STOP;
 
     if (this->rotor_sensor_) {
-        if (fabs(motor_speed) < param_service::ParamServer::getInstance().compile_params.sensored_speed_deadband_scale) {
+        if (fabs(motor_speed) < params_->sensored_speed_deadband_scale) {
             return_state = Brushless6StepControlLoop::Brushless6StepControlLoopState::STOP;
         } else {
             return_state = Brushless6StepControlLoop::Brushless6StepControlLoopState::RUN;
         }
     } else {
-        if (fabs(motor_speed) < param_service::ParamServer::getInstance().compile_params.sensorless_speed_deadband_scale) {
+        if (fabs(motor_speed) < params_->sensorless_speed_deadband_scale) {
             return_state = Brushless6StepControlLoop::Brushless6StepControlLoopState::STOP;
-        } else if (current_time_us - time_at_start <
-                   param_service::ParamServer::getInstance().compile_params.sensorless_phase_motor_startup_sequence_time_us) {
+        } else if (current_time_us - time_at_start < params_->sensorless_phase_motor_startup_sequence_time_us) {
             return_state = Brushless6StepControlLoop::Brushless6StepControlLoopState::START;
         } else {
             return_state = Brushless6StepControlLoop::Brushless6StepControlLoopState::RUN;
@@ -70,7 +69,13 @@ bool Brushless6StepControlLoop::zero_crossing_detected(const hwbridge::Bridge3Ph
     return return_value;
 }
 
+void Brushless6StepControlLoop::init(Brushless6StepControlLoopParams* params) { params_ = params; }
+
 void Brushless6StepControlLoop::run(float speed) {
+    if (params_ == nullptr) {
+        return;
+    }
+
     hwbridge::Bridge3Phase::phase_command_t phase_commands[3] = {0, 0};
 
     // Get the desired motor speed from the system manager
@@ -117,10 +122,9 @@ void Brushless6StepControlLoop::run(float speed) {
         case Brushless6StepControlLoopState::START: {
             // This defines the startup sequence for the motor
             // Use the deadband scale to determine the speed to run the motor at
-            float startup_motor_speed = param_service::ParamServer::getInstance().compile_params.sensorless_startup_speed;
+            float startup_motor_speed = params_->sensorless_startup_speed;
             // Check if we should switch to the next commutation step
-            if (current_time_us - last_commutation_step_switch_time_ >
-                param_service::ParamServer::getInstance().compile_params.sensorless_phase_commutation_step_time_us) {
+            if (current_time_us - last_commutation_step_switch_time_ > params_->sensorless_phase_commutation_step_time_us) {
                 // Switch to the next commutation step
                 commutation_step_++;
                 if (commutation_step_ > 5) {
@@ -147,7 +151,7 @@ void Brushless6StepControlLoop::run(float speed) {
                 }
 
                 // Log zerocrossings if enabled in param server
-                if (param_service::ParamServer::getInstance().compile_params.log_zero_crossing_in_sensored_mode) {
+                if (params_->log_zero_crossing_in_sensored_mode) {
                     // Get the bemf voltage
                     hwbridge::Bridge3Phase::bemf_voltage_t bemf_voltage;
                     this->motor_.read_bemf(bemf_voltage);
@@ -159,8 +163,7 @@ void Brushless6StepControlLoop::run(float speed) {
                     }
                     // Check if we have detected a zero crossing. Only update the variable if the ZCT is 0
                     if (zero_crossing_detected(bemf_voltage, commutation_step_) && zero_crossing_time_ == 0 &&
-                        (current_time_us - last_commutation_step_switch_time_) >
-                            param_service::ParamServer::getInstance().compile_params.bemf_zero_crossing_timeout_us) {
+                        (current_time_us - last_commutation_step_switch_time_) > params_->bemf_zero_crossing_timeout_us) {
                         zero_crossing_time_ = current_time_us;
                     }
                 }
@@ -181,13 +184,11 @@ void Brushless6StepControlLoop::run(float speed) {
                     // Check if we have detected a zero crossing
                     // If we don't detect a zero crossing, look at the average commutation step time to see if we should switch
                     if (zero_crossing_detected(bemf_voltage, commutation_step_) &&
-                        (current_time_us - last_commutation_step_switch_time_) >
-                            param_service::ParamServer::getInstance().compile_params.bemf_zero_crossing_timeout_us) {
+                        (current_time_us - last_commutation_step_switch_time_) > params_->bemf_zero_crossing_timeout_us) {
                         zero_crossing_time_ = current_time_us;
                     } else if (average_commutation_step_delta_time_ != 0 &&
                                current_time_us - last_commutation_step_switch_time_ > average_commutation_step_delta_time_ &&
-                               param_service::ParamServer::getInstance()
-                                   .compile_params.sensorless_bemf_enable_backemf_skip_overrun) {
+                               params_->sensorless_bemf_enable_backemf_skip_overrun) {
                         // Switch to the next commutation step
                         commutation_step_switch_sensorless(current_time_us);
                     }

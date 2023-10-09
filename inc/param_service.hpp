@@ -1,4 +1,4 @@
-#ifndef PARAM_SERVER_HPP
+#ifdef PARAM_SERVER_HPP
 #define PARAM_SERVER_HPP
 #include <stdint.h>
 
