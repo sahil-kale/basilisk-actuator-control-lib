@@ -2,6 +2,7 @@
 
 #include "math.h"
 #include "math_foc.hpp"
+#include "math_util.hpp"
 
 namespace control_loop {
 

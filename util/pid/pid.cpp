@@ -1,6 +1,6 @@
 #include "pid.hpp"
 
-#include "math_foc.hpp"
+#include "math_util.hpp"
 
 namespace pid {
 

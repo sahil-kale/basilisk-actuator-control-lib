@@ -52,6 +52,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/control_loop/brushed)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/control_loop/bldc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/control_loop/stepper)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/util/pid)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/util/math)
 
 # Mocks
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/test/mocks)
