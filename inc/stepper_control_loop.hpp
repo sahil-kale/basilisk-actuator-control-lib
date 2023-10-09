@@ -10,6 +10,13 @@ namespace control_loop {
 
 class StepperControlLoop : public ControlLoop {
    public:
+    class StepperControlLoopParams {
+       public:
+        float stepper_motor_current_to_pwm_duty_cycle_slope;
+        bool stepper_motor_disable_current_pid;
+        bool stepper_motor_simple_switcher_enabled;
+    };
+
     // Define a constructor that takes 2 references to HBridge objects. One for the A motor and one for the B motor. Also, a clock
     // instance
     StepperControlLoop(hwbridge::HBridge& motor_a, hwbridge::HBridge& motor_b, basilisk_hal::HAL_CLOCK& clock)
@@ -49,6 +56,7 @@ class StepperControlLoop : public ControlLoop {
     basilisk_hal::HAL_CLOCK& clock_;
     float previous_angle_ = 0.0f;
     uint32_t previous_time_ = 0;
+    StepperControlLoopParams* params_ = nullptr;
 };
 
 }  // namespace control_loop

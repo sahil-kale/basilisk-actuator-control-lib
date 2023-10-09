@@ -48,6 +48,20 @@ class Brushless6StepControlLoop : public ControlLoop {
         {CommutationSignal::HIGH, CommutationSignal::Z_RISING, CommutationSignal::LOW},
     };
 
+    class Brushless6StepControlLoopParams {
+       public:
+        float sensored_speed_deadband_scale;
+        float sensorless_speed_deadband_scale;
+        float sensorless_phase_motor_startup_sequence_time_us;
+        float sensorless_startup_speed;
+        float sensorless_phase_commutation_step_time_us;
+        bool log_zero_crossing_in_sensored_mode;
+        bool sensorless_bemf_enable_backemf_skip_overrun;
+        float bemf_zero_crossing_timeout_us;
+    };
+
+    void init(Brushless6StepControlLoopParams* params);
+
     Brushless6StepControlLoop(hwbridge::Bridge3Phase& motor, basilisk_hal::HAL_CLOCK& clock,
                               hwbridge::BldcRotorSectorSensor* rotor_sensor = nullptr)
         : motor_(motor), clock_(clock) {
@@ -58,6 +72,7 @@ class Brushless6StepControlLoop : public ControlLoop {
 
    protected:
     hwbridge::Bridge3Phase& motor_;
+    Brushless6StepControlLoopParams* params_ = nullptr;
     basilisk_hal::HAL_CLOCK& clock_;
     hwbridge::BldcRotorSectorSensor* rotor_sensor_;
     Brushless6StepControlLoopState state_ = Brushless6StepControlLoopState::STOP;

@@ -45,6 +45,17 @@ class Brushless6StepControlLoopTest {
     }
 };
 
+static Brushless6StepControlLoop::Brushless6StepControlLoopParams default_params{
+    .sensored_speed_deadband_scale = 0.1f,
+    .sensorless_speed_deadband_scale = 0.1f,
+    .sensorless_phase_motor_startup_sequence_time_us = 1000.0f,
+    .sensorless_startup_speed = 0.0f,
+    .sensorless_phase_commutation_step_time_us = 1000.0f,
+    .log_zero_crossing_in_sensored_mode = false,
+    .sensorless_bemf_enable_backemf_skip_overrun = false,
+    .bemf_zero_crossing_timeout_us = 1000.0f,
+};
+
 // Brushless 6step control loop state machine test
 // Test the get desired state function when in deadband returns stop instead of startup
 TEST(Brushless6StepControlLoopTest, get_desired_state_deadband) {
@@ -57,7 +68,10 @@ TEST(Brushless6StepControlLoopTest, get_desired_state_deadband) {
     utime_t time_at_start = 0;
 
     // Set the motor speed to half of the deadband
-    float motor_speed = param_service::ParamServer::getInstance().compile_params.sensorless_speed_deadband_scale * 0.5f;
+    float motor_speed = default_params.sensorless_speed_deadband_scale * 0.5f;
+
+    // init the control loop
+    test.brushless_6step_control_loop_.init(&default_params);
 
     // Get the desired state
     Brushless6StepControlLoop::Brushless6StepControlLoopState desired_state =
@@ -78,7 +92,10 @@ TEST(Brushless6StepControlLoopTest, get_desired_state_startup) {
     utime_t time_at_start = 0;
 
     // Set the motor speed to half of the deadband
-    float motor_speed = param_service::ParamServer::getInstance().compile_params.sensorless_speed_deadband_scale * 1.5f;
+    float motor_speed = default_params.sensorless_speed_deadband_scale * 1.5f;
+
+    // init the control loop
+    test.brushless_6step_control_loop_.init(&default_params);
 
     // Get the desired state
     Brushless6StepControlLoop::Brushless6StepControlLoopState desired_state =
@@ -94,14 +111,16 @@ TEST(Brushless6StepControlLoopTest, get_desired_state_run) {
     Brushless6StepControlLoopTest test;
 
     // Set the current time to 1
-    utime_t current_time_us =
-        param_service::ParamServer::getInstance().compile_params.sensorless_phase_motor_startup_sequence_time_us - 1;
+    utime_t current_time_us = default_params.sensorless_phase_motor_startup_sequence_time_us - 1;
 
     // Set the time since start to 0
     utime_t time_at_start = 0;
 
     // Set the motor speed to half of the deadband
-    float motor_speed = param_service::ParamServer::getInstance().compile_params.sensorless_speed_deadband_scale * 1.5f;
+    float motor_speed = default_params.sensorless_speed_deadband_scale * 1.5f;
+
+    // init the control loop
+    test.brushless_6step_control_loop_.init(&default_params);
 
     // Get the desired state
     Brushless6StepControlLoop::Brushless6StepControlLoopState desired_state =
@@ -109,7 +128,7 @@ TEST(Brushless6StepControlLoopTest, get_desired_state_run) {
 
     // Check that the desired state is start
     EXPECT_EQ(desired_state, Brushless6StepControlLoop::Brushless6StepControlLoopState::START);
-    current_time_us = param_service::ParamServer::getInstance().compile_params.sensorless_phase_motor_startup_sequence_time_us;
+    current_time_us = default_params.sensorless_phase_motor_startup_sequence_time_us;
     desired_state = test.get_desired_state(current_time_us, time_at_start, motor_speed);
     EXPECT_EQ(desired_state, Brushless6StepControlLoop::Brushless6StepControlLoopState::RUN);
 }
@@ -188,7 +207,10 @@ TEST(Brushless6StepControlLoopTest, rotor_sensor_stop) {
     utime_t time_at_start = 0;
 
     // Set the motor speed to half of the deadband
-    float motor_speed = param_service::ParamServer::getInstance().compile_params.sensored_speed_deadband_scale * 0.5f;
+    float motor_speed = default_params.sensored_speed_deadband_scale * 0.5f;
+
+    // init the control loop
+    test.brushless_6step_control_loop_.init(&default_params);
 
     // Get the desired state
     Brushless6StepControlLoop::Brushless6StepControlLoopState desired_state =
@@ -211,7 +233,10 @@ TEST(Brushless6StepControlLoopTest, rotor_sensor_run) {
     utime_t time_at_start = 0;
 
     // Set the motor speed to half of the deadband
-    float motor_speed = param_service::ParamServer::getInstance().compile_params.sensored_speed_deadband_scale * 1.5f;
+    float motor_speed = default_params.sensored_speed_deadband_scale * 1.5f;
+
+    // init the control loop
+    test.brushless_6step_control_loop_.init(&default_params);
 
     // Get the desired state
     Brushless6StepControlLoop::Brushless6StepControlLoopState desired_state =

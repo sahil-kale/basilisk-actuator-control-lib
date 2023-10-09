@@ -24,6 +24,8 @@ class BrushedControlLoopTest {
 
     utime_t& get_last_speed_dir_change_time_us() { return brushed_control_loop_.last_speed_dir_change_time_us_; }
 
+    void init(BrushedControlLoop::BrushedControlLoopParams* params) { brushed_control_loop_.init(params); }
+
    private:
     BrushedControlLoop brushed_control_loop_;
 };
@@ -32,8 +34,15 @@ class BrushedControlLoopTest {
 // Test that a motor speed of 0.0f with brake mode false returns a duty cycle of 0.0f for all pins
 TEST(BrushedControlLoopTests, compute_motor_speed_outputs_zero_speed_no_brake) {
     BrushedControlLoopTest brushed_control_loop;
-    BrushedControlLoop::h_bridge_motor_speed_outputs_t motor_speed_outputs = brushed_control_loop.compute_motor_speed_outputs(
-        0.0f, false, (utime_t)param_service::ParamServer::getInstance().compile_params.h_bridge_dead_time_us);
+    control_loop::BrushedControlLoop::BrushedControlLoopParams params{
+        .brake_mode_enabled = false,
+        .h_bridge_dead_time_us = 0,
+    };
+
+    brushed_control_loop.init(&params);
+
+    BrushedControlLoop::h_bridge_motor_speed_outputs_t motor_speed_outputs =
+        brushed_control_loop.compute_motor_speed_outputs(0.0f, false, params.h_bridge_dead_time_us);
     EXPECT_EQ(motor_speed_outputs.DC_A_HIGH, 0.0f);
     EXPECT_EQ(motor_speed_outputs.DC_A_LOW, 0.0f);
     EXPECT_EQ(motor_speed_outputs.DC_B_HIGH, 0.0f);
@@ -43,8 +52,16 @@ TEST(BrushedControlLoopTests, compute_motor_speed_outputs_zero_speed_no_brake) {
 // Test that a motor speed of 0.0f with brake mode true returns a duty cycle of 1.0f for low pins and 0.0f for high pins
 TEST(BrushedControlLoopTests, compute_motor_speed_outputs_zero_speed_brake) {
     BrushedControlLoopTest brushed_control_loop;
-    BrushedControlLoop::h_bridge_motor_speed_outputs_t motor_speed_outputs = brushed_control_loop.compute_motor_speed_outputs(
-        0.0f, true, (utime_t)param_service::ParamServer::getInstance().compile_params.h_bridge_dead_time_us);
+
+    control_loop::BrushedControlLoop::BrushedControlLoopParams params{
+        .brake_mode_enabled = true,
+        .h_bridge_dead_time_us = 0,
+    };
+
+    brushed_control_loop.init(&params);
+
+    BrushedControlLoop::h_bridge_motor_speed_outputs_t motor_speed_outputs =
+        brushed_control_loop.compute_motor_speed_outputs(0.0f, true, params.h_bridge_dead_time_us);
     EXPECT_EQ(motor_speed_outputs.DC_A_HIGH, 0.0f);
     EXPECT_EQ(motor_speed_outputs.DC_A_LOW, 1.0f);
     EXPECT_EQ(motor_speed_outputs.DC_B_HIGH, 0.0f);
@@ -54,9 +71,16 @@ TEST(BrushedControlLoopTests, compute_motor_speed_outputs_zero_speed_brake) {
 // Test that a motor speed of 1.0f returns a duty cycle of 1.0f A high and B low and 0.0f for the other pins
 TEST(BrushedControlLoopTests, compute_motor_speed_outputs_full_speed) {
     BrushedControlLoopTest brushed_control_loop;
+
+    BrushedControlLoop::BrushedControlLoopParams params{
+        .brake_mode_enabled = false,
+        .h_bridge_dead_time_us = 0,
+    };
+
+    brushed_control_loop.init(&params);
+
     BrushedControlLoop::h_bridge_motor_speed_outputs_t motor_speed_outputs = brushed_control_loop.compute_motor_speed_outputs(
-        control_loop::ControlLoop::MAX_MOTOR_SPEED, false,
-        (utime_t)param_service::ParamServer::getInstance().compile_params.h_bridge_dead_time_us);
+        control_loop::ControlLoop::MAX_MOTOR_SPEED, false, params.h_bridge_dead_time_us);
     EXPECT_EQ(motor_speed_outputs.DC_A_HIGH, 1.0f);
     EXPECT_EQ(motor_speed_outputs.DC_A_LOW, 0.0f);
     EXPECT_EQ(motor_speed_outputs.DC_B_HIGH, 0.0f);
@@ -66,9 +90,16 @@ TEST(BrushedControlLoopTests, compute_motor_speed_outputs_full_speed) {
 // Test that a motor speed of -1.0f returns a duty cycle of 1.0f A low and B high and 0.0f for the other pins
 TEST(BrushedControlLoopTests, compute_motor_speed_outputs_full_reverse_speed) {
     BrushedControlLoopTest brushed_control_loop;
+
+    BrushedControlLoop::BrushedControlLoopParams params{
+        .brake_mode_enabled = false,
+        .h_bridge_dead_time_us = 0,
+    };
+
+    brushed_control_loop.init(&params);
+
     BrushedControlLoop::h_bridge_motor_speed_outputs_t motor_speed_outputs = brushed_control_loop.compute_motor_speed_outputs(
-        -control_loop::ControlLoop::MAX_MOTOR_SPEED, false,
-        (utime_t)param_service::ParamServer::getInstance().compile_params.h_bridge_dead_time_us);
+        -control_loop::ControlLoop::MAX_MOTOR_SPEED, false, params.h_bridge_dead_time_us);
     EXPECT_EQ(motor_speed_outputs.DC_A_HIGH, 0.0f);
     EXPECT_EQ(motor_speed_outputs.DC_A_LOW, 1.0f);
     EXPECT_EQ(motor_speed_outputs.DC_B_HIGH, 1.0f);
@@ -78,9 +109,16 @@ TEST(BrushedControlLoopTests, compute_motor_speed_outputs_full_reverse_speed) {
 // Test that a motor speed of 0.5f returns a duty cycle of 0.5f A high and B low and 0.0f for the other pins
 TEST(BrushedControlLoopTests, compute_motor_speed_outputs_half_speed) {
     BrushedControlLoopTest brushed_control_loop;
+
+    BrushedControlLoop::BrushedControlLoopParams params{
+        .brake_mode_enabled = false,
+        .h_bridge_dead_time_us = 0,
+    };
+
+    brushed_control_loop.init(&params);
+
     BrushedControlLoop::h_bridge_motor_speed_outputs_t motor_speed_outputs = brushed_control_loop.compute_motor_speed_outputs(
-        control_loop::ControlLoop::MAX_MOTOR_SPEED * 0.5f, false,
-        (utime_t)param_service::ParamServer::getInstance().compile_params.h_bridge_dead_time_us);
+        control_loop::ControlLoop::MAX_MOTOR_SPEED * 0.5f, false, params.h_bridge_dead_time_us);
     EXPECT_EQ(motor_speed_outputs.DC_A_HIGH, 0.5f);
     EXPECT_EQ(motor_speed_outputs.DC_A_LOW, 0.0f);
     EXPECT_EQ(motor_speed_outputs.DC_B_HIGH, 0.0f);
@@ -91,6 +129,14 @@ TEST(BrushedControlLoopTests, compute_motor_speed_outputs_half_speed) {
 TEST(BrushedControlLoopTests, compute_motor_speed_outputs_dead_time) {
     utime_t test_time = 100000;
     BrushedControlLoopTest brushed_control_loop;
+
+    BrushedControlLoop::BrushedControlLoopParams params{
+        .brake_mode_enabled = false,
+        .h_bridge_dead_time_us = 10,
+    };
+
+    brushed_control_loop.init(&params);
+
     BrushedControlLoop::h_bridge_motor_speed_outputs_t motor_speed_outputs =
         brushed_control_loop.compute_motor_speed_outputs(-0.5f * control_loop::ControlLoop::MAX_MOTOR_SPEED, false, test_time);
     EXPECT_EQ(motor_speed_outputs.DC_A_HIGH, 0.0f);
@@ -103,9 +149,8 @@ TEST(BrushedControlLoopTests, compute_motor_speed_outputs_dead_time) {
     EXPECT_EQ(motor_speed_outputs.DC_A_LOW, 0.0f);
     EXPECT_EQ(motor_speed_outputs.DC_B_HIGH, 0.0f);
     EXPECT_EQ(motor_speed_outputs.DC_B_LOW, 0.0f);
-    motor_speed_outputs = brushed_control_loop.compute_motor_speed_outputs(
-        control_loop::ControlLoop::MAX_MOTOR_SPEED * 0.5f, false,
-        param_service::ParamServer::getInstance().compile_params.h_bridge_dead_time_us + test_time + 1);
+    motor_speed_outputs = brushed_control_loop.compute_motor_speed_outputs(control_loop::ControlLoop::MAX_MOTOR_SPEED * 0.5f,
+                                                                           false, params.h_bridge_dead_time_us + test_time + 1);
     EXPECT_EQ(motor_speed_outputs.DC_A_HIGH, 0.5f);
     EXPECT_EQ(motor_speed_outputs.DC_A_LOW, 0.0f);
     EXPECT_EQ(motor_speed_outputs.DC_B_HIGH, 0.0f);

@@ -20,7 +20,7 @@ void StepperControlLoop::run(float speed) {
     float time_delta = (current_time - previous_time_) / basilisk_hal::HAL_CLOCK::kMicrosecondsPerSecond;
     float desired_angle = previous_angle_;
 
-    if (param_service::ParamServer::getInstance().compile_params.stepper_motor_simple_switcher_enabled) {
+    if (params_->stepper_motor_simple_switcher_enabled) {
         // Call the determineElectricalAngleSimple function to determine the electrical angle of the motor
         desired_angle = determineElectricalAngleSimple(time_delta, desired_speed, previous_angle_);
     } else {
@@ -34,12 +34,10 @@ void StepperControlLoop::run(float speed) {
     // Determine the A and B current scalars based on the electrical angle
     std::pair<float, float> current_scalars = determineCurrentSetpointScalars(desired_angle);
 
-    if (param_service::ParamServer::getInstance().compile_params.stepper_motor_disable_current_pid) {
+    if (params_->stepper_motor_disable_current_pid) {
         // Set the current setpoints of the motors
-        motor_a_.run(param_service::ParamServer::getInstance().compile_params.stepper_motor_current_to_pwm_duty_cycle_slope *
-                     current_scalars.first);
-        motor_b_.run(param_service::ParamServer::getInstance().compile_params.stepper_motor_current_to_pwm_duty_cycle_slope *
-                     current_scalars.second);
+        motor_a_.run(params_->stepper_motor_current_to_pwm_duty_cycle_slope * current_scalars.first);
+        motor_b_.run(params_->stepper_motor_current_to_pwm_duty_cycle_slope * current_scalars.second);
     }
 }
 

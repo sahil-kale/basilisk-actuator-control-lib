@@ -19,7 +19,10 @@ void BrushedControlLoop::run(float speed) {
     float motor_speed = speed;
 
     // Get the brake mode from the params
-    bool brake_mode = param_service::ParamServer::getInstance().compile_params.h_bridge_brake_mode_enabled;
+    if (params_ == nullptr) {
+        return;
+    }
+    bool brake_mode = params_->brake_mode_enabled;
 
     // Compute the motor speed outputs
     h_bridge_motor_speed_outputs_t motor_speed_outputs = compute_motor_speed_outputs(motor_speed, brake_mode, current_time_us);
@@ -32,7 +35,11 @@ void BrushedControlLoop::run(float speed) {
 BrushedControlLoop::h_bridge_motor_speed_outputs_t BrushedControlLoop::compute_motor_speed_outputs(float motor_speed,
                                                                                                    bool brake_mode,
                                                                                                    utime_t current_time_us) {
-    h_bridge_motor_speed_outputs_t motor_speed_outputs;
+    h_bridge_motor_speed_outputs_t motor_speed_outputs = {0.0f, 0.0f, 0.0f, 0.0f};
+
+    if (params_ == nullptr) {
+        return motor_speed_outputs;
+    }
 
     // Check if the motor speed is 0.0f
     if (motor_speed == 0.0f) {
@@ -78,8 +85,7 @@ BrushedControlLoop::h_bridge_motor_speed_outputs_t BrushedControlLoop::compute_m
     }
 
     // Check if the time is less than the last speed change time plus the dead time constant
-    if (current_time_us <
-        param_service::ParamServer::getInstance().compile_params.h_bridge_dead_time_us + last_speed_dir_change_time_us_) {
+    if (current_time_us < params_->h_bridge_dead_time_us + last_speed_dir_change_time_us_) {
         // Set the duty cycle of all pins to 0.0f
         motor_speed_outputs.DC_A_HIGH = 0.0f;
         motor_speed_outputs.DC_A_LOW = 0.0f;
@@ -90,6 +96,11 @@ BrushedControlLoop::h_bridge_motor_speed_outputs_t BrushedControlLoop::compute_m
     last_motor_speed_ = motor_speed;
 
     return motor_speed_outputs;
+}
+
+void BrushedControlLoop::init(BrushedControlLoopParams* params) {
+    params_ = params;
+    last_speed_dir_change_time_us_ = 0;
 }
 
 }  // namespace control_loop
