@@ -60,6 +60,7 @@ class BldcElectricalRotorPositionEstimatorFromHall : public BldcElectricalRotorP
     typedef struct BldcElectricalRotorPositionEstimatorFromHallParams {
         uint16_t num_hall_updates_to_start;
         float max_estimate_angle_overrun;  // How much to allow the estimator to overrun the hall angle (radians)
+        bool enable_interpolation;         // Whether to enable interpolation between hall updates or just use the hall angle
     } BldcElectricalRotorPositionEstimatorFromHallParams_t;
 
     /**
