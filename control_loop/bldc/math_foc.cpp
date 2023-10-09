@@ -1,6 +1,7 @@
 #include "math_foc.hpp"
 
 #include "math.h"
+#include "math_util.hpp"
 
 namespace math {
 
@@ -102,16 +103,6 @@ svpwm_duty_cycle_t svpwm(float Vd, float Vq, float theta_el, float Vbus) {
     }
 
     return result;
-}
-
-float trapezoidal_integral(float x, float x_prev, float y, float y_prev) {
-    float integral = (x - x_prev) * (y + y_prev) / 2.0f;
-    return integral;
-}
-
-float low_pass_filter(float input, float prev_output, float tau, float dt) {
-    float alpha = dt / (tau + dt);
-    return alpha * input + (1.0f - alpha) * prev_output;
 }
 
 }  // namespace math
