@@ -16,12 +16,5 @@ class MOCK_BRIDGE_3PHASE : public Bridge3Phase {
     MOCK_METHOD(app_hal_status_E, read_bus_voltage, (float& voltage), (override));
 };
 
-// Define a mock class for a 3-phase rotor sector sensor
-class MOCK_ROTOR_SECTOR_SENSOR : public BldcRotorSectorSensor {
-   public:
-    MOCK_METHOD(app_hal_status_E, init, (), (override));
-    MOCK_METHOD(app_hal_status_E, get_sector, (uint8_t & sector), (override));
-};
-
 }  // namespace hwbridge
 #endif  // MOCK_BRIDGE_3PHASE_HPP

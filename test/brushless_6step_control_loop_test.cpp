@@ -3,6 +3,7 @@
 #include "mock_bridge_3phase.hpp"
 #include "mock_hal_adc.hpp"
 #include "mock_hal_clock.hpp"
+#include "mock_rotor_estimator.hpp"
 
 namespace control_loop {
 using namespace ::testing;
@@ -18,7 +19,7 @@ class Brushless6StepControlLoopTest {
     // Define the control loop object
     Brushless6StepControlLoop brushless_6step_control_loop_;
 
-    Brushless6StepControlLoopTest(hwbridge::BldcRotorSectorSensor* rotor_sensor = nullptr)
+    Brushless6StepControlLoopTest(bldc_rotor_estimator::BldcRotorSectorSensor* rotor_sensor = nullptr)
         : mock_clock_(), mock_bridge_3phase_(), brushless_6step_control_loop_(mock_bridge_3phase_, mock_clock_, rotor_sensor) {}
 
     // get desired state
@@ -196,7 +197,7 @@ TEST(Brushless6StepControlLoopTest, average_commutation_step_delta_time_empty_ar
 // If a rotor sensor is provided, ensure that the state machine returns stop when less than the sensored deadband
 TEST(Brushless6StepControlLoopTest, rotor_sensor_stop) {
     // Define a rotor sensor
-    hwbridge::MOCK_ROTOR_SECTOR_SENSOR rotor_sensor;
+    bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR rotor_sensor;
     Brushless6StepControlLoopTest test(&rotor_sensor);
 
     // Set the current time to 1
@@ -222,7 +223,7 @@ TEST(Brushless6StepControlLoopTest, rotor_sensor_stop) {
 // If a rotor sensor is provided, ensure that the state machine returns run when greater than the sensored deadband
 TEST(Brushless6StepControlLoopTest, rotor_sensor_run) {
     // Define a rotor sensor
-    hwbridge::MOCK_ROTOR_SECTOR_SENSOR rotor_sensor;
+    bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR rotor_sensor;
     Brushless6StepControlLoopTest test(&rotor_sensor);
 
     // Set the current time to 1

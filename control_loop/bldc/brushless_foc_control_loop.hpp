@@ -13,40 +13,9 @@ class BrushlessFocControlLoopTest;
 #include "hal_clock.hpp"
 #include "math_foc.hpp"
 #include "pid.hpp"
+#include "rotor_estimator.hpp"
 
 namespace control_loop {
-
-class BldcElectricalRotorPositionEstimator {
-   public:
-    BldcElectricalRotorPositionEstimator() = default;
-    virtual ~BldcElectricalRotorPositionEstimator() = default;
-
-    /**
-     * @brief Update the rotor position estimator
-     */
-    virtual app_hal_status_E update(utime_t time) = 0;
-
-    /**
-     * @brief Get the rotor position
-     * @param rotor_position The rotor position as an electrical angle (radians)
-     */
-    virtual app_hal_status_E get_rotor_position(float& rotor_position) = 0;
-
-    /**
-     * @brief Get the rotor velocity
-     * @param rotor_velocity The rotor velocity as an electrical angular velocity (radians/s)
-     */
-    virtual app_hal_status_E get_rotor_velocity(float& rotor_velocity) = 0;
-
-    /**
-     * @brief get whether the rotor position estimation is valid
-     *
-     * @return true if the rotor position estimation is valid
-     */
-    virtual bool is_estimation_valid() = 0;
-
-    virtual app_hal_status_E reset_estimation() = 0;
-};
 
 // Define a brushless foc control loop class that inherits from ControlLoop
 class BrushlessFocControlLoop : public ControlLoop {
@@ -89,7 +58,7 @@ class BrushlessFocControlLoop : public ControlLoop {
     };
 
     BrushlessFocControlLoop(hwbridge::Bridge3Phase& motor, basilisk_hal::HAL_CLOCK& clock,
-                            BldcElectricalRotorPositionEstimator& rotor_position_estimator)
+                            bldc_rotor_estimator::BldcElectricalRotorPositionEstimator& rotor_position_estimator)
         : bridge_(motor), clock_(clock), rotor_position_estimator_(rotor_position_estimator) {}
 
     /**
@@ -111,7 +80,7 @@ class BrushlessFocControlLoop : public ControlLoop {
     BrushlessFocControlLoopState state_ = BrushlessFocControlLoopState::NOT_INITIALIZED;
     hwbridge::Bridge3Phase& bridge_;
     basilisk_hal::HAL_CLOCK& clock_;
-    BldcElectricalRotorPositionEstimator& rotor_position_estimator_;
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimator& rotor_position_estimator_;
     // Control loop parameters
     BrushlessFocControLoopParams* params_ = nullptr;
 
@@ -166,82 +135,6 @@ class BrushlessFocControlLoop : public ControlLoop {
 #if defined(UNIT_TEST) || defined(DEBUG)
     friend class BrushlessFocControlLoopTest;
 #endif
-};
-
-class BldcElectricalRotorPositionEstimatorFromHall : public BldcElectricalRotorPositionEstimator {
-   public:
-    BldcElectricalRotorPositionEstimatorFromHall(basilisk_hal::HAL_CLOCK& clock, hwbridge::BldcRotorSectorSensor& sector_sensor)
-        : clock_(clock), sector_sensor_(sector_sensor) {}
-
-    typedef struct BldcElectricalRotorPositionEstimatorFromHallParams {
-        uint16_t num_hall_updates_to_start;
-        float max_estimate_angle_overrun;  // How much to allow the estimator to overrun the hall angle (radians)
-    } BldcElectricalRotorPositionEstimatorFromHallParams_t;
-
-    /**
-     * @brief Initialize the rotor position estimator
-     * @param params The rotor position estimator parameters
-     * @return app_hal_status_E the status of the initialization
-     */
-    app_hal_status_E init(BldcElectricalRotorPositionEstimatorFromHallParams_t* params);
-
-    /**
-     * @brief Update the rotor position estimator
-     * @param time The current time
-     * @return app_hal_status_E the status of the update
-     */
-    app_hal_status_E update(utime_t time) override;
-
-    /**
-     * @brief Get the rotor position
-     * @param rotor_position The rotor position as an electrical angle (radians)
-     * @return app_hal_status_E the status of the operation
-     * @note: rotor_position is from 0 -> 2*pi
-     */
-    app_hal_status_E get_rotor_position(float& rotor_position) override;
-
-    /**
-     * @brief Get the rotor velocity
-     * @param rotor_velocity The rotor velocity as an electrical angular velocity (radians/s)
-     * @return app_hal_status_E the status of the operation
-     */
-    app_hal_status_E get_rotor_velocity(float& rotor_velocity) override;
-
-    /**
-     * @brief Get the raw hall angle
-     * @param raw_hall_angle The raw hall angle (radians)
-     * @return app_hal_status_E the status of the operation
-     * @note: raw_hall_angle is from 0 -> 2*pi
-     */
-    app_hal_status_E get_raw_hall_angle(float& raw_hall_angle) {
-        raw_hall_angle = raw_hall_angle_;
-        return APP_HAL_OK;
-    }
-
-    /**
-     * @brief get whether the rotor position estimation is valid
-     * @return true if the rotor position estimation is valid
-     * @note: the rotor position estimation is valid if the number of hall updates is greater than the number of hall updates to
-     * start
-     */
-    bool is_estimation_valid() override;
-
-    /**
-     * @brief reset the rotor position estimation
-     * @return app_hal_status_E the status of the operation
-     */
-    app_hal_status_E reset_estimation() override;
-
-    basilisk_hal::HAL_CLOCK& clock_;
-    hwbridge::BldcRotorSectorSensor& sector_sensor_;
-    float rotor_position_ = 0.0f;
-    float velocity_ = 0.0f;              // rad/s
-    float compensated_velocity_ = 0.0f;  // rad/s
-    float raw_hall_angle_ = 0.0f;
-    utime_t time_at_last_hall_update_ = 0;
-    utime_t time_update_last_called_ = 0;
-    uint64_t number_of_hall_updates_ = 0;
-    BldcElectricalRotorPositionEstimatorFromHallParams_t* params_ = nullptr;
 };
 
 }  // namespace control_loop

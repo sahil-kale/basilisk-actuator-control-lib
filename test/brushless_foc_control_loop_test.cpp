@@ -8,6 +8,7 @@
 #include "mock_hal_adc.hpp"
 #include "mock_hal_clock.hpp"
 #include "mock_hal_timer.hpp"
+#include "mock_rotor_estimator.hpp"
 
 namespace control_loop {
 using namespace ::testing;
@@ -38,7 +39,8 @@ class BrushlessFocControlLoopTest {
         .pwm_control_type = BrushlessFocControlLoop::BrushlessFocPwmControlType::SPACE_VECTOR,
     };
 
-    BrushlessFocControlLoopTest(BldcElectricalRotorPositionEstimator& rotor_position_estimator, basilisk_hal::HAL_CLOCK& clock_)
+    BrushlessFocControlLoopTest(bldc_rotor_estimator::BldcElectricalRotorPositionEstimator& rotor_position_estimator,
+                                basilisk_hal::HAL_CLOCK& clock_)
         : mock_bridge_3phase_(), brushless_foc_control_loop_(mock_bridge_3phase_, clock_, rotor_position_estimator) {}
 
     BrushlessFocControlLoop::BrushlessFocControlLoopState get_desired_state(
@@ -57,15 +59,16 @@ class BrushlessFocControlLoopTest {
 
 TEST(BrushlessFocTest, test_angle_one_for_one) {
     // Create a mock rotor sensor
-    hwbridge::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
+    bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
     // Initialize a sector sensor from hall
-    control_loop::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
     // Make a param struct for the rotor estimator
-    control_loop::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams_t params{
-        .num_hall_updates_to_start = 10,
-        .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
-    };
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams_t
+        params{
+            .num_hall_updates_to_start = 10,
+            .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
+        };
 
     rotor_estimator.init(&params);
 
@@ -98,14 +101,15 @@ TEST(BrushlessFocTest, test_angle_one_for_one) {
 
 TEST(BrushlessFocTest, test_angle_underflow) {
     // Create a mock rotor sensor
-    hwbridge::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
+    bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
     // Initialize a sector sensor from hall
-    control_loop::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
-    control_loop::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams_t params{
-        .num_hall_updates_to_start = 10,
-        .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
-    };
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams_t
+        params{
+            .num_hall_updates_to_start = 10,
+            .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
+        };
 
     rotor_estimator.init(&params);
 
@@ -137,9 +141,9 @@ TEST(BrushlessFocTest, test_angle_underflow) {
 // Test the state machine transition from stop to start, and a time out makes it go back to stop
 TEST(BrushlessFocTest, test_stop_to_start_to_run) {
     // Create a mock rotor sensor
-    hwbridge::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
+    bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
     // Initialize a sector sensor from hall
-    control_loop::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
     // instantiate a brushless foc control loop test class
     BrushlessFocControlLoopTest test_control_loop(rotor_estimator, mock_clock);
@@ -168,9 +172,9 @@ TEST(BrushlessFocTest, test_stop_to_start_to_run) {
 // Test the state machine transition from run to stop
 TEST(BrushlessFocTest, test_run_to_stop) {
     // Create a mock rotor sensor
-    hwbridge::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
+    bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
     // Initialize a sector sensor from hall
-    control_loop::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
     // instantiate a brushless foc control loop test class
     BrushlessFocControlLoopTest test_control_loop(rotor_estimator, mock_clock);
