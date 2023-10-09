@@ -9,8 +9,8 @@ namespace bldc_rotor_estimator {
 // Define a mock class for a 3-phase rotor sector sensor
 class MOCK_ROTOR_SECTOR_SENSOR : public BldcRotorSectorSensor {
    public:
-    MOCK_METHOD(app_hal_status_E, init, (), (override));
-    MOCK_METHOD(app_hal_status_E, get_sector, (uint8_t & sector), (override));
+    MOCK_METHOD(app_hal_status_E, get_electrical_angle, (float& angle), (override));
+    MOCK_METHOD(app_hal_status_E, reset, (), (override));
 };
 }  // namespace bldc_rotor_estimator
 
