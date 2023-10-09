@@ -11,6 +11,7 @@ class Brushless6StepControlLoopTest;
 #include "bridge_3phase.hpp"
 #include "control_loop.hpp"
 #include "hal_clock.hpp"
+#include "rotor_estimator.hpp"
 namespace control_loop {
 
 // Define a brushless 6step control loop class that inherits from ControlLoop
@@ -63,7 +64,7 @@ class Brushless6StepControlLoop : public ControlLoop {
     void init(Brushless6StepControlLoopParams* params);
 
     Brushless6StepControlLoop(hwbridge::Bridge3Phase& motor, basilisk_hal::HAL_CLOCK& clock,
-                              hwbridge::BldcRotorSectorSensor* rotor_sensor = nullptr)
+                              bldc_rotor_estimator::BldcRotorSectorSensor* rotor_sensor = nullptr)
         : motor_(motor), clock_(clock) {
         rotor_sensor_ = rotor_sensor;
     }
@@ -74,7 +75,7 @@ class Brushless6StepControlLoop : public ControlLoop {
     hwbridge::Bridge3Phase& motor_;
     Brushless6StepControlLoopParams* params_ = nullptr;
     basilisk_hal::HAL_CLOCK& clock_;
-    hwbridge::BldcRotorSectorSensor* rotor_sensor_;
+    bldc_rotor_estimator::BldcRotorSectorSensor* rotor_sensor_;
     Brushless6StepControlLoopState state_ = Brushless6StepControlLoopState::STOP;
     utime_t time_at_start_ = 0;
     utime_t zero_crossing_time_ = 0;

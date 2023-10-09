@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 #include "math.h"
 #include "math_foc.hpp"
+#include "math_util.hpp"
 
 namespace math {
 // Test the clarke transform function

@@ -48,20 +48,6 @@ class Bridge3Phase {
     static constexpr uint8_t NUM_PHASES = 3;
 };
 
-// Define a generic class for a sensor that returns the sector of the rotor
-class BldcRotorSectorSensor {
-   public:
-    BldcRotorSectorSensor() = default;
-    virtual ~BldcRotorSectorSensor() = default;
-
-    // Define a virtual function to initialize the sensor
-    virtual app_hal_status_E init() = 0;
-
-    // Define a virtual function to get the sector
-    // @RETURNS the sector (0-5)
-    virtual app_hal_status_E get_sector(uint8_t& sector) = 0;
-};
-
 }  // namespace hwbridge
 
 #endif  // BRIDGE_3PHASE_HPP

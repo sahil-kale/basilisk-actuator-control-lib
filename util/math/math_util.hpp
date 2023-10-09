@@ -1,7 +1,17 @@
 #ifndef MATH_UTIL_HPP
 #define MATH_UTIL_HPP
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 namespace math {
+
+constexpr float sqrt_3 = 1.7320508075688772;
+constexpr float sqrt_3_over_3 = 0.5773502691896258;
+
+constexpr float M_PI_FLOAT = static_cast<float>(M_PI);
+
 /**
  * @brief Integrate the given value using the trapezoidal rule.
  * @param x The current x value
