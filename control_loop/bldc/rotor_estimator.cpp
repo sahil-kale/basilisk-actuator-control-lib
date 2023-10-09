@@ -74,7 +74,7 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
 
             // Account for over/underflow
             // NOTE: if the rotor delta theta is greater than pi radians, then this detection will not work
-            math::wraparound(raw_hall_angle_diff, static_cast<float>(-M_PI), static_cast<float>(M_PI));
+            math::wraparound(raw_hall_angle_diff, -math::M_PI_FLOAT, math::M_PI_FLOAT);
 
             velocity_ = raw_hall_angle_diff / time_delta_since_hall_update;
 
@@ -89,13 +89,14 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
             number_of_hall_updates_++;
         }
 
-        const float current_measurement_period =
-            (float)(time - time_update_last_called_) / basilisk_hal::HAL_CLOCK::kMicrosecondsPerSecond;
-        // Update the rotor position with the velocity estimate
-        rotor_position_ += compensated_velocity_ * current_measurement_period;
-
-        // Implement a wraparound
-        math::wraparound(rotor_position_, 0.0f, float(2.0f * M_PI));
+        if (params_->enable_interpolation) {
+            const float current_measurement_period =
+                (float)(time - time_update_last_called_) / basilisk_hal::HAL_CLOCK::kMicrosecondsPerSecond;
+            // Update the rotor position with the velocity estimate
+            rotor_position_ += compensated_velocity_ * current_measurement_period;
+            // Implement a wraparound
+            math::wraparound(rotor_position_, 0.0f, float(2.0f * M_PI));
+        }
 
         time_update_last_called_ = time;
     } while (false);
