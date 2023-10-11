@@ -1,5 +1,6 @@
 #include "brushless_control_loop.hpp"
 
+#include "bridge_3phase.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "math.h"
@@ -15,56 +16,38 @@ using namespace ::testing;
 
 basilisk_hal::MOCK_HAL_CLOCK mock_clock;
 
-class BrushlessControlLoopTest {
+class BrushlessControlLoopTest : public BrushlessControlLoop {
    public:
-    // Define a mock HAL clock object
+    hwbridge::MOCK_BRIDGE_3PHASE bridge;
 
-    // Define a mock 3 phase bridge
-    hwbridge::MOCK_BRIDGE_3PHASE mock_bridge_3phase_;
-
-    // Define the control loop object
-    BrushlessControlLoop brushless_control_loop_;
-
-    BrushlessControlLoop::BrushlessFocControLoopParams test_params_foc_{
+    BrushlessControlLoop::BrushlessFocControLoopParams foc_params_{
         .kp_q_current = 0.0f,
         .ki_q_current = 0.0f,
         .kd_q_current = 0.0f,
+
         .kp_d_current = 0.0f,
         .ki_d_current = 0.0f,
         .kd_d_current = 0.0f,
-        .foc_start_timeout_period_us = 1000000,
+
+        .foc_start_timeout_period_us = 0,
+
         .speed_to_iq_gain = 0.0f,
         .i_d_reference = 0.0f,
-        .pwm_control_type = BrushlessControlLoop::BrushlessFocPwmControlType::SPACE_VECTOR,
-    };
+
+        .pwm_control_type = BrushlessControlLoop::BrushlessFocPwmControlType::SINE};
 
     BrushlessControlLoop::BrushlessControlLoopParams test_params_{
-        .commutation_type = BrushlessControlLoop::BrushlessControlLoopCommutationType::FOC,
-        .foc_params = test_params_foc_,
-        .open_loop_full_speed_theta_velocity = 0.0f,
-    };
+        .commutation_type = BrushlessControlLoop::BrushlessControlLoopCommutationType::TRAPEZOIDAL,
+        .foc_params = foc_params_,
+        .open_loop_full_speed_theta_velocity = 0.0f};
 
     BrushlessControlLoopTest(bldc_rotor_estimator::BldcElectricalRotorPositionEstimator& rotor_position_estimator,
-                             basilisk_hal::HAL_CLOCK& clock_)
-        : mock_bridge_3phase_(), brushless_control_loop_(mock_bridge_3phase_, clock_, rotor_position_estimator) {}
+                             basilisk_hal::HAL_CLOCK& clock)
+        : BrushlessControlLoop(bridge, clock, rotor_position_estimator) {}
 
-    BrushlessControlLoop::BrushlessControlLoopState get_desired_state(
-        float motor_speed, const BrushlessControlLoop::BrushlessControlLoopState current_state) {
-        return brushless_control_loop_.get_desired_state(motor_speed, current_state);
-    }
-
-    void init(BrushlessControlLoop::BrushlessControlLoopParams* params) { brushless_control_loop_.init(params); }
-
-    void update_state(BrushlessControlLoop::BrushlessControlLoopState state) { brushless_control_loop_.state_ = state; }
-
-    BrushlessControlLoop::BrushlessControlLoopType get_control_loop_type(bool is_estimator_valid) {
-        return brushless_control_loop_.get_desired_control_loop_type(is_estimator_valid);
-    }
-
-    void determine_inverter_duty_cycles_trap(hwbridge::Bridge3Phase::phase_command_t phase_command[3],
-                                             Bldc6StepCommutationTypes::commutation_step_t commutation_step, float motor_speed) {
-        brushless_control_loop_.determine_inverter_duty_cycles_trap(phase_command, commutation_step, motor_speed);
-    }
+    // Make the private functions public so we can test them
+    using BrushlessControlLoop::determine_inverter_duty_cycles_trap;
+    using BrushlessControlLoop::get_desired_state;
 };
 
 // Test the state machine transition from stop to start, and a time out makes it go back to stop

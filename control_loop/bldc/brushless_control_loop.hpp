@@ -1,11 +1,6 @@
 #ifndef BRUSHLESS_CONTROL_LOOP_HPP
 #define BRUSHLESS_CONTROL_LOOP_HPP
 
-// forward declare when in unit test
-#if defined(UNIT_TEST) || defined(DEBUG)
-class BrushlessControlLoopTest;
-#endif
-
 #include <stdlib.h>
 
 #include "bridge_3phase.hpp"
@@ -166,10 +161,6 @@ class BrushlessControlLoop : public ControlLoop {
     void determine_inverter_duty_cycles_trap(hwbridge::Bridge3Phase::phase_command_t phase_command[3],
                                              Bldc6StepCommutationTypes::commutation_step_t current_commutation_step,
                                              float motor_speed);
-
-#if defined(UNIT_TEST) || defined(DEBUG)
-    friend class BrushlessControlLoopTest;
-#endif
 };
 
 }  // namespace control_loop
