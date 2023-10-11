@@ -1,5 +1,6 @@
 #ifndef MATH_UTIL_HPP
 #define MATH_UTIL_HPP
+#include <stdint.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -11,6 +12,8 @@ constexpr float sqrt_3 = 1.7320508075688772;
 constexpr float sqrt_3_over_3 = 0.5773502691896258;
 
 constexpr float M_PI_FLOAT = static_cast<float>(M_PI);
+
+constexpr float ACCEPTABLE_FLOAT_ERROR = 0.000001;
 
 /**
  * @brief Integrate the given value using the trapezoidal rule.
@@ -64,6 +67,29 @@ void wraparound(T& value, const T& min, const T& max) {
  * @param dt The time step
  */
 float low_pass_filter(float input, float prev_output, float tau, float dt);
+
+// Make a function to get the sign of a number of any type
+/**
+ * @brief Return the sign of a number.
+ * @param val The number to get the sign of
+ * @return int The sign of the number
+ */
+template <typename T>
+int8_t sign(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
+// Return the maximum of two values
+/**
+ * @brief Return the maximum of two values.
+ * @param a The first value
+ * @param b The second value
+ */
+template <typename T>
+T max(const T& a, const T& b) {
+    return (a > b) ? a : b;
+}
+
 }  // namespace math
 
 #endif  // MATH_UTIL_HPP

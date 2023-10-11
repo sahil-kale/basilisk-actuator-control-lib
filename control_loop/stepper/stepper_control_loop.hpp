@@ -5,6 +5,7 @@
 #include "bridge_hbridge.hpp"
 #include "control_loop.hpp"
 #include "hal_clock.hpp"
+#include "pid.hpp"
 
 namespace control_loop {
 
@@ -12,51 +13,59 @@ class StepperControlLoop : public ControlLoop {
    public:
     class StepperControlLoopParams {
        public:
-        float stepper_motor_current_to_pwm_duty_cycle_slope;
-        bool stepper_motor_disable_current_pid;
-        bool stepper_motor_simple_switcher_enabled;
+        float i_hold;  // The current to hold the motor at when not moving at the specific electrical angle
+        float i_run;   // The current to run the motor at when moving at the specific electrical angle
+
+        float kp;  // The proportional gain for the current control loop
+        float ki;  // The integral gain for the current control loop
+        float kd;  // The derivative gain for the current control loop
+
+        float max_speed;  // The maximum electrical speed of the motor (radians / second)
+        // NOTE: the maximum speed is not the same as the maximum mechanical speed, which is the maximum electrical speed divided
+        // by the number of pole pairs
     };
 
-    // Define a constructor that takes 2 references to HBridge objects. One for the A motor and one for the B motor. Also, a clock
-    // instance
-    StepperControlLoop(hwbridge::HBridge& motor_a, hwbridge::HBridge& motor_b, basilisk_hal::HAL_CLOCK& clock)
-        : motor_a_(motor_a), motor_b_(motor_b), clock_(clock) {}
-    void run(float speed) override;
-
-    // Define a function to determine the electrical angle of the motor
     /**
-     * @brief Determine the electrical angle of the motor
-     * @param time_delta The time delta since the last time this function was called in seconds
-     * @param desired_speed The desired speed of the motor
-     * @param previous_angle The previous angle of the motor
-     *
-     * @return The new angle of the motor in degrees (0 -> 360)
+     * @brief Construct a new StepperControlLoop object
+     * @param bridge_a The HBridge object for the A motor
+     * @param bridge_b The HBridge object for the B motor
+     * @param clock The HAL_CLOCK object
+     * @return void
      */
-    float determineElectricalAngle(float time_delta, float desired_speed, float previous_angle);
+    StepperControlLoop(hwbridge::HBridge& bridge_a, hwbridge::HBridge& bridge_b, basilisk_hal::HAL_CLOCK& clock)
+        : bridge_a_(bridge_a),
+          bridge_b_(bridge_b),
+          clock_(clock),
+          current_controller_a_(0, 0, 0, 0, 0, 0),
+          current_controller_b_(0, 0, 0, 0, 0, 0) {}
 
+    void init(StepperControlLoopParams* params);
+
+    void run(float speed);
+
+   protected:
     /**
-     * @brief Determine the electrical angle of the motor using 4 step commutation
-     * @param time_delta The time delta since the last time this function was called in seconds
-     * @param desired_speed The desired speed of the motor
-     * @param previous_angle The previous angle of the motor
+     * @brief determine the current setpoint scalars based on the electrical angle
+     * @param electrical_angle The electrical angle of the motor (radians)
+     * @return std::pair<float, float> The A and B current scalars
      */
-    float determineElectricalAngleSimple(float time_delta, float desired_speed, float previous_angle);
+    std::pair<float, float> determine_current_setpoints(float desired_current, float electrical_angle);
 
-    // Define a function to determine the AB and CD current magnitudes based on the electrical angle
-    /**
-     * @brief Determine the A and B current scalar (-1 -> 1) based on the electrical angle
-     * @param electrical_angle The electrical angle of the motor
-     * @return A pair of floats. The first is the A current scalar and the second is the B current scalar
-     */
-    std::pair<float, float> determineCurrentSetpointScalars(float electrical_angle);
-
-   private:
-    hwbridge::HBridge& motor_a_;
-    hwbridge::HBridge& motor_b_;
+    hwbridge::HBridge& bridge_a_;
+    hwbridge::HBridge& bridge_b_;
     basilisk_hal::HAL_CLOCK& clock_;
-    float previous_angle_ = 0.0f;
+    float electrical_angle_ = 0;  // The electrical angle of the motor (radians)
     uint32_t previous_time_ = 0;
     StepperControlLoopParams* params_ = nullptr;
+
+    // Create 2 PID objects for the A and B motors
+    pid::PID<float> current_controller_a_;
+    pid::PID<float> current_controller_b_;
+
+    // Create 2 variables to store the current setpoints for the A and B motors
+    float current_setpoint_a, current_setpoint_b = 0;
+    // Further, store the last commanded duty cycles
+    float duty_cycle_a_, duty_cycle_b_ = 0;
 };
 
 }  // namespace control_loop
