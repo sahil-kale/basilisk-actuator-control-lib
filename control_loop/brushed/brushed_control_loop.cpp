@@ -1,104 +1,158 @@
 #include "brushed_control_loop.hpp"
 
+#include "control_loop.hpp"
+#include "math.h"
+#include "math_util.hpp"
+#include "util.hpp"
+
 namespace control_loop {
-
-BrushedControlLoop::BrushedControlLoop() {}
-
-void BrushedControlLoop::run(float speed) {
-    // Get the current time
-    // First check if clock is valid. If not, return early
-    if (!clock_) {
-        return;
-    }
-
-    utime_t current_time_us = clock_->get_time_us();
-
-    // Get the motor speed from the system manager
-    float motor_speed = speed;
-
-    // Get the brake mode from the params
-    if (params_ == nullptr) {
-        return;
-    }
-    bool brake_mode = params_->brake_mode_enabled;
-
-    // Compute the motor speed outputs
-    h_bridge_motor_speed_outputs_t motor_speed_outputs = compute_motor_speed_outputs(motor_speed, brake_mode, current_time_us);
-
-    // Set the motor speed outputs
-    // TODO: implement this with 4 timers that can be registered
-    (void)motor_speed_outputs;
-}
-
-BrushedControlLoop::h_bridge_motor_speed_outputs_t BrushedControlLoop::compute_motor_speed_outputs(float motor_speed,
-                                                                                                   bool brake_mode,
-                                                                                                   utime_t current_time_us) {
-    h_bridge_motor_speed_outputs_t motor_speed_outputs = {0.0f, 0.0f, 0.0f, 0.0f};
-
-    if (params_ == nullptr) {
-        return motor_speed_outputs;
-    }
-
-    // Check if the motor speed is 0.0f
-    if (motor_speed == 0.0f) {
-        // Check if brake mode is enabled
-        if (brake_mode) {
-            // Set the duty cycle of the low pins to 1.0f and the high pins to 0.0f
-            motor_speed_outputs.DC_A_HIGH = 0.0f;
-            motor_speed_outputs.DC_A_LOW = 1.0f;
-            motor_speed_outputs.DC_B_HIGH = 0.0f;
-            motor_speed_outputs.DC_B_LOW = 1.0f;
-
-        } else {
-            // Set the duty cycle of all pins to 0.0f
-            motor_speed_outputs.DC_A_HIGH = 0.0f;
-            motor_speed_outputs.DC_A_LOW = 0.0f;
-            motor_speed_outputs.DC_B_HIGH = 0.0f;
-            motor_speed_outputs.DC_B_LOW = 0.0f;
-        }
-    } else if (motor_speed >= 0.0f) {
-        // A high and B low should be set to a scale of absolute value of motor speed from 0.0f to 1.0f
-        // using the max motor speed constant
-        motor_speed_outputs.DC_A_HIGH = motor_speed / MAX_MOTOR_SPEED;
-        motor_speed_outputs.DC_A_LOW = 0.0f;
-        motor_speed_outputs.DC_B_HIGH = 0.0f;
-        motor_speed_outputs.DC_B_LOW = motor_speed / MAX_MOTOR_SPEED;
-    } else if (motor_speed < 0.0f) {
-        // A low and B high should be set to a scale of absolute value of motor speed from 0.0f to 1.0f
-        // using the max motor speed constant
-        motor_speed_outputs.DC_A_HIGH = 0.0f;
-        motor_speed_outputs.DC_A_LOW = -motor_speed / MAX_MOTOR_SPEED;
-        motor_speed_outputs.DC_B_HIGH = -motor_speed / MAX_MOTOR_SPEED;
-        motor_speed_outputs.DC_B_LOW = 0.0f;
-    }
-
-    // Dead time insertion- if the signs of the last successful motor speed and the current motor speed are different
-    // and the time is less than the last speed change time plus the dead time constant, then set the duty cycle of all
-    // pins to 0.0f
-
-    // First check if the signs are different
-    if ((motor_speed * last_motor_speed_ < 0.0f)) {
-        // Update the last changed time
-        last_speed_dir_change_time_us_ = current_time_us;
-    }
-
-    // Check if the time is less than the last speed change time plus the dead time constant
-    if (current_time_us < params_->h_bridge_dead_time_us + last_speed_dir_change_time_us_) {
-        // Set the duty cycle of all pins to 0.0f
-        motor_speed_outputs.DC_A_HIGH = 0.0f;
-        motor_speed_outputs.DC_A_LOW = 0.0f;
-        motor_speed_outputs.DC_B_HIGH = 0.0f;
-        motor_speed_outputs.DC_B_LOW = 0.0f;
-    }
-
-    last_motor_speed_ = motor_speed;
-
-    return motor_speed_outputs;
-}
 
 void BrushedControlLoop::init(BrushedControlLoopParams* params) {
     params_ = params;
-    last_speed_dir_change_time_us_ = 0;
+    // Set the constants of the current controller
+    current_controller_.set_kp(params_->current_controller_params.kp);
+    current_controller_.set_ki(params_->current_controller_params.ki);
+    current_controller_.set_kd(params_->current_controller_params.kd);
+}
+
+void BrushedControlLoop::run(float speed) {
+    // Get the current time
+    utime_t current_time = clock_.get_time_us();
+    // Get the desired state
+    BrushedControlLoopState desired_state =
+        get_desired_state(speed, last_speed_, state_, current_time, deadtime_start_time_, params_->deadtime_us);
+
+    // If the desired state is different than the current state, then we need to transition to the desired state
+    if (desired_state != state_) {
+        // If the desired state is STOP, then we need to set the deadtime start time
+        if (desired_state == BrushedControlLoopState::STOP) {
+            deadtime_start_time_ = current_time;
+            // Reset the current controller duty cycle
+            current_controller_duty_cycle_ = 0.0f;
+        }
+        // If the desired state is DEADTIME_PAUSE, then we need to set the deadtime start time
+        else if (desired_state == BrushedControlLoopState::DEADTIME_PAUSE) {
+            deadtime_start_time_ = current_time;
+        }
+        // Otherwise, we need to set the deadtime start time to 0
+        else {
+            deadtime_start_time_ = 0;
+        }
+
+        // Set the state to the desired state
+        state_ = desired_state;
+    }
+
+    // Get the desired output
+    hwbridge::HBridge::HBridgeInput bridge_input = run_state(speed, state_);
+
+    // Run the bridge
+    bridge_.run(bridge_input);
+
+    // Update the last speed
+    last_speed_ = speed;
+}
+
+BrushedControlLoop::BrushedControlLoopState BrushedControlLoop::get_desired_state(float desired_speed, float previous_speed,
+                                                                                  BrushedControlLoopState current_state,
+                                                                                  utime_t current_time,
+                                                                                  utime_t deadtime_start_time,
+                                                                                  utime_t deadtime_pause_time_us) {
+    BrushedControlLoopState desired_state = current_state;
+
+    switch (current_state) {
+        case BrushedControlLoopState::STOP:
+            if (desired_speed != 0) {
+                // NOTE: we should check that we are in the stop state for at least DEADTIME_PAUSE_TIME_US before transitioning to
+                // RUN
+                desired_state = BrushedControlLoopState::RUN;
+            }
+            break;
+        case BrushedControlLoopState::RUN: {
+            if (fabs(desired_speed) < math::ACCEPTABLE_FLOAT_ERROR) {
+                desired_state = BrushedControlLoopState::STOP;
+            }
+            // Otherwise, if the desired speed is different than the previous speed, then we need to pause the control loop for
+            // deadtime
+            else if ((desired_speed * previous_speed < 0) && (deadtime_pause_time_us > 0)) {
+                // If the deadtime pause ticks is > 0, then we need to pause the control loop for deadtime
+                desired_state = BrushedControlLoopState::DEADTIME_PAUSE;
+            } else {
+                // Do nothing, maintain the RUN state
+                desired_state = BrushedControlLoopState::RUN;
+            }
+        } break;
+        case BrushedControlLoopState::DEADTIME_PAUSE: {
+            // If the speed is 0, then we can transition to the STOP state
+            if (fabs(desired_speed) < math::ACCEPTABLE_FLOAT_ERROR) {
+                desired_state = BrushedControlLoopState::STOP;
+            }
+            // Otherwise, check to see if the deadtime has expired
+            else if ((current_time - deadtime_start_time) >= deadtime_pause_time_us) {
+                desired_state = BrushedControlLoopState::RUN;
+            } else {
+                // Do nothing, maintain the DEADTIME_PAUSE state
+                desired_state = BrushedControlLoopState::DEADTIME_PAUSE;
+            }
+        }
+        default:
+            break;
+    }
+
+    return desired_state;
+}
+
+hwbridge::HBridge::HBridgeInput BrushedControlLoop::run_state(float speed, const BrushedControlLoopState& state) {
+    hwbridge::HBridge::HBridgeInput bridge_input = {0.0f, false, 0.0f, false};
+
+    switch (state) {
+        case BrushedControlLoopState::STOP: {
+            switch (params_->brake_mode) {
+                case BrushedBrakeType::COAST: {
+                    bridge_input = {0.0f, false, 0.0f, false};
+                }; break;
+                case BrushedBrakeType::BRAKE_LOW_SIDE: {
+                    bridge_input = {0.0f, true, 0.0f, true};
+                }; break;
+                case BrushedBrakeType::BRAKE_HIGH_SIDE: {
+                    bridge_input = {1.0f, false, 1.0f, false};
+                }; break;
+                default:
+                    // do nothing
+                    break;
+            };
+        } break;
+        case BrushedControlLoopState::RUN: {
+            // If the speed is positive, then we need to drive the motor forward (A high, B low)
+            // If the speed is negative, then we need to drive the motor backward (A low, B high)
+            if (speed > 0) {
+                bridge_input = {speed, false, 0.0f, true};
+            } else {
+                bridge_input = {0.0f, true, -speed, false};
+            }
+        } break;
+        case BrushedControlLoopState::DEADTIME_PAUSE: {
+            // Set the bridge to float
+            bridge_input = {0.0f, false, 0.0f, false};
+        } break;
+        default:
+            // Do nothing
+            break;
+    };
+
+    return bridge_input;
+}
+
+// Write the run_constant_current function
+void BrushedControlLoop::run_constant_current(float current) {
+    // Get the current bridge current
+    float bridge_current = 0.0f;
+    bridge_.get_current(bridge_current);
+
+    // Run the current controller
+    current_controller_duty_cycle_ += current_controller_.calculate(current, bridge_current);
+
+    run(current_controller_duty_cycle_);
 }
 
 }  // namespace control_loop

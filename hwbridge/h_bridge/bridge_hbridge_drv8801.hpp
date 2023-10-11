@@ -6,6 +6,7 @@
 #include "control_loop.hpp"
 #include "hal_gpio.hpp"
 #include "hal_timer.hpp"
+#include "math_util.hpp"
 
 namespace hwbridge {
 
@@ -36,9 +37,12 @@ class HBridgeDRV8801 : public HBridge {
     }
 
     // Define a run method that overrides the run method in HBridge
-    void run(float speed) override {
-        // Set the direction pin
-        dir_pin_->set_output_state(speed > 0);
+    app_hal_status_E run(HBridgeInput input) override {
+        // Set the direction pin based on which low side GPIO is active
+        dir_pin_->set_output_state(input.low_side_b_gpio_state);
+
+        // Determine the speed based on the highest duty cycle of the 2 high side timers
+        float speed = math::max(input.duty_cycle_a_h, input.duty_cycle_b_h);
 
         // Determine the appropriate amount of ticks by getting the timer period
         uint32_t period = pwm_timer_->get_period();
@@ -46,6 +50,8 @@ class HBridgeDRV8801 : public HBridge {
 
         // Set the PWM timer
         pwm_timer_->set_channel(ticks, channel_);
+
+        return app_hal_status_E::APP_HAL_OK;
     }
 
    private:

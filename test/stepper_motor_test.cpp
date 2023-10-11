@@ -1,103 +1,54 @@
 #include "bridge_hbridge_drv8801.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "math_util.hpp"
 #include "mock_hal_clock.hpp"
+#include "mock_hbridge.hpp"
 #include "stepper_control_loop.hpp"
 
+// Make a class that inherits from StepperControlLoop so we can test it
 namespace control_loop {
-// Test the determineElectricalAngle function. For now, this will use simple 4 block commutation
+class StepperControlLoopTest : public control_loop::StepperControlLoop {
+   public:
+    StepperControlLoopParams default_params{.i_hold = 0.5, .i_run = 1.0, .max_speed = 10.0};
 
-// Assert that a desired speed of 0 returns the same previous angle
-TEST(StepperControlLoop, determineElectricalAngleZeroSpeed) {
-    // Create a mock clock
+    hwbridge::MOCK_HBRIDGE bridge_a;
+    hwbridge::MOCK_HBRIDGE bridge_b;
     basilisk_hal::MOCK_HAL_CLOCK clock;
-    // Create a mock motor
-    hwbridge::HBridgeDRV8801 motor;
-    // Create a stepper control loop
-    StepperControlLoop stepper_control_loop(motor, motor, clock);
-    // Assert that the angle is the same as the previous angle
-    EXPECT_EQ(stepper_control_loop.determineElectricalAngle(0.0f, 0.0f, 0.0f), 0.0f);
-    EXPECT_EQ(stepper_control_loop.determineElectricalAngle(0.0f, 0.0f, 90.0f), 90.0f);
-    EXPECT_EQ(stepper_control_loop.determineElectricalAngle(0.0f, 0.0f, 180.0f), 180.0f);
-    EXPECT_EQ(stepper_control_loop.determineElectricalAngle(0.0f, 0.0f, 270.0f), 270.0f);
-    EXPECT_EQ(stepper_control_loop.determineElectricalAngle(0.0f, 0.0f, 360.0f), 360.0f);
-}
 
-// Assert that at a desired speed's time delta, the angle is 90 degrees greater than previous angle
-TEST(StepperControlLoop, determineElectricalAngleMaxSpeed) {
-    // Create a mock clock
-    basilisk_hal::MOCK_HAL_CLOCK clock;
-    // Create a mock motor
-    hwbridge::HBridgeDRV8801 motor;
-    // Create a stepper control loop
-    StepperControlLoop stepper_control_loop(motor, motor, clock);
-    const float test_max_speed_steps_per_second = 200.0f;
-    // Determine the time delta to be at max speed
-    const float test_time_delta = 1.0f / test_max_speed_steps_per_second;
-    EXPECT_EQ(stepper_control_loop.determineElectricalAngle(test_time_delta, test_max_speed_steps_per_second, 0.0f), 90.0f);
-    // make an angle 1 degree. Expect the angle to be 271 degrees
-    EXPECT_EQ(stepper_control_loop.determineElectricalAngle(test_time_delta, -test_max_speed_steps_per_second, 1.0f), 271.0f);
-    // make an angle 359 degrees. Expect the angle to be 89 degrees
-    EXPECT_EQ(stepper_control_loop.determineElectricalAngle(test_time_delta, test_max_speed_steps_per_second, 359.0f), 89.0f);
-}
+    BrushedControlLoop brushed_control_loop_a{bridge_a, clock};
+    BrushedControlLoop brushed_control_loop_b{bridge_b, clock};
 
-// Microstepping test: assert that at half a desired's speed's time delta, the angle is 45 degrees greater than previous angle
-TEST(StepperControlLoop, determineElectricalAngleHalfSpeed) {
-    // Create a mock clock
-    basilisk_hal::MOCK_HAL_CLOCK clock;
-    // Create a mock motor
-    hwbridge::HBridgeDRV8801 motor;
-    // Create a stepper control loop
-    StepperControlLoop stepper_control_loop(motor, motor, clock);
-    const float test_max_speed_steps_per_second = 200.0f;
-    // Determine the time delta to be at max speed
-    const float test_time_delta = 1.0f / (2.0f * test_max_speed_steps_per_second);
-    EXPECT_EQ(stepper_control_loop.determineElectricalAngle(test_time_delta, test_max_speed_steps_per_second, 0.0f), 45.0f);
-    // make an angle 1 degree. Expect the angle to be 316 degrees
-    EXPECT_EQ(stepper_control_loop.determineElectricalAngle(test_time_delta, -test_max_speed_steps_per_second, 1.0f), 316.0f);
-    // make an angle 359 degrees. Expect the angle to be 44 degrees
-    EXPECT_EQ(stepper_control_loop.determineElectricalAngle(test_time_delta, test_max_speed_steps_per_second, 359.0f), 44.0f);
-}
+    StepperControlLoopTest() : StepperControlLoop(brushed_control_loop_a, brushed_control_loop_b, clock) {}
+    // Make the private functions public so we can test them
+    using StepperControlLoop::determine_current_setpoints;
 
-// Test the motor current value calculation function
-// Assert that a desired angle of 0 makes the A current scaler 1 and B current scaler 0
-TEST(StepperControlLoop, determineMotorCurrentValuesAngle0) {
-    // Create a mock clock
-    basilisk_hal::MOCK_HAL_CLOCK clock;
-    // Create a mock motor
-    hwbridge::HBridgeDRV8801 motor;
-    // Create a stepper control loop
-    StepperControlLoop stepper_control_loop(motor, motor, clock);
-    // Assert that the angle is the same as the previous angle
-    EXPECT_EQ(stepper_control_loop.determineCurrentSetpointScalars(0.0f), std::make_pair(1.0f, 0.0f));
-}
+    // Make the protected variables public so we can test them
+    using StepperControlLoop::electrical_angle_;
+};
 
-// Assert that a desired angle of 90 makes the A current scaler 0 and B current scaler 1
-TEST(StepperControlLoop, determineMotorCurrentValuesAngle90) {
-    // Create a mock clock
-    basilisk_hal::MOCK_HAL_CLOCK clock;
-    // Create a mock motor
-    hwbridge::HBridgeDRV8801 motor;
-    // Create a stepper control loop
-    StepperControlLoop stepper_control_loop(motor, motor, clock);
-    // Assert that the angle is the same as the previous angle
-    std::pair<float, float> current_scalars = stepper_control_loop.determineCurrentSetpointScalars(90.0f);
-    EXPECT_NEAR(current_scalars.first, 0.0f, 0.01);
-    EXPECT_NEAR(current_scalars.second, 1.0f, 0.01);
-}
+TEST(stepper_motor_test, test_current_setpoint) {
+    StepperControlLoopTest stepper_control_loop_test;
+    // Test the determine_current_setpoint_scalars function
+    // Test the case where the electrical angle is 0
+    auto current_setpoint_scalars = stepper_control_loop_test.determine_current_setpoints(1.0, 0);
+    EXPECT_NEAR(current_setpoint_scalars.first, 1.0, math::ACCEPTABLE_FLOAT_ERROR);
+    EXPECT_NEAR(current_setpoint_scalars.second, 0.0, math::ACCEPTABLE_FLOAT_ERROR);
 
-// Assert that a desired angle of 315 makes the A current scaler 1/sqrt(2) and B current scaler -1/sqrt(2)
-TEST(StepperControlLoop, determineMotorCurrentValuesAngle315) {
-    // Create a mock clock
-    basilisk_hal::MOCK_HAL_CLOCK clock;
-    // Create a mock motor
-    hwbridge::HBridgeDRV8801 motor;
-    // Create a stepper control loop
-    StepperControlLoop stepper_control_loop(motor, motor, clock);
-    // Assert that the angle is the same as the previous angle
-    std::pair<float, float> current_scalars = stepper_control_loop.determineCurrentSetpointScalars(315.0f);
-    EXPECT_NEAR(current_scalars.first, 1.0f / std::sqrt(2.0f), 0.01);
-    EXPECT_NEAR(current_scalars.second, -1.0f / std::sqrt(2.0f), 0.01);
+    // Test the case where the electrical angle is pi/2
+    current_setpoint_scalars = stepper_control_loop_test.determine_current_setpoints(1.0, math::M_PI_FLOAT / 2);
+    EXPECT_NEAR(current_setpoint_scalars.first, 0.0, math::ACCEPTABLE_FLOAT_ERROR);
+    EXPECT_NEAR(current_setpoint_scalars.second, 1.0, math::ACCEPTABLE_FLOAT_ERROR);
+
+    // Test the case where the electrical angle is pi
+    current_setpoint_scalars = stepper_control_loop_test.determine_current_setpoints(1.0, math::M_PI_FLOAT);
+    EXPECT_NEAR(current_setpoint_scalars.first, -1.0, math::ACCEPTABLE_FLOAT_ERROR);
+    EXPECT_NEAR(current_setpoint_scalars.second, 0.0, math::ACCEPTABLE_FLOAT_ERROR);
+
+    // Test the case where the electrical angle is 3pi/2
+    current_setpoint_scalars = stepper_control_loop_test.determine_current_setpoints(1.0, 3 * math::M_PI_FLOAT / 2);
+    EXPECT_NEAR(current_setpoint_scalars.first, 0.0, math::ACCEPTABLE_FLOAT_ERROR);
+    EXPECT_NEAR(current_setpoint_scalars.second, -1.0, math::ACCEPTABLE_FLOAT_ERROR);
 }
 
 }  // namespace control_loop
