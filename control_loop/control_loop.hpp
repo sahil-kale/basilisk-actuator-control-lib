@@ -9,7 +9,7 @@ class ControlLoop {
    public:
     virtual void run(float speed) = 0;
     // Define a max motor_speed member constant
-    constexpr static float MAX_MOTOR_SPEED = 1.0f;
+    static constexpr float MAX_MOTOR_SPEED = 1.0f;
 };
 
 }  // namespace control_loop
