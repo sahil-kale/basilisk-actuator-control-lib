@@ -4,6 +4,7 @@
 #include "math.h"
 #include "math_foc.hpp"
 #include "math_util.hpp"
+#include "util.hpp"
 
 namespace control_loop {
 
@@ -30,6 +31,9 @@ void BrushlessControlLoop::init(BrushlessControlLoop::BrushlessControlLoopParams
 
     // Load the default id reference
     i_d_reference_ = params_->foc_params.i_d_reference_default;
+
+    // reset the status
+    status_.reset();
 }
 
 BrushlessControlLoop::BrushlessControlLoopState BrushlessControlLoop::get_desired_state(
@@ -60,18 +64,43 @@ BrushlessControlLoop::BrushlessControlLoopState BrushlessControlLoop::get_desire
     return desired_state;
 }
 
-void BrushlessControlLoop::run_current_control(float i_d_reference, float i_q_reference) {
-    if (params_->commutation_type != BrushlessControlLoopCommutationType::FOC) {
-        return;
-    }
-    // Update the id reference
-    i_d_reference_ = i_d_reference;
-
-    // Now, run the FOC control loop with the speed multiplied by the speed to iq gain
-    run(i_q_reference * params_->foc_params.speed_to_iq_gain);
+void BrushlessControlLoop::BrushlessControlLoopStatus::reset() {
+    // Reset the status
+    status = ControlLoopStatus::ControlLoopBaseStatus::OK;
+    error = BrushlessControlLoopError::NO_ERROR;
+    warning = BrushlessControlLoopWarning::NO_WARNING;
 }
 
-void BrushlessControlLoop::run(float speed) {
+void BrushlessControlLoop::BrushlessControlLoopStatus::compute_base_status() {
+    // If there's an error, then set the status to error
+    if (error != BrushlessControlLoopError::NO_ERROR) {
+        status = ControlLoopStatus::ControlLoopBaseStatus::ERROR;
+    }
+    // If there's a warning, then set the status to warning
+    else if (warning != BrushlessControlLoopWarning::NO_WARNING) {
+        status = ControlLoopStatus::ControlLoopBaseStatus::WARNING;
+    }
+    // Otherwise, set the status to OK
+    else {
+        status = ControlLoopStatus::ControlLoopBaseStatus::OK;
+    }
+}
+
+ControlLoop::ControlLoopStatus BrushlessControlLoop::run_current_control(float i_d_reference, float i_q_reference) {
+    if (params_->commutation_type != BrushlessControlLoopCommutationType::FOC) {
+        // Set a warning in the status
+        status_.warning = BrushlessControlLoopStatus::BrushlessControlLoopWarning::CURRENT_CONTROL_NOT_SUPPORTED;
+    } else {
+        // Update the id reference
+        i_d_reference_ = i_d_reference;
+        // Now, run the FOC control loop with the speed multiplied by the speed to iq gain
+        UNUSED(run(i_q_reference * params_->foc_params.speed_to_iq_gain));
+    }
+
+    return status_;
+}
+
+ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
     // Get the current time
     utime_t current_time_us = clock_.get_time_us();
 
@@ -97,7 +126,10 @@ void BrushlessControlLoop::run(float speed) {
                     rotor_position_estimator_.get_rotor_position(desired_rotor_angle_open_loop_);
                 }
             } break;
-            case BrushlessControlLoop::BrushlessControlLoopState::NOT_INITIALIZED:
+            case BrushlessControlLoop::BrushlessControlLoopState::NOT_INITIALIZED: {
+                // return an error
+                status_.error = BrushlessControlLoopStatus::BrushlessControlLoopError::PARAMS_NOT_SET;
+            } break;
             case BrushlessControlLoop::BrushlessControlLoopState::STOP:
             default:
                 break;
@@ -132,6 +164,11 @@ void BrushlessControlLoop::run(float speed) {
     this->bridge_.set_phase(phase_commands[0], phase_commands[1], phase_commands[2]);
 
     last_run_time_ = current_time_us;
+
+    // Compute the base status
+    status_.compute_base_status();
+
+    return status_;
 }
 
 void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us,

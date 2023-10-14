@@ -3,11 +3,13 @@
 #include "brushed_control_loop.hpp"
 
 #include "bridge_hbridge.hpp"
+#include "control_loop.hpp"
 #include "gmock/gmock.h"
 #include "mock_hal_clock.hpp"
 #include "mock_hbridge.hpp"
 
 namespace control_loop {
+using namespace ::testing;
 // Make a class to extend the BrushedControlLoop class so we can access its protected members
 class BrushedControlLoopTest : public BrushedControlLoop {
    public:
@@ -22,8 +24,8 @@ class BrushedControlLoopTest : public BrushedControlLoop {
             },
     };
 
-    hwbridge::MOCK_HBRIDGE mock_bridge_;
-    basilisk_hal::MOCK_HAL_CLOCK mock_clock_;
+    NiceMock<hwbridge::MOCK_HBRIDGE> mock_bridge_;
+    NiceMock<basilisk_hal::MOCK_HAL_CLOCK> mock_clock_;
 
     BrushedControlLoopTest() : BrushedControlLoop(mock_bridge_, mock_clock_) {}
 
@@ -31,8 +33,6 @@ class BrushedControlLoopTest : public BrushedControlLoop {
     using BrushedControlLoop::run_state;
     using BrushedControlLoop::state_;
 };
-
-using namespace ::testing;
 
 TEST(BrushedControlLoopTest, test_stop_to_run) {
     // Test that a control loop in the STOP state can transition to the RUN state if the speed is 0
@@ -360,6 +360,38 @@ TEST(BrushedControlLoopTest, test_pos_to_neg_then_stop) {
     control_loop.run(0.0f);
 }
 
+// Test the initalization error when the control loop is not initialized, and that the error is ok when it is initialized
+TEST(BrushedControlLoopTest, test_init_error) {
+    BrushedControlLoopTest control_loop;
+    BrushedControlLoop::BrushedControlLoopParams params{.brake_mode = BrushedControlLoop::BrushedBrakeType::BRAKE_LOW_SIDE,
+                                                        .deadtime_us = 60,
+                                                        .current_controller_params = {
+                                                            .kp = 0.0f,
+                                                            .ki = 0.0f,
+                                                            .kd = 0.0f,
+                                                        }};
+
+    auto base_status = control_loop.run(0.0f);
+
+    // Expect the control loop to be in an error state
+    EXPECT_EQ(base_status.status, BrushedControlLoop::BrushedControlLoopStatus::ControlLoopBaseStatus::ERROR);
+
+    // Expect the brushed control loop error to be PARAMS_NOT_SET
+    EXPECT_EQ(control_loop.get_status().error,
+              BrushedControlLoop::BrushedControlLoopStatus::BrushedControlLoopError::PARAMS_NOT_SET);
+
+    // Initialize the control loop
+    control_loop.init(&params);
+
+    // Run the control loop
+    base_status = control_loop.run(0.0f);
+
+    // Expect the control loop to be in an ok state
+    EXPECT_EQ(base_status, BrushedControlLoop::BrushedControlLoopStatus::ControlLoopBaseStatus::OK);
+
+    // Expect the brushed control loop error to be NO_ERROR
+    EXPECT_EQ(control_loop.get_status().error, BrushedControlLoop::BrushedControlLoopStatus::BrushedControlLoopError::NO_ERROR);
+}
 }  // namespace control_loop
 
 #endif  // BRUSHED_CONTROL_LOOP_TEST_HPP

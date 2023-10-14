@@ -7,7 +7,19 @@ namespace control_loop {
 
 class ControlLoop {
    public:
-    virtual void run(float speed) = 0;
+    class ControlLoopStatus {
+       public:
+        enum class ControlLoopBaseStatus {
+            OK,
+            WARNING,
+            ERROR,
+        };
+        ControlLoopBaseStatus status = ControlLoopBaseStatus::OK;
+
+        // Define an equal operator that checks whether a status class is equal to a ControlLoopBaseStatus
+        bool operator==(ControlLoopBaseStatus status) const { return this->status == status; }
+    };
+    virtual ControlLoopStatus run(float speed) = 0;
     // Define a max motor_speed member constant
     static constexpr float MAX_MOTOR_SPEED = 1.0f;
 };

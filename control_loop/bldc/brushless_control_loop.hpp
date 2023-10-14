@@ -62,6 +62,36 @@ class BrushlessControlLoop : public ControlLoop {
         float open_loop_full_speed_theta_velocity;  // rad/s
     };
 
+    class BrushlessControlLoopStatus : public ControlLoopStatus {
+       public:
+        enum class BrushlessControlLoopError {
+            NO_ERROR,
+            PARAMS_NOT_SET,
+        };
+        enum class BrushlessControlLoopWarning {
+            NO_WARNING,
+            CURRENT_CONTROL_NOT_SUPPORTED,
+        };
+        BrushlessControlLoopStatus() : ControlLoopStatus() {}
+        BrushlessControlLoopWarning warning = BrushlessControlLoopWarning::NO_WARNING;
+        BrushlessControlLoopError error = BrushlessControlLoopError::NO_ERROR;
+
+        /**
+         * @brief reset the status
+         * @return void
+         */
+        void reset();
+
+        /**
+         * @brief compute the base status returned by the class
+         * @return void
+         */
+        void compute_base_status();
+    };
+
+    // Provide a const getter for the status
+    const BrushlessControlLoopStatus& get_status() const { return status_; }
+
     BrushlessControlLoop(hwbridge::Bridge3Phase& motor, basilisk_hal::HAL_CLOCK& clock,
                          bldc_rotor_estimator::BldcElectricalRotorPositionEstimator& rotor_position_estimator)
         : bridge_(motor),
@@ -80,16 +110,18 @@ class BrushlessControlLoop : public ControlLoop {
      * @brief Run the control loop
      * @param speed The desired speed of the motor (note: this is multiplied by the speed_to_iq_gain)
      * @note: speed is from -1 -> 1
+     * @return The status of the control loop
      */
-    void run(float speed) override;
+    ControlLoopStatus run(float speed) override;
 
     /**
      * @brief Run the control loop in current control mode
      * @param i_d_reference The desired d current
      * @param i_q_reference The desired q current
      * @note this function shuold only be used when the control loop control type is FOC
+     * @return The status of the control loop
      */
-    void run_current_control(float i_d_reference, float i_q_reference);
+    ControlLoopStatus run_current_control(float i_d_reference, float i_q_reference);
 
     ~BrushlessControlLoop() = default;
 
@@ -100,6 +132,7 @@ class BrushlessControlLoop : public ControlLoop {
     bldc_rotor_estimator::BldcElectricalRotorPositionEstimator& rotor_position_estimator_;
     // Control loop parameters
     BrushlessControlLoopParams* params_ = nullptr;
+    BrushlessControlLoopStatus status_;
 
     // Control loop state variables
     utime_t time_at_start_ = 0;

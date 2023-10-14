@@ -8,18 +8,32 @@
 
 // Make a class that inherits from StepperControlLoop so we can test it
 namespace control_loop {
+
+using namespace ::testing;
 class StepperControlLoopTest : public control_loop::StepperControlLoop {
    public:
     StepperControlLoopParams default_params{.i_hold = 0.5, .i_run = 1.0, .max_speed = 10.0};
 
-    hwbridge::MOCK_HBRIDGE bridge_a;
-    hwbridge::MOCK_HBRIDGE bridge_b;
-    basilisk_hal::MOCK_HAL_CLOCK clock;
+    BrushedControlLoop::BrushedControlLoopParams default_brushed_params{
+        .brake_mode = BrushedControlLoop::BrushedBrakeType::COAST,
+        .deadtime_us = 0.0f,
+        .current_controller_params = {.kp = 0.0f, .ki = 0.0f, .kd = 0.0f},
+    };
+
+    NiceMock<hwbridge::MOCK_HBRIDGE> bridge_a;
+    NiceMock<hwbridge::MOCK_HBRIDGE> bridge_b;
+    NiceMock<basilisk_hal::MOCK_HAL_CLOCK> clock;
 
     BrushedControlLoop brushed_control_loop_a{bridge_a, clock};
     BrushedControlLoop brushed_control_loop_b{bridge_b, clock};
 
     StepperControlLoopTest() : StepperControlLoop(brushed_control_loop_a, brushed_control_loop_b, clock) {}
+
+    void init_brushed_control_loops() {
+        brushed_control_loop_a.init(&default_brushed_params);
+        brushed_control_loop_b.init(&default_brushed_params);
+    }
+
     // Make the private functions public so we can test them
     using StepperControlLoop::determine_current_setpoints;
 
@@ -49,6 +63,33 @@ TEST(stepper_motor_test, test_current_setpoint) {
     current_setpoint_scalars = stepper_control_loop_test.determine_current_setpoints(1.0, 3 * math::M_PI_FLOAT / 2);
     EXPECT_NEAR(current_setpoint_scalars.first, 0.0, math::ACCEPTABLE_FLOAT_ERROR);
     EXPECT_NEAR(current_setpoint_scalars.second, -1.0, math::ACCEPTABLE_FLOAT_ERROR);
+}
+
+// Test that an uninitialized control loop returns an error
+TEST(stepper_motor_test, test_uninitialized_control_loop) {
+    StepperControlLoopTest stepper_control_loop_test;
+    // Run the control loop with a speed of 0
+    auto status = stepper_control_loop_test.run(0);
+    EXPECT_EQ(status, StepperControlLoop::StepperControlLoopStatus::ControlLoopBaseStatus::ERROR);
+
+    // Poll the StepperControlLoopStatus for the error
+    auto stepper_status = stepper_control_loop_test.get_status();
+    EXPECT_EQ(stepper_status.error, StepperControlLoop::StepperControlLoopStatus::StepperControlLoopError::PARAMS_NOT_SET);
+
+    // Now, initialize the control loop
+    stepper_control_loop_test.init(&stepper_control_loop_test.default_params);
+
+    stepper_control_loop_test.init_brushed_control_loops();
+
+    // Run the control loop with a speed of 0
+    status = stepper_control_loop_test.run(0.0f);
+    // Poll the StepperControlLoopStatus for the error
+    stepper_status = stepper_control_loop_test.get_status();
+
+    // Ensure that the status is OK
+    EXPECT_EQ(status, StepperControlLoop::StepperControlLoopStatus::ControlLoopBaseStatus::OK);
+    // Ensure that the error is NO_ERROR
+    EXPECT_EQ(stepper_status.error, StepperControlLoop::StepperControlLoopStatus::StepperControlLoopError::NO_ERROR);
 }
 
 }  // namespace control_loop

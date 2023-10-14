@@ -12,7 +12,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_GMOCK ON)
 
 #enable Werror, Wextra, Wall, pedantic, and pedantic-errors
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wextra -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wextra -Wall -Og -g")
 
 # enable testing
 enable_testing()

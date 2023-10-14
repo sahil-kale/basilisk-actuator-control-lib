@@ -11,13 +11,35 @@ void StepperControlLoop::init(StepperControlLoopParams* params) {
 
     // Set the previous time to the current time
     previous_time_ = clock_.get_time_us();
+
+    // Reset the status
+    status_.reset();
+}
+
+void StepperControlLoop::StepperControlLoopStatus::reset() {
+    // Reset the status
+    status = ControlLoopStatus::ControlLoopBaseStatus::OK;
+    error = StepperControlLoopError::NO_ERROR;
+    warning = StepperControlLoopWarning::NO_WARNING;
+}
+
+void StepperControlLoop::StepperControlLoopStatus::compute_base_status() {
+    // Set the error and warning
+    if (error != StepperControlLoopError::NO_ERROR) {
+        status = ControlLoopStatus::ControlLoopBaseStatus::ERROR;
+    } else if (warning != StepperControlLoopWarning::NO_WARNING) {
+        status = ControlLoopStatus::ControlLoopBaseStatus::WARNING;
+    } else {
+        status = ControlLoopStatus::ControlLoopBaseStatus::OK;
+    }
 }
 
 // Run the stepper control loop
-void StepperControlLoop::run(float speed) {
+ControlLoop::ControlLoopStatus StepperControlLoop::run(float speed) {
     do {
         if (params_ == nullptr) {
-            // If the params are not set, return
+            // If the params are not set, then return an error
+            status_.error = StepperControlLoopStatus::StepperControlLoopError::PARAMS_NOT_SET;
             break;
         }
         // First, integrate the electrical angle based on the speed
@@ -37,6 +59,10 @@ void StepperControlLoop::run(float speed) {
         bridge_b_.run_constant_current(current_setpoint_scalars.second);
 
     } while (false);
+
+    // Compute the base status
+    status_.compute_base_status();
+    return status_;
 }
 
 std::pair<float, float> StepperControlLoop::determine_current_setpoints(float desired_current, float electrical_angle) {

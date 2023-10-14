@@ -13,44 +13,77 @@ void BrushedControlLoop::init(BrushedControlLoopParams* params) {
     current_controller_.set_kp(params_->current_controller_params.kp);
     current_controller_.set_ki(params_->current_controller_params.ki);
     current_controller_.set_kd(params_->current_controller_params.kd);
+
+    // reset the status
+    status_.reset();
 }
 
-void BrushedControlLoop::run(float speed) {
-    // Get the current time
-    utime_t current_time = clock_.get_time_us();
-    // Get the desired state
-    BrushedControlLoopState desired_state =
-        get_desired_state(speed, last_speed_, state_, current_time, deadtime_start_time_, params_->deadtime_us);
+void BrushedControlLoop::BrushedControlLoopStatus::reset() {
+    // Reset the status
+    status = ControlLoopStatus::ControlLoopBaseStatus::OK;
+    error = BrushedControlLoopError::NO_ERROR;
+    warning = BrushedControlLoopWarning::NO_WARNING;
+}
 
-    // If the desired state is different than the current state, then we need to transition to the desired state
-    if (desired_state != state_) {
-        // If the desired state is STOP, then we need to set the deadtime start time
-        if (desired_state == BrushedControlLoopState::STOP) {
-            deadtime_start_time_ = current_time;
-            // Reset the current controller duty cycle
-            current_controller_duty_cycle_ = 0.0f;
-        }
-        // If the desired state is DEADTIME_PAUSE, then we need to set the deadtime start time
-        else if (desired_state == BrushedControlLoopState::DEADTIME_PAUSE) {
-            deadtime_start_time_ = current_time;
-        }
-        // Otherwise, we need to set the deadtime start time to 0
-        else {
-            deadtime_start_time_ = 0;
-        }
-
-        // Set the state to the desired state
-        state_ = desired_state;
+void BrushedControlLoop::BrushedControlLoopStatus::compute_base_status() {
+    // Set the error and warning
+    if (error != BrushedControlLoopError::NO_ERROR) {
+        status = ControlLoopStatus::ControlLoopBaseStatus::ERROR;
+    } else if (warning != BrushedControlLoopWarning::NO_WARNING) {
+        status = ControlLoopStatus::ControlLoopBaseStatus::WARNING;
+    } else {
+        status = ControlLoopStatus::ControlLoopBaseStatus::OK;
     }
+}
 
-    // Get the desired output
-    hwbridge::HBridge::HBridgeInput bridge_input = run_state(speed, state_);
+ControlLoop::ControlLoopStatus BrushedControlLoop::run(float speed) {
+    do {
+        // if the params are not set, then return an error
+        if (params_ == nullptr) {
+            status_.error = BrushedControlLoopStatus::BrushedControlLoopError::PARAMS_NOT_SET;
+            break;
+        }
+        // Get the current time
+        utime_t current_time = clock_.get_time_us();
+        // Get the desired state
+        BrushedControlLoopState desired_state =
+            get_desired_state(speed, last_speed_, state_, current_time, deadtime_start_time_, params_->deadtime_us);
 
-    // Run the bridge
-    bridge_.run(bridge_input);
+        // If the desired state is different than the current state, then we need to transition to the desired state
+        if (desired_state != state_) {
+            // If the desired state is STOP, then we need to set the deadtime start time
+            if (desired_state == BrushedControlLoopState::STOP) {
+                deadtime_start_time_ = current_time;
+                // Reset the current controller duty cycle
+                current_controller_duty_cycle_ = 0.0f;
+            }
+            // If the desired state is DEADTIME_PAUSE, then we need to set the deadtime start time
+            else if (desired_state == BrushedControlLoopState::DEADTIME_PAUSE) {
+                deadtime_start_time_ = current_time;
+            }
+            // Otherwise, we need to set the deadtime start time to 0
+            else {
+                deadtime_start_time_ = 0;
+            }
 
-    // Update the last speed
-    last_speed_ = speed;
+            // Set the state to the desired state
+            state_ = desired_state;
+        }
+
+        // Get the desired output
+        hwbridge::HBridge::HBridgeInput bridge_input = run_state(speed, state_);
+
+        // Run the bridge
+        bridge_.run(bridge_input);
+
+        // Update the last speed
+        last_speed_ = speed;
+    } while (false);
+
+    // Compute the base status
+    status_.compute_base_status();
+
+    return status_;
 }
 
 BrushedControlLoop::BrushedControlLoopState BrushedControlLoop::get_desired_state(float desired_speed, float previous_speed,

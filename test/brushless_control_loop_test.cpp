@@ -53,7 +53,7 @@ class BrushlessControlLoopTest : public BrushlessControlLoop {
 // Test the state machine transition from stop to start, and a time out makes it go back to stop
 TEST(BrushlessControlLoopTest, test_stop_to_start_to_run) {
     // Create a mock rotor sensor
-    bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
+    NiceMock<bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR> sector_sensor;
     // Initialize a sector sensor from hall
     bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 

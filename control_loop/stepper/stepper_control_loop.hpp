@@ -21,6 +21,36 @@ class StepperControlLoop : public ControlLoop {
         // by the number of pole pairs
     };
 
+    class StepperControlLoopStatus : public ControlLoopStatus {
+       public:
+        enum class StepperControlLoopError {
+            NO_ERROR,
+            MOTOR_SPEED_TOO_HIGH,
+            PARAMS_NOT_SET,
+        };
+        enum class StepperControlLoopWarning {
+            NO_WARNING,
+        };
+        StepperControlLoopStatus() : ControlLoopStatus() {}
+        StepperControlLoopWarning warning = StepperControlLoopWarning::NO_WARNING;
+        StepperControlLoopError error = StepperControlLoopError::NO_ERROR;
+
+        /**
+         * @brief reset the status
+         * @return void
+         */
+        void reset();
+
+        /**
+         * @brief compute the base status returned by the class
+         * @return void
+         */
+        void compute_base_status();
+    };
+
+    // Provide a const getter for the status
+    const StepperControlLoopStatus& get_status() const { return status_; }
+
     /**
      * @brief Construct a new StepperControlLoop object
      * @param bridge_a The HBridge object for the A motor
@@ -33,7 +63,7 @@ class StepperControlLoop : public ControlLoop {
 
     void init(StepperControlLoopParams* params);
 
-    void run(float speed);
+    ControlLoopStatus run(float speed);
 
    protected:
     /**
@@ -52,6 +82,9 @@ class StepperControlLoop : public ControlLoop {
 
     // Create 2 variables to store the current setpoints for the A and B motors
     float current_setpoint_a, current_setpoint_b = 0;
+
+    // Create a status object
+    StepperControlLoopStatus status_;
 };
 
 }  // namespace control_loop

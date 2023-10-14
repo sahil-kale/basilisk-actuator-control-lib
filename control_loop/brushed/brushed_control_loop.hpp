@@ -36,6 +36,35 @@ class BrushedControlLoop : public ControlLoop {
         BrushedControlLoopCurrentControllerParams current_controller_params;
     };
 
+    class BrushedControlLoopStatus : public ControlLoopStatus {
+       public:
+        enum class BrushedControlLoopError {
+            NO_ERROR,
+            PARAMS_NOT_SET,
+        };
+        enum class BrushedControlLoopWarning {
+            NO_WARNING,
+        };
+        BrushedControlLoopStatus() : ControlLoopStatus() {}
+        BrushedControlLoopWarning warning = BrushedControlLoopWarning::NO_WARNING;
+        BrushedControlLoopError error = BrushedControlLoopError::NO_ERROR;
+
+        /**
+         * @brief reset the status
+         * @return void
+         */
+        void reset();
+
+        /**
+         * @brief compute the base status returned by the class
+         * @return void
+         */
+        void compute_base_status();
+    };
+
+    // Provide a const getter for the status
+    const BrushedControlLoopStatus& get_status() const { return status_; }
+
     enum class BrushedControlLoopState {
         STOP,
         RUN,
@@ -49,7 +78,7 @@ class BrushedControlLoop : public ControlLoop {
      */
     void init(BrushedControlLoopParams* params);
 
-    void run(float speed) override;
+    ControlLoopStatus run(float speed) override;
 
     /**
      * @brief Run the motor at a constant current
@@ -71,6 +100,9 @@ class BrushedControlLoop : public ControlLoop {
     pid::PID<float> current_controller_;
     // Define a variable to store the duty cycle commanded by the current controller
     float current_controller_duty_cycle_ = 0.0f;
+
+    // Define a status object
+    BrushedControlLoopStatus status_;
 
     /**
      * @brief Get the desired state of the control loop
