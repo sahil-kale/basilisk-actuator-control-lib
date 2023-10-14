@@ -38,13 +38,8 @@ template <typename T>
 T PID<T>::calculate(T actual, T setpoint) {
     // Calculate the error
     T error = setpoint - actual;
-    // Poll the time
-    utime_t current_time = last_time;
-    float dt_s = 1;  // Default to 1 second if no clock is registered
-    if (clock != nullptr) {
-        const utime_t current_time = clock->get_time_us();
-        dt_s = clock->get_dt_s(current_time, last_time);
-    }
+    const utime_t current_time = clock.get_time_us();
+    const float dt_s = clock.get_dt_s(current_time, last_time);
 
     // Calculate the integral term
     integral += error * dt_s;
@@ -59,13 +54,7 @@ T PID<T>::calculate(T actual, T setpoint) {
     derivative = (error - previous_error) / dt_s;
     // Store the error for the next time
     previous_error = error;
-    if (clock != nullptr) {
-        last_time = current_time;
-    }
-    else
-    {
-        last_time += dt_s;
-    }
+    last_time = current_time;
 
     T output = error * kp + integral * ki + derivative * kd;
 
@@ -81,12 +70,7 @@ template <typename T>
 void PID<T>::reset() {
     integral = 0;
     previous_error = 0;
-}
-
-// Register a clock object to be used for timing
-template <typename T>
-void PID<T>::register_clock(basilisk_hal::HAL_CLOCK* clock) {
-    this->clock = clock;
+    // last_time = clock.get_time_us();
 }
 
 // Set the maximum and minimum output values

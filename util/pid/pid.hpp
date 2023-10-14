@@ -21,16 +21,13 @@ class PID {
      * @param max_output The minimum output value
      * @param integral_windup The integral windup value
      */
-    PID(float kp, float ki, float kd, T min_output, T max_output, float integral_windup, basilisk_hal::HAL_CLOCK* clock = nullptr)
+    PID(float kp, float ki, float kd, T min_output, T max_output, float integral_windup, basilisk_hal::HAL_CLOCK& clock)
         : kp(kp), ki(ki), kd(kd), max_output(max_output), min_output(min_output), integral_windup(integral_windup), clock(clock) {
         reset();
     }
 
     // Reset the PID controller
     void reset();
-
-    // Register a clock object to be used for timing
-    void register_clock(basilisk_hal::HAL_CLOCK* clock);
 
     // PID getter functions (marked as const)
     float get_kp() const;
@@ -69,7 +66,7 @@ class PID {
     T previous_error;
 
     // Clock object to be used for timing
-    basilisk_hal::HAL_CLOCK* clock = nullptr;
+    basilisk_hal::HAL_CLOCK& clock;
     utime_t last_time = 0;
 };
 

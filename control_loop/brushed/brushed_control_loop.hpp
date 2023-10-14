@@ -14,7 +14,7 @@ namespace control_loop {
 class BrushedControlLoop : public ControlLoop {
    public:
     BrushedControlLoop(hwbridge::HBridge& bridge, basilisk_hal::HAL_CLOCK& clock)
-        : bridge_(bridge), clock_(clock), current_controller_{0, 0, 0, 1.0f, -1.0f, 0} {}
+        : bridge_(bridge), clock_(clock), current_controller_{0, 0, 0, 1.0f, -1.0f, 0, clock_} {}
 
     class BrushedControlLoopCurrentControllerParams {
        public:
