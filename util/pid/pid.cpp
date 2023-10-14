@@ -38,13 +38,16 @@ template <typename T>
 T PID<T>::calculate(T actual, T setpoint) {
     // Calculate the error
     T error = setpoint - actual;
+    // Poll the time
+    utime_t current_time = last_time;
+    float dt_s = 1;  // Default to 1 second if no clock is registered
+    if (clock != nullptr) {
+        const utime_t current_time = clock->get_time_us();
+        dt_s = clock->get_dt_s(current_time, last_time);
+    }
 
     // Calculate the integral term
-    if (clock != nullptr) {
-        integral += error * (clock->get_time_us() - last_time) / clock->kMicrosecondsPerSecond;
-    } else {
-        integral += error;
-    }
+    integral += error * dt_s;
     // Clamp the integral term
     if (integral_windup != 0) {
         math::clamp(integral, -integral_windup, integral_windup);
@@ -53,15 +56,15 @@ T PID<T>::calculate(T actual, T setpoint) {
     float derivative = 0;
 
     // Calculate the derivative term
-    if (clock != nullptr) {
-        derivative = (error - previous_error) / clock->get_time_us();
-    } else {
-        derivative = (error - previous_error);
-    }
+    derivative = (error - previous_error) / dt_s;
     // Store the error for the next time
     previous_error = error;
     if (clock != nullptr) {
-        last_time = clock->get_time_us();
+        last_time = current_time;
+    }
+    else
+    {
+        last_time += dt_s;
     }
 
     T output = error * kp + integral * ki + derivative * kd;

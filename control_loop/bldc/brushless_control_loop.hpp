@@ -64,7 +64,11 @@ class BrushlessControlLoop : public ControlLoop {
 
     BrushlessControlLoop(hwbridge::Bridge3Phase& motor, basilisk_hal::HAL_CLOCK& clock,
                          bldc_rotor_estimator::BldcElectricalRotorPositionEstimator& rotor_position_estimator)
-        : bridge_(motor), clock_(clock), rotor_position_estimator_(rotor_position_estimator) {}
+        : bridge_(motor),
+          clock_(clock),
+          rotor_position_estimator_(rotor_position_estimator),
+          pid_q_current_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, &clock),
+          pid_d_current_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, &clock) {}
 
     /**
      * @brief Initialize the control loop
@@ -98,8 +102,8 @@ class BrushlessControlLoop : public ControlLoop {
     BrushlessControlLoopType control_loop_type_ = BrushlessControlLoopType::OPEN_LOOP;
 
     // Create 2 PID controllers for the Q and D currents
-    pid::PID<float> pid_q_current_{0.0, 0, 0, 0, 0, 0};
-    pid::PID<float> pid_d_current_{0.0, 0, 0, 0, 0, 0};
+    pid::PID<float> pid_q_current_;
+    pid::PID<float> pid_d_current_;
     float desired_rotor_angle_open_loop_ = 0.0f;
 
     // duty cycles

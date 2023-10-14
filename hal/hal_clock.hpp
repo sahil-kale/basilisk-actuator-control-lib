@@ -17,6 +17,28 @@ class HAL_CLOCK {
      */
     virtual utime_t get_time_us() = 0;
 
+    /**
+     * @brief Get the current time in seconds
+     * @return The current time in seconds
+     */
+    float get_time_s() { return get_time_us() / kMicrosecondsPerSecond; }
+
+    /**
+     * @brief Get the time difference between two times in microseconds
+     * @param t1 The first time
+     * @param t2 The second time
+     * @return The time difference in microseconds
+     */
+    static utime_t get_dt_us(utime_t t1, utime_t t2) { return t1 - t2; }
+
+    /**
+     * @brief Get the time difference between two times in microseconds
+     * @param t1 The first time
+     * @param t2 The second time
+     * @return The time difference in microseconds
+     */
+    static float get_dt_s(utime_t t1, utime_t t2) { return static_cast<float>(get_dt_us(t1, t2)) / kMicrosecondsPerSecond; }
+
     // Add a constant for the number of microseconds in a second
     static constexpr float kMicrosecondsPerSecond = 1000000.0f;
 };

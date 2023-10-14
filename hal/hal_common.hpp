@@ -16,6 +16,6 @@ typedef enum {
 template <class T>
 void IGNORE(const T&) {}
 
-typedef uint64_t utime_t;
+typedef int64_t utime_t;
 
 #endif
