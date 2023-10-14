@@ -93,8 +93,8 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run_current_control(float i
     } else {
         // Update the id reference
         i_d_reference_ = i_d_reference;
-        // Now, run the FOC control loop with the speed multiplied by the speed to iq gain
-        UNUSED(run(i_q_reference * params_->foc_params.speed_to_iq_gain));
+        // Now, run the FOC control loop with the speed divided by the speed to iq gain
+        UNUSED(run(i_q_reference / params_->foc_params.speed_to_iq_gain));
     }
 
     return status_;
@@ -103,6 +103,9 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run_current_control(float i
 ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
     // Get the current time
     utime_t current_time_us = clock_.get_time_us();
+
+    // Clamp the speed
+    math::clamp(speed, -1.0f, 1.0f);
 
     hwbridge::Bridge3Phase::phase_command_t phase_commands[3] = {0, false};
 
