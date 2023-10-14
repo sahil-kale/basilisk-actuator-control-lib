@@ -59,6 +59,14 @@ void wraparound(T& value, const T& min, const T& max) {
     }
 }
 
+// Determine tau from f_c
+/**
+ * @brief Determine tau from f_c
+ * @param f_c The cutoff frequency
+ * @return float The time constant
+ */
+float determine_tau_from_f_c(float f_c);
+
 /**
  * @brief Low pass filter the given input value.
  * @param input The input value

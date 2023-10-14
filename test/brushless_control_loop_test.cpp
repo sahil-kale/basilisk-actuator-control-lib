@@ -34,6 +34,8 @@ class BrushlessControlLoopTest : public BrushlessControlLoop {
         .speed_to_iq_gain = 0.0f,
         .i_d_reference_default = 0.0f,
 
+        .current_lpf_fc = 0.0f,
+
         .pwm_control_type = BrushlessControlLoop::BrushlessFocPwmControlType::SINE};
 
     BrushlessControlLoop::BrushlessControlLoopParams test_params_{

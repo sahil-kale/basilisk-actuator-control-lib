@@ -52,6 +52,8 @@ class BrushlessControlLoop : public ControlLoop {
         float speed_to_iq_gain;  // Converts speed to iq reference
         float i_d_reference_default;
 
+        float current_lpf_fc;  // The cutoff frequency of the low pass filter for the current controller
+
         BrushlessFocPwmControlType pwm_control_type;
     };
 
@@ -169,10 +171,12 @@ class BrushlessControlLoop : public ControlLoop {
     /**
      * @brief Run the FOC control loop
      * @param motor_speed The desired speed of the motor (note: this is multiplied by the speed_to_iq_gain)
-     *  @param current_time The current time
+     * @param current_time The current time
+     * @param last_run_time The last time the control loop was run
      * @param phase_commands The phase commands to be filled in
      */
-    void run_foc(float speed, utime_t current_time_us, hwbridge::Bridge3Phase::phase_command_t phase_commands[3]);
+    void run_foc(float speed, utime_t current_time_us, utime_t last_run_time,
+                 hwbridge::Bridge3Phase::phase_command_t phase_commands[3]);
 
     /**
      * @brief Run the trap control loop

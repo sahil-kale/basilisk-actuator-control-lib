@@ -149,7 +149,7 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
         case BrushlessControlLoop::BrushlessControlLoopState::RUN: {
             switch (params_->commutation_type) {
                 case BrushlessControlLoopCommutationType::FOC: {
-                    run_foc(speed, current_time_us, phase_commands);
+                    run_foc(speed, current_time_us, last_run_time_, phase_commands);
                 } break;
                 case BrushlessControlLoopCommutationType::TRAPEZOIDAL: {
                     run_trap(speed, phase_commands);
@@ -174,7 +174,7 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
     return status_;
 }
 
-void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us,
+void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t last_run_time_us,
                                    hwbridge::Bridge3Phase::phase_command_t phase_commands[3]) {
     // Get the bus voltage
     float bus_voltage = 0.0f;
@@ -210,6 +210,14 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us,
             // Do a Park transform
             math::park_transform_result_t park_transform_currents =
                 math::park_transform(clarke_transform.alpha, clarke_transform.beta, rotor_position_);
+
+            // Determine the tau for the LPF for the current controller
+            const float tau = math::determine_tau_from_f_c(params_->foc_params.current_lpf_fc);
+            const float dt = clock_.get_dt_s(current_time_us, last_run_time_us);
+
+            // LPF the currents
+            i_direct_ = math::low_pass_filter(park_transform_currents.d, i_direct_, tau, dt);
+            i_quadrature_ = math::low_pass_filter(park_transform_currents.q, i_quadrature_, tau, dt);
 
             i_direct_ = park_transform_currents.d;
             i_quadrature_ = park_transform_currents.q;
