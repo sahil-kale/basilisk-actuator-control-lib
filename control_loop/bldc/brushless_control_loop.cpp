@@ -27,6 +27,9 @@ void BrushlessControlLoop::init(BrushlessControlLoop::BrushlessControlLoopParams
     // Reset the PID controllers
     pid_d_current_.reset();
     pid_q_current_.reset();
+
+    // Load the default id reference
+    i_d_reference_ = params_->foc_params.i_d_reference_default;
 }
 
 BrushlessControlLoop::BrushlessControlLoopState BrushlessControlLoop::get_desired_state(
@@ -55,6 +58,17 @@ BrushlessControlLoop::BrushlessControlLoopState BrushlessControlLoop::get_desire
     }
 
     return desired_state;
+}
+
+void BrushlessControlLoop::run_current_control(float i_d_reference, float i_q_reference) {
+    if (params_->commutation_type != BrushlessControlLoopCommutationType::FOC) {
+        return;
+    }
+    // Update the id reference
+    i_d_reference_ = i_d_reference;
+
+    // Now, run the FOC control loop with the speed multiplied by the speed to iq gain
+    run(i_q_reference * params_->foc_params.speed_to_iq_gain);
 }
 
 void BrushlessControlLoop::run(float speed) {
@@ -163,7 +177,7 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us,
             // Run the PI controller
             // The below hack for speed is kinda hacky and should be reverted lol
             V_quadrature_ += pid_q_current_.calculate(i_quadrature_, speed * params_->foc_params.speed_to_iq_gain);
-            V_direct_ += pid_d_current_.calculate(i_direct_, params_->foc_params.i_d_reference);
+            V_direct_ += pid_d_current_.calculate(i_direct_, i_d_reference_);
         } break;
         default:
             break;

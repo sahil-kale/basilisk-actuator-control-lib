@@ -32,7 +32,7 @@ class BrushlessControlLoopTest : public BrushlessControlLoop {
         .foc_start_timeout_period_us = 0,
 
         .speed_to_iq_gain = 0.0f,
-        .i_d_reference = 0.0f,
+        .i_d_reference_default = 0.0f,
 
         .pwm_control_type = BrushlessControlLoop::BrushlessFocPwmControlType::SINE};
 

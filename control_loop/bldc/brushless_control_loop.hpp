@@ -50,7 +50,7 @@ class BrushlessControlLoop : public ControlLoop {
         utime_t foc_start_timeout_period_us;
 
         float speed_to_iq_gain;  // Converts speed to iq reference
-        float i_d_reference;
+        float i_d_reference_default;
 
         BrushlessFocPwmControlType pwm_control_type;
     };
@@ -83,6 +83,14 @@ class BrushlessControlLoop : public ControlLoop {
      */
     void run(float speed) override;
 
+    /**
+     * @brief Run the control loop in current control mode
+     * @param i_d_reference The desired d current
+     * @param i_q_reference The desired q current
+     * @note this function shuold only be used when the control loop control type is FOC
+     */
+    void run_current_control(float i_d_reference, float i_q_reference);
+
     ~BrushlessControlLoop() = default;
 
    protected:
@@ -111,6 +119,7 @@ class BrushlessControlLoop : public ControlLoop {
 
     // FOC variables
     float i_quadrature_, i_direct_, V_quadrature_, V_direct_, V_alpha_, V_beta_ = 0.0f;
+    float i_d_reference_ = 0.0f;
 
     /**
      * @brief Get the desired state of the control loop
