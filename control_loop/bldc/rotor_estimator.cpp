@@ -131,8 +131,7 @@ bool BldcElectricalRotorPositionEstimatorFromHall::is_estimation_valid() {
     return ret;
 }
 
-app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::init(
-    BldcElectricalRotorPositionEstimatorFromHallParams_t* params) {
+app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::init(BldcElectricalRotorPositionEstimatorFromHallParams* params) {
     app_hal_status_E ret = APP_HAL_OK;
 
     // Set the internal params pointer

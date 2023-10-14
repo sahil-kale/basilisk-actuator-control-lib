@@ -87,18 +87,19 @@ class BldcElectricalRotorPositionEstimatorFromHall : public BldcElectricalRotorP
                                                  bldc_rotor_estimator::BldcRotorSectorSensor& sector_sensor)
         : clock_(clock), sector_sensor_(sector_sensor) {}
 
-    typedef struct BldcElectricalRotorPositionEstimatorFromHallParams {
+    class BldcElectricalRotorPositionEstimatorFromHallParams {
+       public:
         uint16_t num_hall_updates_to_start;
         float max_estimate_angle_overrun;  // How much to allow the estimator to overrun the hall angle (radians)
         bool enable_interpolation;         // Whether to enable interpolation between hall updates or just use the hall angle
-    } BldcElectricalRotorPositionEstimatorFromHallParams_t;
+    };
 
     /**
      * @brief Initialize the rotor position estimator
      * @param params The rotor position estimator parameters
      * @return app_hal_status_E the status of the initialization
      */
-    app_hal_status_E init(BldcElectricalRotorPositionEstimatorFromHallParams_t* params);
+    app_hal_status_E init(BldcElectricalRotorPositionEstimatorFromHallParams* params);
 
     /**
      * @brief Update the rotor position estimator
@@ -156,7 +157,7 @@ class BldcElectricalRotorPositionEstimatorFromHall : public BldcElectricalRotorP
     utime_t time_at_last_hall_update_ = 0;
     utime_t time_update_last_called_ = 0;
     uint64_t number_of_hall_updates_ = 0;
-    BldcElectricalRotorPositionEstimatorFromHallParams_t* params_ = nullptr;
+    BldcElectricalRotorPositionEstimatorFromHallParams* params_ = nullptr;
 };
 
 }  // namespace bldc_rotor_estimator

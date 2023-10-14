@@ -263,6 +263,11 @@ void BrushlessControlLoop::determine_inverter_duty_cycles_foc(float theta, float
             duty_cycle_u_h_ = duty_cycles.dutyCycleU;
             duty_cycle_v_h_ = duty_cycles.dutyCycleV;
             duty_cycle_w_h_ = duty_cycles.dutyCycleW;
+
+            // No matter what, the duty cycles should be between -1 and 1
+            math::clamp(duty_cycle_u_h_, -1.0f, 1.0f);
+            math::clamp(duty_cycle_v_h_, -1.0f, 1.0f);
+            math::clamp(duty_cycle_w_h_, -1.0f, 1.0f);
         } break;
         case BrushlessControlLoop::BrushlessFocPwmControlType::SINE: {
             // Do an inverse Park transform

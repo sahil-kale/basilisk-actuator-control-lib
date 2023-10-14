@@ -20,12 +20,11 @@ TEST(RotorEstimatorTest, test_angle_one_for_one) {
     bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
     // Make a param struct for the rotor estimator
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams_t
-        params{
-            .num_hall_updates_to_start = 10,
-            .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
-            .enable_interpolation = true,
-        };
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams params{
+        .num_hall_updates_to_start = 10,
+        .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
+        .enable_interpolation = true,
+    };
 
     rotor_estimator.init(&params);
 
@@ -62,12 +61,11 @@ TEST(RotorEstimatorTest, test_angle_underflow) {
     // Initialize a sector sensor from hall
     bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams_t
-        params{
-            .num_hall_updates_to_start = 10,
-            .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
-            .enable_interpolation = true,
-        };
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams params{
+        .num_hall_updates_to_start = 10,
+        .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
+        .enable_interpolation = true,
+    };
 
     rotor_estimator.init(&params);
 
@@ -104,12 +102,11 @@ TEST(RotorEstimatorTest, test_angle_interpolation_disabled) {
     bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
     // Make a param struct for the rotor estimator
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams_t
-        params{
-            .num_hall_updates_to_start = 10,
-            .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
-            .enable_interpolation = false,
-        };
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams params{
+        .num_hall_updates_to_start = 10,
+        .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
+        .enable_interpolation = false,
+    };
 
     rotor_estimator.init(&params);
 
