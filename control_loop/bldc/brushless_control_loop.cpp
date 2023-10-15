@@ -230,9 +230,14 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
         default:
             break;
     }
-    // Limit the Vd and Vq
-    math::clamp(V_direct_, -bus_voltage, bus_voltage);
-    math::clamp(V_quadrature_, -bus_voltage, bus_voltage);
+    // Limit the Vd and Vq by first calculating the modulus of the vector
+    const float V_modulus = sqrtf(V_direct_ * V_direct_ + V_quadrature_ * V_quadrature_);
+    // If the modulus is greater than the bus voltage, then we need to scale the voltage vector
+    if (V_modulus > bus_voltage) {
+        // Scale the voltage vector
+        V_direct_ = V_direct_ * bus_voltage / V_modulus;
+        V_quadrature_ = V_quadrature_ * bus_voltage / V_modulus;
+    }
 
     // Determine the appropriate duty cycles for the inverter
     determine_inverter_duty_cycles_foc(rotor_position_, V_direct_, V_quadrature_, bus_voltage,
@@ -263,11 +268,6 @@ void BrushlessControlLoop::determine_inverter_duty_cycles_foc(float theta, float
             duty_cycle_u_h_ = duty_cycles.dutyCycleU;
             duty_cycle_v_h_ = duty_cycles.dutyCycleV;
             duty_cycle_w_h_ = duty_cycles.dutyCycleW;
-
-            // No matter what, the duty cycles should be between -1 and 1
-            math::clamp(duty_cycle_u_h_, -1.0f, 1.0f);
-            math::clamp(duty_cycle_v_h_, -1.0f, 1.0f);
-            math::clamp(duty_cycle_w_h_, -1.0f, 1.0f);
         } break;
         case BrushlessControlLoop::BrushlessFocPwmControlType::SINE: {
             // Do an inverse Park transform
@@ -298,6 +298,11 @@ void BrushlessControlLoop::determine_inverter_duty_cycles_foc(float theta, float
             duty_cycle_w_h_ = 0.0f;
             break;
     }
+
+    // No matter what, the duty cycles should be between 0 and 1
+    math::clamp(duty_cycle_u_h_, 0.0f, 1.0f);
+    math::clamp(duty_cycle_v_h_, 0.0f, 1.0f);
+    math::clamp(duty_cycle_w_h_, 0.0f, 1.0f);
 
     // Set the duty cycles
     phase_command_u.duty_cycle_high_side = duty_cycle_u_h_;
