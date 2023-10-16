@@ -242,6 +242,48 @@ TEST(RotorEstimatorTest, test_sector_position_offset_compensation_disabled) {
     EXPECT_FLOAT_EQ(rotor_position, 11.0f * math::M_PI_FLOAT / 6.0f);
 }
 
+// Test that with a position offset compensation flag of 1 with a max angle tolerance of 2PI/3 when
+// the sector changes from 5 to 0, the estimation is valid
+TEST(RotorEstimatorTest, test_position_offset_compensation_rollover) {
+    bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
+    // Initialize a sector sensor from hall
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+
+    // Make a param struct for the rotor estimator
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams params{
+        .num_hall_updates_to_start = 0,
+        .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
+        .enable_interpolation = true,
+        .enable_sector_position_offset_compensation = true,
+    };
+
+    // Expect a call to get the sector position and ensure the reference is updated to return 5
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(5 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
+
+    rotor_estimator.init(&params);
+
+    // Expect a call to get the sector position and ensure the reference is updated to return 5
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(5 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
+
+    // Update the rotor position
+    rotor_estimator.update(500);
+
+    // Expect the estimation to be valid
+    EXPECT_TRUE(rotor_estimator.is_estimation_valid());
+
+    // Expect a call to get the sector position and ensure the reference is updated to return 0
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(0 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
+
+    // Update the rotor position
+    rotor_estimator.update(1000);
+
+    // Now, poll whether the estimation is valid, and expect it to be valid
+    EXPECT_TRUE(rotor_estimator.is_estimation_valid());
+}
+
 class SensorlessRotorSectorSensor : public BldcSensorlessRotorSectorSensor {
    public:
     SensorlessRotorSectorSensor(hwbridge::Bridge3Phase& bridge, basilisk_hal::HAL_CLOCK& mock_clock)

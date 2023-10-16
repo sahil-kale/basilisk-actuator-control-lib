@@ -125,7 +125,15 @@ bool BldcElectricalRotorPositionEstimatorFromHall::is_estimation_valid() {
     if (params_ != nullptr) {
         bool num_hall_updates_to_start = (number_of_hall_updates_ >= params_->num_hall_updates_to_start);
         // Also make the return conditional if the position estimate no greater than the param for tolerance
-        bool rotor_position_tolerance = (fabs(rotor_position_ - raw_hall_angle_) < params_->max_estimate_angle_overrun);
+        // compute the angle diff
+        float angle_diff = rotor_position_ - raw_hall_angle_;
+
+        // Account for over/underflow
+        // NOTE: if the rotor delta theta is greater than pi radians, then this detection will not work
+        math::wraparound(angle_diff, -math::M_PI_FLOAT, math::M_PI_FLOAT);
+
+        bool rotor_position_tolerance = (fabs(angle_diff) <= params_->max_estimate_angle_overrun);
+
         ret = num_hall_updates_to_start && rotor_position_tolerance;
     }
     return ret;
