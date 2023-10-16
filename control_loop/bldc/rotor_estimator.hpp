@@ -148,6 +148,7 @@ class BldcElectricalRotorPositionEstimatorFromHall : public BldcElectricalRotorP
      */
     app_hal_status_E reset_estimation() override;
 
+   private:
     basilisk_hal::HAL_CLOCK& clock_;
     bldc_rotor_estimator::BldcRotorSectorSensor& sector_sensor_;
     float rotor_position_ = 0.0f;

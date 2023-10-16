@@ -21,14 +21,14 @@ TEST(RotorEstimatorTest, test_angle_one_for_one) {
 
     // Make a param struct for the rotor estimator
     bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams params{
-        .num_hall_updates_to_start = 10,
-        .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
+        .num_hall_updates_to_start = 0,
+        .max_estimate_angle_overrun = 2.5f / 3.0f * M_PI,
         .enable_interpolation = true,
     };
 
     rotor_estimator.init(&params);
 
-    // Expect a call to get the sector position and ensure the reference is updated to return 3
+    // Expect a call to get the sector position and ensure the reference is updated to return
     EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
         .WillOnce(DoAll(SetArgReferee<0>(1 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
@@ -38,7 +38,7 @@ TEST(RotorEstimatorTest, test_angle_one_for_one) {
     float rotor_position = 0.0f;
     rotor_estimator.get_rotor_position(rotor_position);
 
-    EXPECT_FLOAT_EQ(rotor_position, 2.0f * 2.0f * M_PI / 6.0f);
+    EXPECT_FLOAT_EQ(rotor_position, 1.0f * 2.0f * M_PI / 6.0f);
 
     // Expect raw float angle to be 1.0f * 2.0f * M_PI / 6.0f
     float raw_hall_angle = 0.0f;
@@ -46,13 +46,22 @@ TEST(RotorEstimatorTest, test_angle_one_for_one) {
     EXPECT_FLOAT_EQ(raw_hall_angle, 1.0f * 2.0f * M_PI / 6.0f);
 
     // Expect the velocity to be (PI/3 rad) / (500 us) = 2094.395 rad/s
-    // However, we use compensated velocity, which is 2x the velocity due to the sudden velocity jump
-    // this is done to avoid discontinuities in the velocity
     const float actual_velocity = M_PI / (3.0f * (500.0f / mock_clock.kMicrosecondsPerSecond));
     const float compensated_velocity = 1.0f * actual_velocity;
     float rotor_velocity = 0.0f;
     rotor_estimator.get_rotor_velocity(rotor_velocity);
     EXPECT_FLOAT_EQ(rotor_velocity, compensated_velocity);
+
+    // Expect a call to get the sector position and ensure the reference is updated to return
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(1 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
+
+    // Update the rotor position with a utime of 1000
+    rotor_estimator.update(1000);
+
+    // Expect the rotor position to be 2.0f * M_PI / 6.0f
+    rotor_estimator.get_rotor_position(rotor_position);
+    EXPECT_FLOAT_EQ(rotor_position, 2.0f * 2.0f * M_PI / 6.0f);
 }
 
 TEST(RotorEstimatorTest, test_angle_underflow) {

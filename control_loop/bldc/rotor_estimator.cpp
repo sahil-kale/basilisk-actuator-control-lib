@@ -123,7 +123,7 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::reset_estimation(
 bool BldcElectricalRotorPositionEstimatorFromHall::is_estimation_valid() {
     bool ret = false;
     if (params_ != nullptr) {
-        bool num_hall_updates_to_start = (number_of_hall_updates_ > params_->num_hall_updates_to_start);
+        bool num_hall_updates_to_start = (number_of_hall_updates_ >= params_->num_hall_updates_to_start);
         // Also make the return conditional if the position estimate no greater than the param for tolerance
         bool rotor_position_tolerance = (fabs(rotor_position_ - raw_hall_angle_) < params_->max_estimate_angle_overrun);
         ret = num_hall_updates_to_start && rotor_position_tolerance;
@@ -155,6 +155,15 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
             break;
         }
 
+        if (is_estimation_valid() && params_->enable_interpolation) {
+            const float current_measurement_period =
+                (float)(time - time_update_last_called_) / basilisk_hal::HAL_CLOCK::kMicrosecondsPerSecond;
+            // Update the rotor position with the velocity estimate
+            rotor_position_ += compensated_velocity_ * current_measurement_period;
+            // Implement a wraparound
+            math::wraparound(rotor_position_, 0.0f, float(2.0f * M_PI));
+        }
+
         float raw_hall_angle = measured_electrical_angle;
         // We should not update velocity estimations if the raw hall angle is the same as the previous one
         if (fabs(raw_hall_angle - raw_hall_angle_) > 0.001f) {
@@ -179,15 +188,6 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
             this->raw_hall_angle_ = raw_hall_angle;
             time_at_last_hall_update_ = time;
             number_of_hall_updates_++;
-        }
-
-        if (params_->enable_interpolation) {
-            const float current_measurement_period =
-                (float)(time - time_update_last_called_) / basilisk_hal::HAL_CLOCK::kMicrosecondsPerSecond;
-            // Update the rotor position with the velocity estimate
-            rotor_position_ += compensated_velocity_ * current_measurement_period;
-            // Implement a wraparound
-            math::wraparound(rotor_position_, 0.0f, float(2.0f * M_PI));
         }
 
         time_update_last_called_ = time;
