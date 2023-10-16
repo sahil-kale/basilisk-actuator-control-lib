@@ -10,7 +10,7 @@ class MOCK_HBRIDGE : public HBridge {
    public:
     MOCK_METHOD(app_hal_status_E, run, (HBridgeInput input), (override));
     MOCK_METHOD(app_hal_status_E, get_current, (float& current), (override));
-    MOCK_METHOD(app_hal_status_E, get_voltage, (float& voltage), (override));
+    MOCK_METHOD(app_hal_status_E, get_bus_voltage, (float& voltage), (override));
 };
 
 }  // namespace hwbridge

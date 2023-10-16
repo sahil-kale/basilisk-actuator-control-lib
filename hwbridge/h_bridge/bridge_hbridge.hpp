@@ -50,7 +50,7 @@ class HBridge {
      * @param voltage The voltage across the HBridge
      * @return app_hal_status_E The status of the operation
      */
-    virtual app_hal_status_E get_voltage(float& voltage) = 0;
+    virtual app_hal_status_E get_bus_voltage(float& voltage) = 0;
 };
 
 }  // namespace hwbridge
