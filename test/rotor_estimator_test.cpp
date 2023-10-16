@@ -24,6 +24,7 @@ TEST(RotorEstimatorTest, test_angle_one_for_one) {
         .num_hall_updates_to_start = 0,
         .max_estimate_angle_overrun = 2.5f / 3.0f * M_PI,
         .enable_interpolation = true,
+        .enable_sector_position_offset_compensation = true,
     };
 
     rotor_estimator.init(&params);
@@ -38,7 +39,7 @@ TEST(RotorEstimatorTest, test_angle_one_for_one) {
     float rotor_position = 0.0f;
     rotor_estimator.get_rotor_position(rotor_position);
 
-    EXPECT_FLOAT_EQ(rotor_position, 1.0f * 2.0f * M_PI / 6.0f);
+    EXPECT_FLOAT_EQ(rotor_position, 0.5f * 2.0f * M_PI / 6.0f);
 
     // Expect raw float angle to be 1.0f * 2.0f * M_PI / 6.0f
     float raw_hall_angle = 0.0f;
@@ -61,7 +62,7 @@ TEST(RotorEstimatorTest, test_angle_one_for_one) {
 
     // Expect the rotor position to be 2.0f * M_PI / 6.0f
     rotor_estimator.get_rotor_position(rotor_position);
-    EXPECT_FLOAT_EQ(rotor_position, 2.0f * 2.0f * M_PI / 6.0f);
+    EXPECT_FLOAT_EQ(rotor_position, 1.5f * 2.0f * M_PI / 6.0f);
 }
 
 TEST(RotorEstimatorTest, test_angle_underflow) {
@@ -74,6 +75,7 @@ TEST(RotorEstimatorTest, test_angle_underflow) {
         .num_hall_updates_to_start = 10,
         .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
         .enable_interpolation = true,
+        .enable_sector_position_offset_compensation = true,
     };
 
     rotor_estimator.init(&params);
@@ -115,6 +117,7 @@ TEST(RotorEstimatorTest, test_angle_interpolation_disabled) {
         .num_hall_updates_to_start = 10,
         .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
         .enable_interpolation = false,
+        .enable_sector_position_offset_compensation = true,
     };
 
     rotor_estimator.init(&params);
@@ -129,7 +132,7 @@ TEST(RotorEstimatorTest, test_angle_interpolation_disabled) {
     float rotor_position = 0.0f;
     rotor_estimator.get_rotor_position(rotor_position);
 
-    EXPECT_FLOAT_EQ(rotor_position, 1.0f * 2.0f * M_PI / 6.0f);
+    EXPECT_FLOAT_EQ(rotor_position, 0.5f * 2.0f * M_PI / 6.0f);
 
     EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
         .WillOnce(DoAll(SetArgReferee<0>(1 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
@@ -139,7 +142,104 @@ TEST(RotorEstimatorTest, test_angle_interpolation_disabled) {
 
     rotor_estimator.get_rotor_position(rotor_position);
 
-    EXPECT_FLOAT_EQ(rotor_position, 1.0f * 2.0f * M_PI / 6.0f);
+    EXPECT_FLOAT_EQ(rotor_position, 0.5f * 2.0f * M_PI / 6.0f);
+}
+
+// Test the sector angle changing from 0 to 5. We should expect the rotor position to be 11pi/6 radians, NOT 10pi/6 radians
+TEST(RotorEstimatorTest, test_sector_position_offset_compensation) {
+    bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
+    // Initialize a sector sensor from hall
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+
+    // Make a param struct for the rotor estimator
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams params{
+        .num_hall_updates_to_start = 10,
+        .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
+        .enable_interpolation = false,
+        .enable_sector_position_offset_compensation = true,
+    };
+
+    // Expect a call to get the sector position and ensure the reference is updated to return 0
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(0 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
+
+    rotor_estimator.init(&params);
+
+    // Expect a call to get the sector position and ensure the reference is updated to return 0
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(0 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
+
+    // Update the rotor position
+    rotor_estimator.update(500);
+
+    // Get the rotor position
+    float rotor_position = 0.0f;
+    rotor_estimator.get_rotor_position(rotor_position);
+
+    // Expect the rotor position to be 0
+    EXPECT_FLOAT_EQ(rotor_position, 0.0f);
+
+    // Expect a call to get the sector position and ensure the reference is updated to return 5
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(5 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
+
+    // Update the rotor position
+    rotor_estimator.update(1000);
+
+    // Get the rotor position
+    rotor_estimator.get_rotor_position(rotor_position);
+
+    // Expect the rotor position to be 11pi/6
+    EXPECT_FLOAT_EQ(rotor_position, 11.0f * math::M_PI_FLOAT / 6.0f);
+}
+
+// Test the sector angle changing from 0 to 5. We should expect the rotor position to be 10pi/6 radians, NOT 11pi/6 radians when
+// sector position offset compensation is disabled
+TEST(RotorEstimatorTest, test_sector_position_offset_compensation_disabled) {
+    bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
+    // Initialize a sector sensor from hall
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+
+    // Make a param struct for the rotor estimator
+    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams params{
+        .num_hall_updates_to_start = 10,
+        .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
+        .enable_interpolation = false,
+        .enable_sector_position_offset_compensation = true,
+    };
+
+    // Expect a call to get the sector position and ensure the reference is updated to return 0
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(0 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
+
+    rotor_estimator.init(&params);
+
+    // Expect a call to get the sector position and ensure the reference is updated to return 0
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(0 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
+
+    // Update the rotor position
+    rotor_estimator.update(500);
+
+    // Get the rotor position
+    float rotor_position = 0.0f;
+    rotor_estimator.get_rotor_position(rotor_position);
+
+    // Expect the rotor position to be 0
+    EXPECT_FLOAT_EQ(rotor_position, 0.0f);
+
+    // Expect a call to get the sector position and ensure the reference is updated to return 5
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(5 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
+
+    // Update the rotor position
+    rotor_estimator.update(1000);
+
+    // Get the rotor position
+    rotor_estimator.get_rotor_position(rotor_position);
+
+    // Expect the rotor position to be 11pi/6
+    EXPECT_FLOAT_EQ(rotor_position, 11.0f * math::M_PI_FLOAT / 6.0f);
 }
 
 class SensorlessRotorSectorSensor : public BldcSensorlessRotorSectorSensor {

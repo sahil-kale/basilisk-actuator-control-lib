@@ -137,6 +137,13 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::init(BldcElectric
     // Set the internal params pointer
     params_ = params;
 
+    // If the params pointer is not null, then we should reset the rotor position estimation
+    if (params_ != nullptr) {
+        ret = reset_estimation();
+    } else {
+        ret = APP_HAL_ERROR;
+    }
+
     return ret;
 }
 
@@ -177,6 +184,10 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
             // NOTE: if the rotor delta theta is greater than pi radians, then this detection will not work
             math::wraparound(raw_hall_angle_diff, -math::M_PI_FLOAT, math::M_PI_FLOAT);
 
+            // NOTE: if the hall sensor is flicking back and forth between two sectors,
+            // the velocity estimate will be incorrect and cause the interpolation to flail.
+            // However, this scenario only occurs when the motor is starting up, super slow and will only
+            // occur if the hall sensor param of hall sensor updates to start is set to 0.
             velocity_ = raw_hall_angle_diff / time_delta_since_hall_update;
 
             // Calculate a compensated velocity to account for position error and smoothly compensate for it
@@ -185,6 +196,24 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
             // raw_hall_angle_diff));
 
             rotor_position_ = raw_hall_angle;
+
+            // Now, compensate for the rotor position error
+            // In a hall sensor, the rotor position is only known to within 60 degrees
+            // And the hall sensor reports the centre of each sector. We can compensate for this by
+            // adding or subtracting 30 degrees from the rotor position estimate depending on the
+            // sign of the velocity. This will make the rotor position estimate more accurate
+
+            if (params_->enable_sector_position_offset_compensation) {
+                if (velocity_ > 0.0f) {
+                    rotor_position_ -= math::M_PI_FLOAT / 6.0f;
+                } else {
+                    rotor_position_ += math::M_PI_FLOAT / 6.0f;
+                }
+
+                // Implement a wraparound
+                math::wraparound(rotor_position_, 0.0f, math::M_PI_FLOAT * 2.0f);
+            }
+
             this->raw_hall_angle_ = raw_hall_angle;
             time_at_last_hall_update_ = time;
             number_of_hall_updates_++;
