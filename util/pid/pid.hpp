@@ -30,9 +30,7 @@ class PID {
           min_output(min_output),
           integral_windup(integral_windup),
           clock(clock),
-          use_dt(use_dt) {
-        reset();
-    }
+          use_dt(use_dt) {}
 
     // Reset the PID controller
     void reset();
@@ -70,8 +68,8 @@ class PID {
     T min_output;
     float integral_windup;
     // Integral and previous error term storage
-    float integral;
-    T previous_error;
+    float integral{0};
+    T previous_error{0};
 
     // Clock object to be used for timing
     basilisk_hal::HAL_CLOCK& clock;

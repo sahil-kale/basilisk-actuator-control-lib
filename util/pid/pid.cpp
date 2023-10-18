@@ -73,7 +73,7 @@ template <typename T>
 void PID<T>::reset() {
     integral = 0;
     previous_error = 0;
-    // last_time = clock.get_time_us();
+    last_time = clock.get_time_us();
 }
 
 // Set the maximum and minimum output values

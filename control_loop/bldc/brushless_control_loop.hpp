@@ -94,8 +94,8 @@ class BrushlessControlLoop : public ControlLoop {
         : bridge_(motor),
           clock_(clock),
           rotor_position_estimator_(rotor_position_estimator),
-          pid_q_current_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, clock, false),
-          pid_d_current_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, clock, false) {}
+          pid_q_current_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, clock),
+          pid_d_current_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, clock) {}
 
     /**
      * @brief Initialize the control loop
