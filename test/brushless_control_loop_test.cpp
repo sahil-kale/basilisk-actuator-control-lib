@@ -22,8 +22,8 @@ class BrushlessControlLoopTest : public BrushlessControlLoop {
 
     BrushlessControlLoop::BrushlessFocControLoopParams foc_params_{
         .current_control_bandwidth_rad_per_sec = 0.0f,
-
         .foc_start_timeout_period_us = 0,
+        .disable_ki = false,
 
         .speed_to_iq_gain = 0.0f,
         .i_d_reference_default = 0.0f,

@@ -54,7 +54,9 @@ T PID<T>::calculate(T actual, T setpoint) {
     float derivative = 0;
 
     // Calculate the derivative term
-    derivative = (error - previous_error) / dt;
+    if (dt != 0) {
+        derivative = (error - previous_error) / dt;
+    }
     // Store the error for the next time
     previous_error = error;
     last_time = current_time;

@@ -43,6 +43,7 @@ class BrushlessControlLoop : public ControlLoop {
        public:
         float current_control_bandwidth_rad_per_sec;  // The bandwidth of the current control loop
         utime_t foc_start_timeout_period_us;
+        bool disable_ki;  // Disable the ki term of the current controller
 
         float speed_to_iq_gain;  // Converts speed to iq reference
         float i_d_reference_default;

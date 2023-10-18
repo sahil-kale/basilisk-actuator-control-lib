@@ -123,8 +123,9 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
 
                     // Set the PI gains
                     const float kp = params_->foc_params.current_control_bandwidth_rad_per_sec * phase_params.inductance;
-                    const float ki = phase_params.resistance / phase_params.inductance *
-                                     kp;  // multiplied by kp to create a series PI controller
+                    const float ki = phase_params.resistance / phase_params.inductance * kp *
+                                     static_cast<float>((params_->foc_params.disable_ki ==
+                                                         true));  // multiplied by kp to create a series PI controller
 
                     pid_d_current_.set_kp(kp);
                     pid_d_current_.set_ki(ki);
