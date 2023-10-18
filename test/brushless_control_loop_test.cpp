@@ -21,13 +21,7 @@ class BrushlessControlLoopTest : public BrushlessControlLoop {
     hwbridge::MOCK_BRIDGE_3PHASE bridge;
 
     BrushlessControlLoop::BrushlessFocControLoopParams foc_params_{
-        .kp_q_current = 0.0f,
-        .ki_q_current = 0.0f,
-        .kd_q_current = 0.0f,
-
-        .kp_d_current = 0.0f,
-        .ki_d_current = 0.0f,
-        .kd_d_current = 0.0f,
+        .current_control_bandwidth_rad_per_sec = 0.0f,
 
         .foc_start_timeout_period_us = 0,
 

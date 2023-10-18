@@ -14,6 +14,7 @@ class MOCK_BRIDGE_3PHASE : public Bridge3Phase {
     MOCK_METHOD(app_hal_status_E, read_bemf, (bemf_voltage_t & bemf_voltage), (override));
     MOCK_METHOD(app_hal_status_E, read_current, (phase_current_t & current), (override));
     MOCK_METHOD(app_hal_status_E, read_bus_voltage, (float& voltage), (override));
+    MOCK_METHOD(app_hal_status_E, read_phase_params, (phase_params & params), (override));
 };
 
 }  // namespace hwbridge

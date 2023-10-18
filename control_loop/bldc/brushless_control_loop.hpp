@@ -41,12 +41,7 @@ class BrushlessControlLoop : public ControlLoop {
     // Define FOC control-loop specific parameters
     class BrushlessFocControLoopParams {
        public:
-        float kp_q_current;
-        float ki_q_current;
-        float kd_q_current;
-        float kp_d_current;
-        float ki_d_current;
-        float kd_d_current;
+        float current_control_bandwidth_rad_per_sec;  // The bandwidth of the current control loop
         utime_t foc_start_timeout_period_us;
 
         float speed_to_iq_gain;  // Converts speed to iq reference
@@ -99,8 +94,8 @@ class BrushlessControlLoop : public ControlLoop {
         : bridge_(motor),
           clock_(clock),
           rotor_position_estimator_(rotor_position_estimator),
-          pid_q_current_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, clock),
-          pid_d_current_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, clock) {}
+          pid_q_current_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, clock, false),
+          pid_d_current_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, clock, false) {}
 
     /**
      * @brief Initialize the control loop

@@ -39,10 +39,13 @@ T PID<T>::calculate(T actual, T setpoint) {
     // Calculate the error
     T error = setpoint - actual;
     const utime_t current_time = clock.get_time_us();
-    const float dt_s = clock.get_dt_s(current_time, last_time);
+    float dt = clock.get_dt_s(current_time, last_time);
+    if (use_dt == false) {
+        dt = 1;
+    }
 
     // Calculate the integral term
-    integral += error * dt_s;
+    integral += error * dt;
     // Clamp the integral term
     if (integral_windup != 0) {
         math::clamp(integral, -integral_windup, integral_windup);
@@ -51,7 +54,7 @@ T PID<T>::calculate(T actual, T setpoint) {
     float derivative = 0;
 
     // Calculate the derivative term
-    derivative = (error - previous_error) / dt_s;
+    derivative = (error - previous_error) / dt;
     // Store the error for the next time
     previous_error = error;
     last_time = current_time;

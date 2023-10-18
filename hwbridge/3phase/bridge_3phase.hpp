@@ -31,6 +31,12 @@ class Bridge3Phase {
         float w;
     } phase_current_t;
 
+    class phase_params {
+       public:
+        float resistance;
+        float inductance;
+    };
+
     virtual app_hal_status_E init() = 0;
 
     // Define a virtual function to set the individual phases' duty cycles and enable/disable the phase
@@ -44,6 +50,8 @@ class Bridge3Phase {
 
     // Define a virtual function to get the bus voltage
     virtual app_hal_status_E read_bus_voltage(float& bus_voltage) = 0;
+
+    virtual app_hal_status_E read_phase_params(phase_params& params) = 0;
 
     static constexpr uint8_t NUM_PHASES = 3;
 };

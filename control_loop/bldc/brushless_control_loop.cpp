@@ -1,5 +1,6 @@
 #include "brushless_control_loop.hpp"
 
+#include "bridge_3phase.hpp"
 #include "brushless_6step_commutation.hpp"
 #include "math.h"
 #include "math_foc.hpp"
@@ -15,15 +16,6 @@ void BrushlessControlLoop::init(BrushlessControlLoop::BrushlessControlLoopParams
 
     // Set the internal params pointer
     params_ = params;
-
-    // Initialize the PID controllers
-    pid_d_current_.set_kd(params_->foc_params.kd_d_current);
-    pid_d_current_.set_ki(params_->foc_params.ki_d_current);
-    pid_d_current_.set_kp(params_->foc_params.kp_d_current);
-
-    pid_q_current_.set_kd(params_->foc_params.kd_q_current);
-    pid_q_current_.set_ki(params_->foc_params.ki_q_current);
-    pid_q_current_.set_kp(params_->foc_params.kp_q_current);
 
     // Reset the PID controllers
     pid_d_current_.reset();
@@ -123,6 +115,23 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
                     // reset the PID controllers
                     pid_d_current_.reset();
                     pid_q_current_.reset();
+
+                    // Set the PI gains
+                    // First, get the phase params
+                    hwbridge::Bridge3Phase::phase_params phase_params;
+                    bridge_.read_phase_params(phase_params);
+
+                    // Set the PI gains
+                    const float kp = params_->foc_params.current_control_bandwidth_rad_per_sec * phase_params.inductance;
+                    const float ki = phase_params.resistance / phase_params.inductance *
+                                     kp;  // multiplied by kp to create a series PI controller
+
+                    pid_d_current_.set_kp(kp);
+                    pid_d_current_.set_ki(ki);
+
+                    pid_q_current_.set_kp(kp);
+                    pid_q_current_.set_ki(ki);
+
                     // reset the rotor position estimator
                     rotor_position_estimator_.reset_estimation();
                     // Set the desired rotor angle to the current rotor angle
