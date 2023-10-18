@@ -19,19 +19,10 @@ enable_testing()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/libs/googletest ${CMAKE_CURRENT_BINARY_DIR}/googletest)
 
-# Glob recurse the headers inside hal/
-file(GLOB_RECURSE HAL_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/hal/*.hpp)
 
-# Glob recurse the headers inside hwbridge/
-file(GLOB_RECURSE HWBRIDGE_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/hwbridge/*.hpp)
-
-# Glob recurse the headers inside control_loop/
-file(GLOB_RECURSE CONTROL_LOOP_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/control_loop/*.hpp)
 # Glob recurse the sources inside control_loop/
 file(GLOB_RECURSE CONTROL_LOOP_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/control_loop/*.cpp)
 
-# Glob recurse the headers inside utils/
-file(GLOB_RECURSE UTILS_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/util/*.hpp)
 # Glob recurse the sources inside utils/
 file(GLOB_RECURSE UTILS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/util/*.cpp)
 
