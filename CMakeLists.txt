@@ -6,13 +6,13 @@ set(BINARY ${CMAKE_PROJECT_NAME})
 
 project(${This} C CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_GMOCK ON)
-
+# Add a library with just the sources
 #enable Werror, Wextra, Wall, pedantic, and pedantic-errors
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wextra -Wall -Og -g -pedantic -pedantic-errors")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wextra -Wall -Og -g")
 
 # enable testing
 enable_testing()
@@ -49,8 +49,12 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/util/math)
 # Mocks
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/test/mocks)
 
-# Add an executable with the above sources
-add_executable(${This} ${CONTROL_LOOP_SOURCES} ${UTILS_SOURCES} ${TEST_SOURCES})
+add_library(MAIN_SOURCES ${CONTROL_LOOP_SOURCES} ${UTILS_SOURCES})
+# Set pedantic and pedantic-errors flags for MAIN_SOURCES
+target_compile_options(MAIN_SOURCES PRIVATE -pedantic -pedantic-errors)
 
+add_executable(${This} ${TEST_SOURCES})
+
+#target_compile_options(${This} PUBLIC -pedantic -pedantic-errors)
 # Link the executable with the GoogleTest libraries
-target_link_libraries(${This} PUBLIC gtest gtest_main gmock)
+target_link_libraries(${This} PUBLIC gtest gtest_main gmock MAIN_SOURCES)
