@@ -125,6 +125,13 @@ class BldcElectricalRotorPositionEstimatorFromHall : public BldcElectricalRotorP
     app_hal_status_E get_rotor_velocity(float& rotor_velocity) override;
 
     /**
+     * @brief Get the rotor acceleration
+     * @param rotor_acceleration The rotor acceleration as an electrical angular acceleration (radians/s^2)
+     * @return app_hal_status_E the status of the operation
+     */
+    app_hal_status_E get_rotor_acceleration(float& rotor_acceleration);
+
+    /**
      * @brief Get the raw hall angle
      * @param raw_hall_angle The raw hall angle (radians)
      * @return app_hal_status_E the status of the operation

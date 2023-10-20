@@ -202,8 +202,12 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
             math::wraparound(raw_hall_angle_diff, -math::M_PI_FLOAT, math::M_PI_FLOAT);
             const float velocity_previous = velocity_;
 
-            // Calculate the acceleration
-            acceleration_ = (velocity_ - velocity_previous) / time_delta_since_hall_update;
+            // Calculate the acceleration if the time delta is greater than 0
+            if (time_delta_since_hall_update > 0.0f) {
+                acceleration_ = (velocity_ - velocity_previous) / time_delta_since_hall_update;
+            } else {
+                acceleration_ = 0.0f;
+            }
 
             velocity_ = raw_hall_angle_diff / time_delta_since_hall_update;
 
@@ -258,6 +262,14 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::get_rotor_velocit
     app_hal_status_E ret = APP_HAL_OK;
 
     rotor_velocity = compensated_velocity_;
+
+    return ret;
+}
+
+app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::get_rotor_acceleration(float& rotor_acceleration) {
+    app_hal_status_E ret = APP_HAL_OK;
+
+    rotor_acceleration = acceleration_;
 
     return ret;
 }
