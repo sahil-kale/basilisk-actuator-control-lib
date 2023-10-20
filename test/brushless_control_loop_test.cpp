@@ -14,7 +14,7 @@
 namespace control_loop {
 using namespace ::testing;
 
-basilisk_hal::MOCK_HAL_CLOCK mock_clock;
+NiceMock<basilisk_hal::MOCK_HAL_CLOCK> mock_clock;
 
 class BrushlessControlLoopTest : public BrushlessControlLoop {
    public:
