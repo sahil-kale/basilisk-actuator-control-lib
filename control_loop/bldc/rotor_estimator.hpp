@@ -161,6 +161,7 @@ class BldcElectricalRotorPositionEstimatorFromHall : public BldcElectricalRotorP
     basilisk_hal::HAL_CLOCK& clock_;
     bldc_rotor_estimator::BldcRotorSectorSensor& sector_sensor_;
     float rotor_position_ = 0.0f;
+    float acceleration_ = 0.0f;          // rad/s^2
     float velocity_ = 0.0f;              // rad/s
     float compensated_velocity_ = 0.0f;  // rad/s
     float raw_hall_angle_ = 0.0f;

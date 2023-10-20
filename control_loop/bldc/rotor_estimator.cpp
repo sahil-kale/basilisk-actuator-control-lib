@@ -109,6 +109,7 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::reset_estimation(
     time_at_last_hall_update_ = 0;
     time_update_last_called_ = 0;
     number_of_hall_updates_ = 0;
+    acceleration_ = 0.0f;
 
     // Update the rotor position with the sector sensor
     ret = sector_sensor_.get_electrical_angle(raw_hall_angle_);
@@ -176,8 +177,13 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
         if (is_interpolation_permitted()) {
             const float current_measurement_period =
                 (float)(time - time_update_last_called_) / basilisk_hal::HAL_CLOCK::kMicrosecondsPerSecond;
+
+            // Now, update the compensated velocity with the acceleration estimate
+            compensated_velocity_ += acceleration_ * current_measurement_period;
+
             // Update the rotor position with the velocity estimate
             rotor_position_ += compensated_velocity_ * current_measurement_period;
+
             // Implement a wraparound
             math::wraparound(rotor_position_, 0.0f, float(2.0f * M_PI));
         }
@@ -195,12 +201,13 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
             // NOTE: if the rotor delta theta is greater than pi radians, then this detection will not work
             math::wraparound(raw_hall_angle_diff, -math::M_PI_FLOAT, math::M_PI_FLOAT);
             const float velocity_previous = velocity_;
+
+            // Calculate the acceleration
+            acceleration_ = (velocity_ - velocity_previous) / time_delta_since_hall_update;
+
             velocity_ = raw_hall_angle_diff / time_delta_since_hall_update;
 
-            // Calculate a compensated velocity to account for position error and smoothly compensate for it
             compensated_velocity_ = velocity_;
-            // TODO: implement compensated_velocity_ = velocity_ * (1 - ((rotor_position_ - raw_hall_angle_diff) /
-            // raw_hall_angle_diff));
 
             rotor_position_ = raw_hall_angle;
 
