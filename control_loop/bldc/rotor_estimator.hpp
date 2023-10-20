@@ -144,6 +144,14 @@ class BldcElectricalRotorPositionEstimatorFromHall : public BldcElectricalRotorP
     bool is_estimation_valid() override;
 
     /**
+     * @brief get whether interpolation is permitted
+     * @return true if interpolation is permitted
+     * @note: Factors in the num hall updates to start, max estimate angle overrun, and whether interpolation is enabled alongside
+     * other factors to determine whether interpolation is permitted by the main rotor position estimator
+     */
+    bool is_interpolation_permitted();
+
+    /**
      * @brief reset the rotor position estimation
      * @return app_hal_status_E the status of the operation
      */

@@ -111,19 +111,22 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::reset_estimation(
     number_of_hall_updates_ = 0;
 
     // Update the rotor position with the sector sensor
-    float rotor_position_from_sector_sensor = 0.0f;
-    ret = sector_sensor_.get_electrical_angle(rotor_position_from_sector_sensor);
+    ret = sector_sensor_.get_electrical_angle(raw_hall_angle_);
     if (ret == APP_HAL_OK) {
-        rotor_position_ = rotor_position_from_sector_sensor;
+        rotor_position_ = raw_hall_angle_;
     }
 
     return ret;
 }
 
 bool BldcElectricalRotorPositionEstimatorFromHall::is_estimation_valid() {
+    return true;  // Since we know the absolute position, we should always return true
+}
+
+bool BldcElectricalRotorPositionEstimatorFromHall::is_interpolation_permitted() {
     bool ret = false;
-    if (params_ != nullptr) {
-        bool num_hall_updates_to_start = (number_of_hall_updates_ >= params_->num_hall_updates_to_start);
+    if ((params_ != nullptr) && (params_->enable_interpolation)) {
+        const bool num_hall_updates_to_start = (number_of_hall_updates_ >= params_->num_hall_updates_to_start);
         // Also make the return conditional if the position estimate no greater than the param for tolerance
         // compute the angle diff
         float angle_diff = rotor_position_ - raw_hall_angle_;
@@ -132,7 +135,7 @@ bool BldcElectricalRotorPositionEstimatorFromHall::is_estimation_valid() {
         // NOTE: if the rotor delta theta is greater than pi radians, then this detection will not work
         math::wraparound(angle_diff, -math::M_PI_FLOAT, math::M_PI_FLOAT);
 
-        bool rotor_position_tolerance = (fabs(angle_diff) <= params_->max_estimate_angle_overrun);
+        const bool rotor_position_tolerance = (fabs(angle_diff) <= params_->max_estimate_angle_overrun);
 
         ret = num_hall_updates_to_start && rotor_position_tolerance;
     }
@@ -170,7 +173,7 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
             break;
         }
 
-        if (is_estimation_valid() && params_->enable_interpolation) {
+        if (is_interpolation_permitted()) {
             const float current_measurement_period =
                 (float)(time - time_update_last_called_) / basilisk_hal::HAL_CLOCK::kMicrosecondsPerSecond;
             // Update the rotor position with the velocity estimate
@@ -191,11 +194,7 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
             // Account for over/underflow
             // NOTE: if the rotor delta theta is greater than pi radians, then this detection will not work
             math::wraparound(raw_hall_angle_diff, -math::M_PI_FLOAT, math::M_PI_FLOAT);
-
-            // NOTE: if the hall sensor is flicking back and forth between two sectors,
-            // the velocity estimate will be incorrect and cause the interpolation to flail.
-            // However, this scenario only occurs when the motor is starting up, super slow and will only
-            // occur if the hall sensor param of hall sensor updates to start is set to 0.
+            const float velocity_previous = velocity_;
             velocity_ = raw_hall_angle_diff / time_delta_since_hall_update;
 
             // Calculate a compensated velocity to account for position error and smoothly compensate for it
@@ -225,6 +224,14 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
             this->raw_hall_angle_ = raw_hall_angle;
             time_at_last_hall_update_ = time;
             number_of_hall_updates_++;
+
+            // If the velocity sign has changed, then we should reset the rotor position estimation
+            // This is because the rotor position estimation is only valid for one direction of rotation
+            // and prevents the rotor position estimation from being wonky at low speeds
+            const bool velocity_sign_changed = (velocity_ * velocity_previous) < 0.0f;
+            if (velocity_sign_changed) {
+                reset_estimation();
+            }
         }
 
         time_update_last_called_ = time;

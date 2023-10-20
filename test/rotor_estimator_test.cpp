@@ -27,6 +27,9 @@ TEST(RotorEstimatorTest, test_angle_one_for_one) {
         .enable_sector_position_offset_compensation = true,
     };
 
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(0 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
+
     rotor_estimator.init(&params);
 
     // Expect a call to get the sector position and ensure the reference is updated to return
@@ -78,6 +81,9 @@ TEST(RotorEstimatorTest, test_angle_underflow) {
         .enable_sector_position_offset_compensation = true,
     };
 
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(0 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
+
     rotor_estimator.init(&params);
 
     // Expect a call to get the sector position and ensure the reference is updated to return 3
@@ -119,6 +125,9 @@ TEST(RotorEstimatorTest, test_angle_interpolation_disabled) {
         .enable_interpolation = false,
         .enable_sector_position_offset_compensation = true,
     };
+
+    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(0 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
     rotor_estimator.init(&params);
 
@@ -263,6 +272,11 @@ TEST(RotorEstimatorTest, test_position_offset_compensation_rollover) {
 
     rotor_estimator.init(&params);
 
+    // Expect that the raw hall angle is 5pi/3
+    float raw_hall_angle = 0.0f;
+    rotor_estimator.get_raw_hall_angle(raw_hall_angle);
+    EXPECT_FLOAT_EQ(raw_hall_angle, 5.0f * math::M_PI_FLOAT / 3.0f);
+
     // Expect a call to get the sector position and ensure the reference is updated to return 5
     EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
         .WillOnce(DoAll(SetArgReferee<0>(5 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
@@ -270,8 +284,8 @@ TEST(RotorEstimatorTest, test_position_offset_compensation_rollover) {
     // Update the rotor position
     rotor_estimator.update(500);
 
-    // Expect the estimation to be valid
-    EXPECT_TRUE(rotor_estimator.is_estimation_valid());
+    // Expect the interpolator to be valid
+    EXPECT_TRUE(rotor_estimator.is_interpolation_permitted());
 
     // Expect a call to get the sector position and ensure the reference is updated to return 0
     EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
@@ -281,7 +295,7 @@ TEST(RotorEstimatorTest, test_position_offset_compensation_rollover) {
     rotor_estimator.update(1000);
 
     // Now, poll whether the estimation is valid, and expect it to be valid
-    EXPECT_TRUE(rotor_estimator.is_estimation_valid());
+    EXPECT_TRUE(rotor_estimator.is_interpolation_permitted());
 }
 
 class SensorlessRotorSectorSensor : public BldcSensorlessRotorSectorSensor {

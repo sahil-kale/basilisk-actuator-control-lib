@@ -80,10 +80,10 @@ float low_pass_filter(float input, float prev_output, float tau, float dt);
 /**
  * @brief Return the sign of a number.
  * @param val The number to get the sign of
- * @return int The sign of the number
+ * @return float The sign of the number
  */
 template <typename T>
-int8_t sign(T val) {
+float sign(T val) {
     return (T(0) < val) - (val < T(0));
 }
 
