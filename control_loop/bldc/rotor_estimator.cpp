@@ -104,18 +104,14 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::reset_estimation(
 
     rotor_position_ = 0.0f;
     velocity_ = 0.0f;
+    velocity_previous_ = 0.0f;
     compensated_velocity_ = 0.0f;
-    raw_hall_angle_ = 0.0f;
     time_at_last_hall_update_ = 0;
     time_update_last_called_ = 0;
     number_of_hall_updates_ = 0;
     acceleration_ = 0.0f;
 
-    // Update the rotor position with the sector sensor
-    ret = sector_sensor_.get_electrical_angle(raw_hall_angle_);
-    if (ret == APP_HAL_OK) {
-        rotor_position_ = raw_hall_angle_;
-    }
+    rotor_position_ = raw_hall_angle_;
 
     return ret;
 }
@@ -138,23 +134,35 @@ bool BldcElectricalRotorPositionEstimatorFromHall::is_interpolation_permitted() 
 
         const bool rotor_position_tolerance = (fabs(angle_diff) <= params_->max_estimate_angle_overrun);
 
-        ret = num_hall_updates_to_start && rotor_position_tolerance;
+        // We check the velocity to see if it is above the minimum estimation velocity, as well as the compensated velocity in
+        // case we think the rotor is decelerating below the minimum estimation velocity
+        const bool rotor_velocity_above_min = (fabs(velocity_) >= params_->minimum_estimation_velocity) &&
+                                              (fabs(compensated_velocity_) >= params_->minimum_estimation_velocity);
+
+        ret = num_hall_updates_to_start && rotor_position_tolerance && rotor_velocity_above_min;
     }
     return ret;
 }
 
 app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::init(BldcElectricalRotorPositionEstimatorFromHallParams* params) {
     app_hal_status_E ret = APP_HAL_OK;
+    do {
+        // Set the internal params pointer
+        params_ = params;
 
-    // Set the internal params pointer
-    params_ = params;
+        // If the params pointer is not null, then we should reset the rotor position estimation
+        if (params_ != nullptr) {
+            ret = sector_sensor_.get_electrical_angle(raw_hall_angle_);
+            if (ret != APP_HAL_OK) {
+                break;
+            }
+            ret = reset_estimation();
 
-    // If the params pointer is not null, then we should reset the rotor position estimation
-    if (params_ != nullptr) {
-        ret = reset_estimation();
-    } else {
-        ret = APP_HAL_ERROR;
-    }
+        } else {
+            ret = APP_HAL_ERROR;
+        }
+
+    } while (false);
 
     return ret;
 }
@@ -200,14 +208,14 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
             // Account for over/underflow
             // NOTE: if the rotor delta theta is greater than pi radians, then this detection will not work
             math::wraparound(raw_hall_angle_diff, -math::M_PI_FLOAT, math::M_PI_FLOAT);
-            const float velocity_previous = velocity_;
-
-            velocity_ = raw_hall_angle_diff / time_delta_since_hall_update;
+            velocity_previous_ = velocity_;
 
             // Calculate the acceleration if the time delta is greater than 0
             if (time_delta_since_hall_update > 0.0f) {
-                acceleration_ = (velocity_ - velocity_previous) / time_delta_since_hall_update;
+                velocity_ = raw_hall_angle_diff / time_delta_since_hall_update;
+                acceleration_ = (velocity_ - velocity_previous_) / time_delta_since_hall_update;
             } else {
+                velocity_ = 0.0f;
                 acceleration_ = 0.0f;
             }
 
@@ -235,14 +243,15 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
             this->raw_hall_angle_ = raw_hall_angle;
             time_at_last_hall_update_ = time;
             number_of_hall_updates_++;
+        }
 
-            // If the velocity sign has changed, then we should reset the rotor position estimation
-            // This is because the rotor position estimation is only valid for one direction of rotation
-            // and prevents the rotor position estimation from being wonky at low speeds
-            const bool velocity_sign_changed = (velocity_ * velocity_previous) < 0.0f;
-            if (velocity_sign_changed) {
-                reset_estimation();
-            }
+        // If the velocity sign has changed, then we should reset the rotor position estimation
+        // This is because the rotor position estimation is only valid for one direction of rotation
+        // and prevents the rotor position estimation from being wonky at low speeds
+        const bool velocity_sign_changed = (velocity_ * velocity_previous_) < 0.0f;
+
+        if (velocity_sign_changed) {
+            reset_estimation();
         }
 
         time_update_last_called_ = time;
@@ -273,4 +282,5 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::get_rotor_acceler
 
     return ret;
 }
+
 }  // namespace bldc_rotor_estimator

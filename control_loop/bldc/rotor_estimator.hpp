@@ -93,6 +93,7 @@ class BldcElectricalRotorPositionEstimatorFromHall : public BldcElectricalRotorP
         float max_estimate_angle_overrun;  // How much to allow the estimator to overrun the hall angle (radians)
         bool enable_interpolation;         // Whether to enable interpolation between hall updates or just use the hall angle
         bool enable_sector_position_offset_compensation;  // Whether to enable sector position offset compensation
+        float minimum_estimation_velocity;                // The minimum velocity to use for estimation (rad/s)
     };
 
     /**
@@ -168,9 +169,9 @@ class BldcElectricalRotorPositionEstimatorFromHall : public BldcElectricalRotorP
     basilisk_hal::HAL_CLOCK& clock_;
     bldc_rotor_estimator::BldcRotorSectorSensor& sector_sensor_;
     float rotor_position_ = 0.0f;
-    float acceleration_ = 0.0f;          // rad/s^2
-    float velocity_ = 0.0f;              // rad/s
-    float compensated_velocity_ = 0.0f;  // rad/s
+    float acceleration_ = 0.0f;                         // rad/s^2
+    float velocity_previous_ = 0.0f, velocity_ = 0.0f;  // rad/s
+    float compensated_velocity_ = 0.0f;                 // rad/s
     float raw_hall_angle_ = 0.0f;
     utime_t time_at_last_hall_update_ = 0;
     utime_t time_update_last_called_ = 0;

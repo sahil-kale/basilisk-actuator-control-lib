@@ -25,6 +25,7 @@ TEST(RotorEstimatorTest, test_angle_one_for_one) {
         .max_estimate_angle_overrun = 2.5f / 3.0f * M_PI,
         .enable_interpolation = true,
         .enable_sector_position_offset_compensation = true,
+        .minimum_estimation_velocity = 0.0f,
     };
 
     EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
@@ -74,6 +75,7 @@ TEST(RotorEstimatorTest, test_angle_underflow) {
         .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
         .enable_interpolation = true,
         .enable_sector_position_offset_compensation = true,
+        .minimum_estimation_velocity = 0.0f,
     };
 
     EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
@@ -119,6 +121,7 @@ TEST(RotorEstimatorTest, test_angle_interpolation_disabled) {
         .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
         .enable_interpolation = false,
         .enable_sector_position_offset_compensation = true,
+        .minimum_estimation_velocity = 0.0f,
     };
 
     EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
@@ -161,6 +164,7 @@ TEST(RotorEstimatorTest, test_sector_position_offset_compensation) {
         .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
         .enable_interpolation = false,
         .enable_sector_position_offset_compensation = true,
+        .minimum_estimation_velocity = 0.0f,
     };
 
     // Expect a call to get the sector position and ensure the reference is updated to return 0
@@ -210,6 +214,7 @@ TEST(RotorEstimatorTest, test_sector_position_offset_compensation_disabled) {
         .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
         .enable_interpolation = false,
         .enable_sector_position_offset_compensation = true,
+        .minimum_estimation_velocity = 0.0f,
     };
 
     // Expect a call to get the sector position and ensure the reference is updated to return 0
@@ -259,6 +264,7 @@ TEST(RotorEstimatorTest, test_position_offset_compensation_rollover) {
         .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
         .enable_interpolation = true,
         .enable_sector_position_offset_compensation = true,
+        .minimum_estimation_velocity = 0.0f,
     };
 
     // Expect a call to get the sector position and ensure the reference is updated to return 5
