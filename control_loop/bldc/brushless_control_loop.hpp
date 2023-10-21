@@ -136,7 +136,8 @@ class BrushlessControlLoop : public ControlLoop {
     utime_t time_at_start_ = 0;
     utime_t last_run_time_ = 0;
     float rotor_position_open_loop_start_ = 0.0f;
-    float motor_speed_, rotor_position_ = 0;
+    float motor_speed_ = 0.0f;
+    float rotor_position_ = 0;
 
     BrushlessControlLoopType control_loop_type_ = BrushlessControlLoopType::OPEN_LOOP;
 
@@ -146,10 +147,10 @@ class BrushlessControlLoop : public ControlLoop {
     float desired_rotor_angle_open_loop_ = 0.0f;
 
     // duty cycles
-    float duty_cycle_u_h_, duty_cycle_v_h_, duty_cycle_w_h_ = 0.0f;
+    float duty_cycle_u_h_ = 0.0f, duty_cycle_v_h_ = 0.0f, duty_cycle_w_h_ = 0.0f;
 
     // FOC variables
-    float i_quadrature_, i_direct_, V_quadrature_, V_direct_, V_alpha_, V_beta_ = 0.0f;
+    float i_quadrature_ = 0.0f, i_direct_ = 0.0f, V_quadrature_ = 0.0f, V_direct_ = 0.0f, V_alpha_ = 0.0f, V_beta_ = 0.0f;
     float i_d_reference_ = 0.0f;
 
     /**

@@ -56,16 +56,11 @@ TEST(RotorEstimatorTest, test_angle_one_for_one) {
     rotor_estimator.get_rotor_velocity(rotor_velocity);
     EXPECT_FLOAT_EQ(rotor_velocity, compensated_velocity);
 
-    // Expect a call to get the sector position and ensure the reference is updated to return
-    EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
-        .WillOnce(DoAll(SetArgReferee<0>(1 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
-
-    // Update the rotor position with a utime of 1000
-    rotor_estimator.update(1000);
-
-    // Expect the rotor position to be 2.0f * M_PI / 6.0f
-    rotor_estimator.get_rotor_position(rotor_position);
-    EXPECT_FLOAT_EQ(rotor_position, 1.5f * 2.0f * M_PI / 6.0f);
+    // Expect the acceleration to be (2094.395 - 0) / (500 us) = 4.18879e6 rad/s^2
+    const float actual_acceleration = (actual_velocity - 0.0f) / (500.0f / mock_clock.kMicrosecondsPerSecond);
+    float rotor_acceleration = 0.0f;
+    rotor_estimator.get_rotor_acceleration(rotor_acceleration);
+    EXPECT_FLOAT_EQ(rotor_acceleration, actual_acceleration);
 }
 
 TEST(RotorEstimatorTest, test_angle_underflow) {

@@ -13,9 +13,6 @@ typedef enum {
     APP_HAL_BUFFER_DIMENSION_MISSMATCH,
 } app_hal_status_E;
 
-template <class T>
-void IGNORE(const T&) {}
-
 typedef int64_t utime_t;
 
 #endif

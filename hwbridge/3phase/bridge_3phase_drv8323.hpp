@@ -9,6 +9,7 @@
 #include "hal_common.hpp"
 #include "hal_gpio.hpp"
 #include "hal_timer.hpp"
+#include "util.hpp"
 
 namespace hwbridge {
 
@@ -28,14 +29,8 @@ class Bridge3PhaseDRV8323 : public Bridge3Phase {
     } drv8323_phase_config_info_t;
 
     Bridge3PhaseDRV8323(basilisk_hal::HAL_ComplementaryPWM_Timer& timer, drv8323_phase_config_info_t& u,
-                        drv8323_phase_config_info_t& v, drv8323_phase_config_info_t& w, uint32_t frequency) {
-        // Register the timer and pin
-        pwm_timer_ = &timer;
-        u_ = u;
-        v_ = v;
-        w_ = w;
-        frequency_ = frequency;
-    };
+                        drv8323_phase_config_info_t& v, drv8323_phase_config_info_t& w, uint32_t frequency)
+        : pwm_timer_(&timer), u_(u), v_(v), w_(w), frequency_(frequency){};
     ~Bridge3PhaseDRV8323() = default;
 
     app_hal_status_E init() override {
@@ -122,7 +117,7 @@ class Bridge3PhaseDRV8323 : public Bridge3Phase {
     }
 
     // Define a function to read the current
-    app_hal_status_E read_current(phase_current_t& current) {
+    app_hal_status_E read_current(const phase_current_t& current) {
         IGNORE(current);
         return app_hal_status_E::APP_HAL_NOT_IMPLEMENTED;
     }

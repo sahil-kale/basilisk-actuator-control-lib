@@ -72,7 +72,7 @@ bool BldcSensorlessRotorSectorSensor::zero_crossing_detected(
         control_loop::Bldc6StepCommutationTypes::CommutationSignal::Z_RISING;
     float undriven_phase_voltage = 0.0f;
 
-    float bemf_voltages[hwbridge::Bridge3Phase::NUM_PHASES] = {bemf_voltage.u, bemf_voltage.v, bemf_voltage.w};
+    const float bemf_voltages[hwbridge::Bridge3Phase::NUM_PHASES] = {bemf_voltage.u, bemf_voltage.v, bemf_voltage.w};
 
     for (uint8_t i = 0; i < hwbridge::Bridge3Phase::NUM_PHASES; i++) {
         if ((current_commutation_step.signals[i] != control_loop::Bldc6StepCommutationTypes::CommutationSignal::Z_FALLING) &&
@@ -202,14 +202,14 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
             math::wraparound(raw_hall_angle_diff, -math::M_PI_FLOAT, math::M_PI_FLOAT);
             const float velocity_previous = velocity_;
 
+            velocity_ = raw_hall_angle_diff / time_delta_since_hall_update;
+
             // Calculate the acceleration if the time delta is greater than 0
             if (time_delta_since_hall_update > 0.0f) {
                 acceleration_ = (velocity_ - velocity_previous) / time_delta_since_hall_update;
             } else {
                 acceleration_ = 0.0f;
             }
-
-            velocity_ = raw_hall_angle_diff / time_delta_since_hall_update;
 
             compensated_velocity_ = velocity_;
 

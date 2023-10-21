@@ -63,7 +63,7 @@ class StepperControlLoop : public ControlLoop {
 
     void init(StepperControlLoopParams* params);
 
-    ControlLoopStatus run(float speed);
+    ControlLoopStatus run(float speed) override;
 
    protected:
     /**
@@ -81,7 +81,7 @@ class StepperControlLoop : public ControlLoop {
     StepperControlLoopParams* params_ = nullptr;
 
     // Create 2 variables to store the current setpoints for the A and B motors
-    float current_setpoint_a, current_setpoint_b = 0;
+    float current_setpoint_a = 0.0f, current_setpoint_b = 0.0f;
 
     // Create a status object
     StepperControlLoopStatus status_;

@@ -86,7 +86,7 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run_current_control(float i
         // Update the id reference
         i_d_reference_ = i_d_reference;
         // Now, run the FOC control loop with the speed divided by the speed to iq gain
-        UNUSED(run(i_q_reference / params_->foc_params.speed_to_iq_gain));
+        IGNORE(run(i_q_reference / params_->foc_params.speed_to_iq_gain));
     }
 
     return status_;
