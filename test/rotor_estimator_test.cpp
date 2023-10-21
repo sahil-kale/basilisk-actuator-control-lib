@@ -149,7 +149,7 @@ TEST(RotorEstimatorTest, test_angle_interpolation_disabled) {
 
     rotor_estimator.get_rotor_position(rotor_position);
 
-    EXPECT_FLOAT_EQ(rotor_position, 0.5f * 2.0f * M_PI / 6.0f);
+    EXPECT_FLOAT_EQ(rotor_position, 1.0 * M_PI / 3.0f);
 }
 
 // Test the sector angle changing from 0 to 5. We should expect the rotor position to be 11pi/6 radians, NOT 10pi/6 radians

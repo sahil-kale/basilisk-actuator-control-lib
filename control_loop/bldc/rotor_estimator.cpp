@@ -194,6 +194,12 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
 
             // Implement a wraparound
             math::wraparound(rotor_position_, 0.0f, float(2.0f * M_PI));
+        } else {
+            // Just update the rotor position with the measured electrical angle
+            rotor_position_ = measured_electrical_angle;
+            // and compensated vel/accl to 0
+            compensated_velocity_ = 0.0f;
+            acceleration_ = 0.0f;
         }
 
         float raw_hall_angle = measured_electrical_angle;
@@ -240,18 +246,18 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
                 math::wraparound(rotor_position_, 0.0f, math::M_PI_FLOAT * 2.0f);
             }
 
+            // If the velocity sign has changed, then we should reset the rotor position estimation
+            // This is because the rotor position estimation is only valid for one direction of rotation
+            // and prevents the rotor position estimation from being wonky at low speeds
+            const bool velocity_sign_changed = (velocity_ * velocity_previous_) < 0.0f;
+            const bool rotor_speed_below_minimum = ((fabs(velocity_) < params_->minimum_estimation_velocity));
+            if (velocity_sign_changed || rotor_speed_below_minimum) {
+                reset_estimation();
+            }
+
             this->raw_hall_angle_ = raw_hall_angle;
             time_at_last_hall_update_ = time;
             number_of_hall_updates_++;
-        }
-
-        // If the velocity sign has changed, then we should reset the rotor position estimation
-        // This is because the rotor position estimation is only valid for one direction of rotation
-        // and prevents the rotor position estimation from being wonky at low speeds
-        const bool velocity_sign_changed = (velocity_ * velocity_previous_) < 0.0f;
-
-        if (velocity_sign_changed) {
-            reset_estimation();
         }
 
         time_update_last_called_ = time;
