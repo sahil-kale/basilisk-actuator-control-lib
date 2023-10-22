@@ -62,16 +62,6 @@ TEST(BrushlessControlLoopTest, test_stop_to_start_to_run) {
     BrushlessControlLoopTest test_control_loop(rotor_estimator, mock_clock);
 
     // Call the desired state function with a time of 0, time at start of 0, and a motor speed of 0
-    // Ensure the desired state is NOT_INITIALIZED
-    EXPECT_EQ(test_control_loop.get_desired_state(0, BrushlessControlLoop::BrushlessControlLoopState::NOT_INITIALIZED),
-              BrushlessControlLoop::BrushlessControlLoopState::NOT_INITIALIZED);
-
-    test_control_loop.init(&test_control_loop.test_params_);
-
-    EXPECT_EQ(test_control_loop.get_desired_state(0, BrushlessControlLoop::BrushlessControlLoopState::NOT_INITIALIZED),
-              BrushlessControlLoop::BrushlessControlLoopState::STOP);
-
-    // Call the desired state function with a time of 0, time at start of 0, and a motor speed of 0
     // Ensure that the desired state is stop
     EXPECT_EQ(test_control_loop.get_desired_state(0, BrushlessControlLoop::BrushlessControlLoopState::STOP),
               BrushlessControlLoop::BrushlessControlLoopState::STOP);

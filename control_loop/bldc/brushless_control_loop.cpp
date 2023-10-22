@@ -32,11 +32,6 @@ BrushlessControlLoop::BrushlessControlLoopState BrushlessControlLoop::get_desire
     float motor_speed, const BrushlessControlLoopState current_state) {
     BrushlessControlLoop::BrushlessControlLoopState desired_state = current_state;
     switch (current_state) {
-        case BrushlessControlLoop::BrushlessControlLoopState::NOT_INITIALIZED: {
-            if (params_ != nullptr) {
-                desired_state = BrushlessControlLoop::BrushlessControlLoopState::STOP;
-            }
-        } break;
         case BrushlessControlLoop::BrushlessControlLoopState::STOP: {
             // if the estimator reports that it is valid, then we should start the motor
             if ((motor_speed != 0)) {
@@ -95,88 +90,97 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run_current_control(float i
 ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
     // Get the current time
     utime_t current_time_us = clock_.get_time_us();
-
-    // Clamp the speed
-    math::clamp(speed, -1.0f, 1.0f);
-
-    hwbridge::Bridge3Phase::phase_command_t phase_commands[3] = {0, false};
-
-    // Get the current state and the desired state
-    BrushlessControlLoop::BrushlessControlLoopState desired_state = get_desired_state(speed, state_);
-
-    // If the desired state is different from the current state, then we need to transition
-    if (desired_state != state_) {
-        switch (desired_state) {
-            case BrushlessControlLoop::BrushlessControlLoopState::RUN: {
-                if (params_->commutation_type == BrushlessControlLoopCommutationType::FOC) {
-                    // reset the PID controllers
-                    pid_d_current_.reset();
-                    pid_q_current_.reset();
-
-                    // Set the PI gains
-                    const float kp =
-                        params_->foc_params.current_control_bandwidth_rad_per_sec * params_->foc_params.phase_inductance;
-                    const float ki = params_->foc_params.phase_resistance / params_->foc_params.phase_inductance *
-                                     kp;  // multiplied by kp to create a series PI controller
-
-                    pid_d_current_.set_kp(kp);
-                    pid_q_current_.set_kp(kp);
-                    if (params_->foc_params.disable_ki == false) {
-                        pid_d_current_.set_ki(ki);
-                        pid_q_current_.set_ki(ki);
-                    }
-
-                    // reset the rotor position estimator
-                    primary_rotor_position_estimator_.reset_estimation();
-                    // Set the desired rotor angle to the current rotor angle
-                    primary_rotor_position_estimator_.get_rotor_position(desired_rotor_angle_open_loop_);
-                }
-            } break;
-            case BrushlessControlLoop::BrushlessControlLoopState::NOT_INITIALIZED: {
-                // return an error
-                status_.error = BrushlessControlLoopStatus::BrushlessControlLoopError::PARAMS_NOT_SET;
-            } break;
-            case BrushlessControlLoop::BrushlessControlLoopState::STOP:
-            default:
-                break;
-        }
-        state_ = desired_state;
-    }
-
-    // Update the rotor position estimator
-    bldc_rotor_estimator::ElectricalRotorPosEstimator::EstimatorInputs estimator_inputs;
-    update_rotor_position_estimator(estimator_inputs, current_time_us);
-
-    // Run the state machine
-    control_loop_type_ = get_desired_control_loop_type(primary_rotor_position_estimator_.is_estimation_valid());
-    switch (state_) {
-        case BrushlessControlLoop::BrushlessControlLoopState::STOP:
+    do {
+        if (params_ == nullptr) {
+            // Set an error in the status
+            status_.error = BrushlessControlLoopStatus::BrushlessControlLoopError::PARAMS_NOT_SET;
             break;
+        }
 
-        case BrushlessControlLoop::BrushlessControlLoopState::RUN: {
-            switch (params_->commutation_type) {
-                case BrushlessControlLoopCommutationType::FOC: {
-                    run_foc(speed, current_time_us, last_run_time_, estimator_inputs.phase_current, phase_commands);
+        // Clamp the speed
+        math::clamp(speed, -1.0f, 1.0f);
+
+        hwbridge::Bridge3Phase::phase_command_t phase_commands[3] = {0, false};
+
+        // Get the current state and the desired state
+        BrushlessControlLoop::BrushlessControlLoopState desired_state = get_desired_state(speed, state_);
+
+        // If the desired state is different from the current state, then we need to transition
+        if (desired_state != state_) {
+            switch (desired_state) {
+                case BrushlessControlLoop::BrushlessControlLoopState::RUN: {
+                    if (params_->commutation_type == BrushlessControlLoopCommutationType::FOC) {
+                        // reset the PID controllers
+                        pid_d_current_.reset();
+                        pid_q_current_.reset();
+
+                        // Set the PI gains
+                        const float kp =
+                            params_->foc_params.current_control_bandwidth_rad_per_sec * params_->foc_params.phase_inductance;
+                        const float ki = params_->foc_params.phase_resistance / params_->foc_params.phase_inductance *
+                                         kp;  // multiplied by kp to create a series PI controller
+
+                        pid_d_current_.set_kp(kp);
+                        pid_q_current_.set_kp(kp);
+                        if (params_->foc_params.disable_ki == false) {
+                            pid_d_current_.set_ki(ki);
+                            pid_q_current_.set_ki(ki);
+                        }
+
+                        // reset the rotor position estimator
+                        primary_rotor_position_estimator_.reset_estimation();
+                        // Set the desired rotor angle to the current rotor angle
+                        primary_rotor_position_estimator_.get_rotor_position(desired_rotor_angle_open_loop_);
+                    }
                 } break;
-                case BrushlessControlLoopCommutationType::TRAPEZOIDAL: {
-                    run_trap(speed, phase_commands);
-                } break;
+                case BrushlessControlLoop::BrushlessControlLoopState::STOP:
                 default:
                     break;
             }
-        } break;
+            state_ = desired_state;
+        }
 
-        default:
-            break;
-    }
+        // Update the rotor position estimator
+        bldc_rotor_estimator::ElectricalRotorPosEstimator::EstimatorInputs estimator_inputs;
+        update_rotor_position_estimator(estimator_inputs, current_time_us);
 
-    // Set the duty cycles
-    this->bridge_.set_phase(phase_commands[0], phase_commands[1], phase_commands[2]);
+        // Run the state machine
+        control_loop_type_ = get_desired_control_loop_type(primary_rotor_position_estimator_.is_estimation_valid());
+        switch (state_) {
+            case BrushlessControlLoop::BrushlessControlLoopState::STOP:
+                break;
 
+            case BrushlessControlLoop::BrushlessControlLoopState::RUN: {
+                switch (params_->commutation_type) {
+                    case BrushlessControlLoopCommutationType::FOC: {
+                        run_foc(speed, current_time_us, last_run_time_, estimator_inputs.phase_current, phase_commands);
+                    } break;
+                    case BrushlessControlLoopCommutationType::TRAPEZOIDAL: {
+                        run_trap(speed, phase_commands);
+                    } break;
+                    default:
+                        break;
+                }
+            } break;
+
+            default:
+                break;
+        }
+
+        // Set the duty cycles
+        this->bridge_.set_phase(phase_commands[0], phase_commands[1], phase_commands[2]);
+    } while (false);
     last_run_time_ = current_time_us;
 
     // Compute the base status
     status_.compute_base_status();
+
+    // If the control loop has an error, then we should issue the phase commands to stop the motor
+    if (status_.status == ControlLoopStatus::ControlLoopBaseStatus::ERROR) {
+        // Set the duty cycles to 0
+        hwbridge::Bridge3Phase::phase_command_t phase_commands[3] = {0, false};
+        this->bridge_.set_phase(phase_commands[0], phase_commands[1], phase_commands[2]);
+    }
 
     return status_;
 }

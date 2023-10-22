@@ -16,7 +16,6 @@ namespace control_loop {
 class BrushlessControlLoop : public ControlLoop {
    public:
     enum class BrushlessControlLoopState {
-        NOT_INITIALIZED,
         STOP,
         RUN,
     };
@@ -131,7 +130,7 @@ class BrushlessControlLoop : public ControlLoop {
     ~BrushlessControlLoop() = default;
 
    protected:
-    BrushlessControlLoopState state_ = BrushlessControlLoopState::NOT_INITIALIZED;
+    BrushlessControlLoopState state_ = BrushlessControlLoopState::STOP;
     hwbridge::Bridge3Phase& bridge_;
     basilisk_hal::HAL_CLOCK& clock_;
     bldc_rotor_estimator::ElectricalRotorPosEstimator& primary_rotor_position_estimator_;
