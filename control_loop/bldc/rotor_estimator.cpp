@@ -2,6 +2,7 @@
 
 #include "brushless_6step_commutation.hpp"
 #include "math.h"
+#include "math_foc.hpp"
 #include "math_util.hpp"
 
 namespace bldc_rotor_estimator {
@@ -16,7 +17,7 @@ app_hal_status_E BldcSensorlessRotorSectorSensor::get_electrical_angle(float& an
     app_hal_status_E ret = APP_HAL_OK;
     do {
         // Get the bemf voltage
-        hwbridge::Bridge3Phase::bemf_voltage_t bemf_voltage;
+        hwbridge::Bridge3Phase::phase_voltage_t bemf_voltage;
         ret = bridge_.read_bemf(bemf_voltage);
         const utime_t current_time = clock_.get_time_us();
 
@@ -65,7 +66,7 @@ app_hal_status_E BldcSensorlessRotorSectorSensor::get_electrical_angle(float& an
 }
 
 bool BldcSensorlessRotorSectorSensor::zero_crossing_detected(
-    const hwbridge::Bridge3Phase::bemf_voltage_t& bemf_voltage,
+    const hwbridge::Bridge3Phase::phase_voltage_t& bemf_voltage,
     control_loop::Bldc6StepCommutationTypes::commutation_step_t current_commutation_step) {
     float phase_sum = 0.0f;
     control_loop::Bldc6StepCommutationTypes::CommutationSignal zero_crossing_signal =
@@ -99,7 +100,7 @@ bool BldcSensorlessRotorSectorSensor::zero_crossing_detected(
     return return_value;
 }
 
-app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::reset_estimation() {
+app_hal_status_E ElectricalRotorPosEstimatorFromHall::reset_estimation() {
     app_hal_status_E ret = APP_HAL_OK;
 
     rotor_position_ = 0.0f;
@@ -116,11 +117,11 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::reset_estimation(
     return ret;
 }
 
-bool BldcElectricalRotorPositionEstimatorFromHall::is_estimation_valid() {
+bool ElectricalRotorPosEstimatorFromHall::is_estimation_valid() {
     return true;  // Since we know the absolute position, we should always return true
 }
 
-bool BldcElectricalRotorPositionEstimatorFromHall::is_interpolation_permitted() {
+bool ElectricalRotorPosEstimatorFromHall::is_interpolation_permitted() {
     bool ret = false;
     if ((params_ != nullptr) && (params_->enable_interpolation)) {
         const bool num_hall_updates_to_start = (number_of_hall_updates_ >= params_->num_hall_updates_to_start);
@@ -144,7 +145,7 @@ bool BldcElectricalRotorPositionEstimatorFromHall::is_interpolation_permitted() 
     return ret;
 }
 
-app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::init(BldcElectricalRotorPositionEstimatorFromHallParams* params) {
+app_hal_status_E ElectricalRotorPosEstimatorFromHall::init(ElectricalRotorPosEstimatorFromHallParams* params) {
     app_hal_status_E ret = APP_HAL_OK;
     do {
         // Set the internal params pointer
@@ -167,8 +168,9 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::init(BldcElectric
     return ret;
 }
 
-app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t time) {
+app_hal_status_E ElectricalRotorPosEstimatorFromHall::update(const ElectricalRotorPosEstimator::EstimatorInputs& inputs) {
     app_hal_status_E ret = APP_HAL_OK;
+    const utime_t time = inputs.time;
     do {
         if (params_ == nullptr) {
             ret = APP_HAL_ERROR;
@@ -265,7 +267,7 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::update(utime_t ti
     return ret;
 }
 
-app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::get_rotor_position(float& rotor_position) {
+app_hal_status_E ElectricalRotorPosEstimatorFromHall::get_rotor_position(float& rotor_position) {
     app_hal_status_E ret = APP_HAL_OK;
 
     rotor_position = rotor_position_;
@@ -273,7 +275,7 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::get_rotor_positio
     return ret;
 }
 
-app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::get_rotor_velocity(float& rotor_velocity) {
+app_hal_status_E ElectricalRotorPosEstimatorFromHall::get_rotor_velocity(float& rotor_velocity) {
     app_hal_status_E ret = APP_HAL_OK;
 
     rotor_velocity = compensated_velocity_;
@@ -281,11 +283,142 @@ app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::get_rotor_velocit
     return ret;
 }
 
-app_hal_status_E BldcElectricalRotorPositionEstimatorFromHall::get_rotor_acceleration(float& rotor_acceleration) {
+app_hal_status_E ElectricalRotorPosEstimatorFromHall::get_rotor_acceleration(float& rotor_acceleration) {
     app_hal_status_E ret = APP_HAL_OK;
 
     rotor_acceleration = acceleration_;
 
+    return ret;
+}
+
+app_hal_status_E SensorlessRotorFluxObserver::init(SensorlessRotorFluxObserverParams* params) {
+    app_hal_status_E ret = APP_HAL_OK;
+    do {
+        if (params == nullptr) {
+            ret = APP_HAL_ERROR;
+            break;
+        }
+
+        params_ = params;
+
+        reset_estimation();
+
+    } while (false);
+    return ret;
+}
+
+app_hal_status_E SensorlessRotorFluxObserver::update(const EstimatorInputs& inputs) {
+    app_hal_status_E ret = APP_HAL_OK;
+    do {
+        // Clarke transform the current
+        math::clarke_transform_result_t clarke_transform_result =
+            math::clarke_transform(inputs.phase_current.u, inputs.phase_current.v, inputs.phase_current.w);
+        // Get the y_alpha and y_beta values
+        const float y_alpha =
+            determine_flux_driving_voltage(inputs.phase_resistance, inputs.V_alpha, clarke_transform_result.alpha);
+        const float y_beta = determine_flux_driving_voltage(inputs.phase_resistance, inputs.V_beta, clarke_transform_result.beta);
+
+        // Get the eta values for the alpha and beta axes
+        const float eta_alpha = determine_flux_deviation(x_alpha_, inputs.phase_inductance, clarke_transform_result.alpha);
+        const float eta_beta = determine_flux_deviation(x_beta_, inputs.phase_inductance, clarke_transform_result.beta);
+
+        // Get the estimated flux linkage squared
+        const float estimated_flux_linkage_squared = x_alpha_ * x_alpha_ + x_beta_ * x_beta_;
+
+        // Get the pm flux squared
+        const float pm_flux_squared = inputs.pm_flux_linkage * inputs.pm_flux_linkage;
+
+        // Get the flux_dot values for the alpha and beta axes
+        const float flux_dot_alpha =
+            determine_flux_dot(y_alpha, params_->observer_gain, eta_alpha, estimated_flux_linkage_squared, pm_flux_squared);
+        const float flux_dot_beta =
+            determine_flux_dot(y_beta, params_->observer_gain, eta_beta, estimated_flux_linkage_squared, pm_flux_squared);
+
+        // Integrate the flux_dot values to get the flux values
+        const float dt = clock_.get_dt_s(inputs.time, last_run_time_);
+        x_alpha_ += flux_dot_alpha * dt;
+        x_beta_ += flux_dot_beta * dt;
+
+        // Store the previous theta_hat value
+        const float theta_hat_previous_ = theta_hat_;
+        // Now, we should update the estimated electrical angle by using the flux values
+        theta_hat_ = determine_theta_hat_from_flux_states(x_alpha_, clarke_transform_result.alpha, x_beta_,
+                                                          clarke_transform_result.beta, inputs.phase_inductance);
+
+        // Now, we should update the estimated electrical velocity
+        if (dt > 0.0f) {
+            theta_hat_dot_ = (theta_hat_ - theta_hat_previous_) / dt;
+        } else {
+            theta_hat_dot_ = 0.0f;
+        }
+
+    } while (false);
+
+    last_run_time_ = inputs.time;
+    return ret;
+}
+
+float SensorlessRotorFluxObserver::determine_flux_dot(const float& flux_driving_voltage_frame, const float& observer_gain,
+                                                      const float eta, const float& estimated_flux_linkage_squared,
+                                                      const float& pm_flux_squared) {
+    // equation 8 from the paper in same arg order.
+    float x_dot = flux_driving_voltage_frame + observer_gain / 2.0f * eta * (pm_flux_squared - estimated_flux_linkage_squared);
+    return x_dot;
+}
+
+float SensorlessRotorFluxObserver::determine_flux_driving_voltage(const float& phase_resistance, const float& V_frame,
+                                                                  const float& i_frame) {
+    // equation 4 from the paper in same arg order.
+    float V_flux = V_frame - phase_resistance * i_frame;
+    return V_flux;
+}
+
+float SensorlessRotorFluxObserver::determine_flux_deviation(float x_frame, float phase_inductance, float i_frame) {
+    // equation 6 from the paper in same arg order.
+    float eta = x_frame - phase_inductance * i_frame;
+    return eta;
+}
+
+float SensorlessRotorFluxObserver::determine_theta_hat_from_flux_states(const float& x_alpha, const float& i_alpha,
+                                                                        const float& x_beta, const float i_beta,
+                                                                        const float& phase_inductance) {
+    // equation 9 from the paper in same arg order.
+    const float arg1 = x_beta - phase_inductance * i_beta;
+    const float arg2 = x_alpha - phase_inductance * i_alpha;
+    float theta_hat = atan2f(arg1, arg2);
+
+    // Implement a wraparound of the theta_hat value to be between 0 and 2pi
+    math::wraparound(theta_hat, 0.0f, float(2.0f * M_PI));
+
+    return theta_hat;
+}
+
+app_hal_status_E SensorlessRotorFluxObserver::reset_estimation() {
+    app_hal_status_E ret = APP_HAL_OK;
+    x_alpha_ = 0.0f;
+    x_beta_ = 0.0f;
+
+    last_run_time_ = clock_.get_time_us();
+    theta_hat_ = 0.0f;
+    theta_hat_dot_ = 0.0f;
+
+    return ret;
+}
+
+app_hal_status_E SensorlessRotorFluxObserver::get_rotor_position(float& rotor_position) {
+    app_hal_status_E ret = APP_HAL_OK;
+    rotor_position = theta_hat_;
+    return ret;
+}
+
+bool SensorlessRotorFluxObserver::is_estimation_valid() {
+    const bool is_above_min_velocity = (fabs(theta_hat_dot_) >= params_->minimum_estimation_velocity);
+    return is_above_min_velocity;
+}
+
+app_hal_status_E SensorlessRotorFluxObserver::get_rotor_velocity(float& rotor_velocity) {
+    app_hal_status_E ret = APP_HAL_OK;
+    rotor_velocity = theta_hat_dot_;
     return ret;
 }
 

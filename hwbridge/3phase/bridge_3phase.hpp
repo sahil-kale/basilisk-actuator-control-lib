@@ -18,14 +18,14 @@ class Bridge3Phase {
     } phase_command_t;
 
     // Define a struct to return the PHASE (not backemf) voltage
-    typedef struct bemf_voltage {
+    typedef struct phase_voltage {
         float u;
         float v;
         float w;
-    } bemf_voltage_t;
+    } phase_voltage_t;
 
     // Define a struct to return the current
-    typedef struct current {
+    typedef struct phase_current {
         float u;
         float v;
         float w;
@@ -43,7 +43,7 @@ class Bridge3Phase {
     virtual void set_phase(const phase_command_t& u, const phase_command_t& v, const phase_command_t& w) = 0;
 
     // Define a virtual function to get the back emf voltage
-    virtual app_hal_status_E read_bemf(bemf_voltage_t& bemf_voltage) = 0;
+    virtual app_hal_status_E read_bemf(phase_voltage_t& bemf_voltage) = 0;
 
     // Define a virtual function to get the current
     virtual app_hal_status_E read_current(phase_current_t& current) = 0;

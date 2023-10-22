@@ -17,10 +17,10 @@ TEST(RotorEstimatorTest, test_angle_one_for_one) {
     // Create a mock rotor sensor
     bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
     // Initialize a sector sensor from hall
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
     // Make a param struct for the rotor estimator
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams params{
+    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall::ElectricalRotorPosEstimatorFromHallParams params{
         .num_hall_updates_to_start = 0,
         .max_estimate_angle_overrun = 2.5f / 3.0f * M_PI,
         .enable_interpolation = true,
@@ -38,7 +38,9 @@ TEST(RotorEstimatorTest, test_angle_one_for_one) {
         .WillOnce(DoAll(SetArgReferee<0>(1 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
     // Update the rotor position
-    rotor_estimator.update(500);
+    ElectricalRotorPosEstimator::EstimatorInputs inputs;
+    inputs.time = 500;
+    rotor_estimator.update(inputs);
 
     float rotor_position = 0.0f;
     rotor_estimator.get_rotor_position(rotor_position);
@@ -68,9 +70,9 @@ TEST(RotorEstimatorTest, test_angle_underflow) {
     // Create a mock rotor sensor
     bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
     // Initialize a sector sensor from hall
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams params{
+    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall::ElectricalRotorPosEstimatorFromHallParams params{
         .num_hall_updates_to_start = 10,
         .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
         .enable_interpolation = true,
@@ -88,7 +90,9 @@ TEST(RotorEstimatorTest, test_angle_underflow) {
         .WillOnce(DoAll(SetArgReferee<0>(5 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
     // Update the rotor position
-    rotor_estimator.update(500);
+    ElectricalRotorPosEstimator::EstimatorInputs inputs;
+    inputs.time = 500;
+    rotor_estimator.update(inputs);
 
     float rotor_position = 0.0f;
     rotor_estimator.get_rotor_position(rotor_position);
@@ -113,10 +117,10 @@ TEST(RotorEstimatorTest, test_angle_underflow) {
 TEST(RotorEstimatorTest, test_angle_interpolation_disabled) {
     bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
     // Initialize a sector sensor from hall
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
     // Make a param struct for the rotor estimator
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams params{
+    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall::ElectricalRotorPosEstimatorFromHallParams params{
         .num_hall_updates_to_start = 10,
         .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
         .enable_interpolation = false,
@@ -134,7 +138,9 @@ TEST(RotorEstimatorTest, test_angle_interpolation_disabled) {
         .WillOnce(DoAll(SetArgReferee<0>(1 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
     // Update the rotor position
-    rotor_estimator.update(500);
+    ElectricalRotorPosEstimator::EstimatorInputs inputs;
+    inputs.time = 500;
+    rotor_estimator.update(inputs);
 
     float rotor_position = 0.0f;
     rotor_estimator.get_rotor_position(rotor_position);
@@ -145,7 +151,8 @@ TEST(RotorEstimatorTest, test_angle_interpolation_disabled) {
         .WillOnce(DoAll(SetArgReferee<0>(1 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
     // Update the rotor position
-    rotor_estimator.update(1000);
+    inputs.time = 1000;
+    rotor_estimator.update(inputs);
 
     rotor_estimator.get_rotor_position(rotor_position);
 
@@ -156,10 +163,10 @@ TEST(RotorEstimatorTest, test_angle_interpolation_disabled) {
 TEST(RotorEstimatorTest, test_sector_position_offset_compensation) {
     bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
     // Initialize a sector sensor from hall
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
     // Make a param struct for the rotor estimator
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams params{
+    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall::ElectricalRotorPosEstimatorFromHallParams params{
         .num_hall_updates_to_start = 10,
         .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
         .enable_interpolation = false,
@@ -178,7 +185,9 @@ TEST(RotorEstimatorTest, test_sector_position_offset_compensation) {
         .WillOnce(DoAll(SetArgReferee<0>(0 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
     // Update the rotor position
-    rotor_estimator.update(500);
+    ElectricalRotorPosEstimator::EstimatorInputs inputs;
+    inputs.time = 500;
+    rotor_estimator.update(inputs);
 
     // Get the rotor position
     float rotor_position = 0.0f;
@@ -192,7 +201,8 @@ TEST(RotorEstimatorTest, test_sector_position_offset_compensation) {
         .WillOnce(DoAll(SetArgReferee<0>(5 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
     // Update the rotor position
-    rotor_estimator.update(1000);
+    inputs.time = 1000;
+    rotor_estimator.update(inputs);
 
     // Get the rotor position
     rotor_estimator.get_rotor_position(rotor_position);
@@ -206,10 +216,10 @@ TEST(RotorEstimatorTest, test_sector_position_offset_compensation) {
 TEST(RotorEstimatorTest, test_sector_position_offset_compensation_disabled) {
     bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
     // Initialize a sector sensor from hall
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
     // Make a param struct for the rotor estimator
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams params{
+    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall::ElectricalRotorPosEstimatorFromHallParams params{
         .num_hall_updates_to_start = 10,
         .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
         .enable_interpolation = false,
@@ -228,7 +238,9 @@ TEST(RotorEstimatorTest, test_sector_position_offset_compensation_disabled) {
         .WillOnce(DoAll(SetArgReferee<0>(0 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
     // Update the rotor position
-    rotor_estimator.update(500);
+    ElectricalRotorPosEstimator::EstimatorInputs inputs;
+    inputs.time = 500;
+    rotor_estimator.update(inputs);
 
     // Get the rotor position
     float rotor_position = 0.0f;
@@ -242,7 +254,8 @@ TEST(RotorEstimatorTest, test_sector_position_offset_compensation_disabled) {
         .WillOnce(DoAll(SetArgReferee<0>(5 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
     // Update the rotor position
-    rotor_estimator.update(1000);
+    inputs.time = 1000;
+    rotor_estimator.update(inputs);
 
     // Get the rotor position
     rotor_estimator.get_rotor_position(rotor_position);
@@ -256,10 +269,10 @@ TEST(RotorEstimatorTest, test_sector_position_offset_compensation_disabled) {
 TEST(RotorEstimatorTest, test_position_offset_compensation_rollover) {
     bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
     // Initialize a sector sensor from hall
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
     // Make a param struct for the rotor estimator
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall::BldcElectricalRotorPositionEstimatorFromHallParams params{
+    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall::ElectricalRotorPosEstimatorFromHallParams params{
         .num_hall_updates_to_start = 0,
         .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
         .enable_interpolation = true,
@@ -283,7 +296,9 @@ TEST(RotorEstimatorTest, test_position_offset_compensation_rollover) {
         .WillOnce(DoAll(SetArgReferee<0>(5 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
     // Update the rotor position
-    rotor_estimator.update(500);
+    ElectricalRotorPosEstimator::EstimatorInputs inputs;
+    inputs.time = 500;
+    rotor_estimator.update(inputs);
 
     // Expect the interpolator to be valid
     EXPECT_TRUE(rotor_estimator.is_interpolation_permitted());
@@ -293,7 +308,8 @@ TEST(RotorEstimatorTest, test_position_offset_compensation_rollover) {
         .WillOnce(DoAll(SetArgReferee<0>(0 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
 
     // Update the rotor position
-    rotor_estimator.update(1000);
+    inputs.time = 1000;
+    rotor_estimator.update(inputs);
 
     // Now, poll whether the estimation is valid, and expect it to be valid
     EXPECT_TRUE(rotor_estimator.is_interpolation_permitted());
@@ -323,7 +339,7 @@ TEST(RotorEstimatorTest, test_zero_crossing_detection) {
     // We expect HIGH, LOW, Z_FALLING
 
     // Make a fake bemf voltage struct
-    hwbridge::Bridge3Phase::bemf_voltage_t bemf_voltage = {0.0f, 0.0f, 0.0f};
+    hwbridge::Bridge3Phase::phase_voltage_t bemf_voltage = {0.0f, 0.0f, 0.0f};
 
     // Load the bemf with a voltage of 1.0f, 0.0f, and 1.0f
     bemf_voltage.u = 1.0f;
@@ -365,7 +381,7 @@ TEST(RotorEstimatorTest, sensorless_estimator_timing_switch) {
 
     // We should be in commutation step 0
     // Make a fake bemf voltage struct
-    hwbridge::Bridge3Phase::bemf_voltage_t bemf_voltage = {0.0f, 0.0f, 0.0f};
+    hwbridge::Bridge3Phase::phase_voltage_t bemf_voltage = {0.0f, 0.0f, 0.0f};
 
     // In sector 0, we expect Z_FALLING, HIGH, LOW
     bemf_voltage.u = 1.0f;

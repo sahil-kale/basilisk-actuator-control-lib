@@ -22,6 +22,11 @@ class BrushlessControlLoopTest : public BrushlessControlLoop {
 
     BrushlessControlLoop::BrushlessFocControLoopParams foc_params_{
         .current_control_bandwidth_rad_per_sec = 0.0f,
+
+        .phase_resistance = 0.0f,
+        .phase_inductance = 0.0f,
+        .pm_flux_linkage = 0.0f,
+
         .foc_start_timeout_period_us = 0,
         .disable_ki = false,
 
@@ -37,7 +42,7 @@ class BrushlessControlLoopTest : public BrushlessControlLoop {
         .foc_params = foc_params_,
         .open_loop_full_speed_theta_velocity = 0.0f};
 
-    BrushlessControlLoopTest(bldc_rotor_estimator::BldcElectricalRotorPositionEstimator& rotor_position_estimator,
+    BrushlessControlLoopTest(bldc_rotor_estimator::ElectricalRotorPosEstimator& rotor_position_estimator,
                              basilisk_hal::HAL_CLOCK& clock)
         : BrushlessControlLoop(bridge, clock, rotor_position_estimator) {}
 
@@ -51,7 +56,7 @@ TEST(BrushlessControlLoopTest, test_stop_to_start_to_run) {
     // Create a mock rotor sensor
     NiceMock<bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR> sector_sensor;
     // Initialize a sector sensor from hall
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
     // instantiate a brushless foc control loop test class
     BrushlessControlLoopTest test_control_loop(rotor_estimator, mock_clock);
@@ -82,7 +87,7 @@ TEST(BrushlessControlLoopTest, test_run_to_stop) {
     // Create a mock rotor sensor
     bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
     // Initialize a sector sensor from hall
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
     // instantiate a brushless foc control loop test class
     BrushlessControlLoopTest test_control_loop(rotor_estimator, mock_clock);
@@ -98,7 +103,7 @@ TEST(BrushlessControlLoopTest, test_6_step_duty_cycle) {
     // Create a mock rotor sensor
     bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
     // Initialize a sector sensor from hall
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
+    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
 
     // instantiate a brushless foc control loop test class
     BrushlessControlLoopTest test_control_loop(rotor_estimator, mock_clock);

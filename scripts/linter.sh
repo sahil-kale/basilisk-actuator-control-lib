@@ -19,4 +19,4 @@ hpp_files=$(echo "$files" | grep -E "\.hpp$")
 # Find the directories of the hpp files. Prepend the -I flag to each directory
 hpp_dirs=$(echo "$hpp_files" | xargs -n1 dirname | sort | uniq | sed -e 's/^/-I/')
 
-cppcheck $files --enable=all $suppressions $hpp_dirs --template=gcc -q --error-exitcode=1 --cppcheck-build-dir=cppcheckbuild
+cppcheck $files --enable=all $suppressions $hpp_dirs --template=gcc --error-exitcode=1 --cppcheck-build-dir=cppcheckbuild

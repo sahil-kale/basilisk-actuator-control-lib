@@ -12,7 +12,7 @@ namespace control_loop {
 // Define the init function
 void BrushlessControlLoop::init(BrushlessControlLoop::BrushlessControlLoopParams* params) {
     // Initialize the rotor position estimator
-    rotor_position_estimator_.reset_estimation();
+    primary_rotor_position_estimator_.reset_estimation();
 
     // Set the internal params pointer
     params_ = params;
@@ -101,9 +101,6 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
 
     hwbridge::Bridge3Phase::phase_command_t phase_commands[3] = {0, false};
 
-    // Update the rotor position estimator
-    rotor_position_estimator_.update(current_time_us);
-
     // Get the current state and the desired state
     BrushlessControlLoop::BrushlessControlLoopState desired_state = get_desired_state(speed, state_);
 
@@ -117,13 +114,9 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
                     pid_q_current_.reset();
 
                     // Set the PI gains
-                    // First, get the phase params
-                    hwbridge::Bridge3Phase::phase_params phase_params;
-                    bridge_.read_phase_params(phase_params);
-
-                    // Set the PI gains
-                    const float kp = params_->foc_params.current_control_bandwidth_rad_per_sec * phase_params.inductance;
-                    const float ki = phase_params.resistance / phase_params.inductance *
+                    const float kp =
+                        params_->foc_params.current_control_bandwidth_rad_per_sec * params_->foc_params.phase_inductance;
+                    const float ki = params_->foc_params.phase_resistance / params_->foc_params.phase_inductance *
                                      kp;  // multiplied by kp to create a series PI controller
 
                     pid_d_current_.set_kp(kp);
@@ -134,9 +127,9 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
                     }
 
                     // reset the rotor position estimator
-                    rotor_position_estimator_.reset_estimation();
+                    primary_rotor_position_estimator_.reset_estimation();
                     // Set the desired rotor angle to the current rotor angle
-                    rotor_position_estimator_.get_rotor_position(desired_rotor_angle_open_loop_);
+                    primary_rotor_position_estimator_.get_rotor_position(desired_rotor_angle_open_loop_);
                 }
             } break;
             case BrushlessControlLoop::BrushlessControlLoopState::NOT_INITIALIZED: {
@@ -150,8 +143,12 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
         state_ = desired_state;
     }
 
+    // Update the rotor position estimator
+    bldc_rotor_estimator::ElectricalRotorPosEstimator::EstimatorInputs estimator_inputs;
+    update_rotor_position_estimator(estimator_inputs, current_time_us);
+
     // Run the state machine
-    control_loop_type_ = get_desired_control_loop_type(rotor_position_estimator_.is_estimation_valid());
+    control_loop_type_ = get_desired_control_loop_type(primary_rotor_position_estimator_.is_estimation_valid());
     switch (state_) {
         case BrushlessControlLoop::BrushlessControlLoopState::STOP:
             break;
@@ -159,7 +156,7 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
         case BrushlessControlLoop::BrushlessControlLoopState::RUN: {
             switch (params_->commutation_type) {
                 case BrushlessControlLoopCommutationType::FOC: {
-                    run_foc(speed, current_time_us, last_run_time_, phase_commands);
+                    run_foc(speed, current_time_us, last_run_time_, estimator_inputs.phase_current, phase_commands);
                 } break;
                 case BrushlessControlLoopCommutationType::TRAPEZOIDAL: {
                     run_trap(speed, phase_commands);
@@ -184,7 +181,39 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
     return status_;
 }
 
+void BrushlessControlLoop::update_rotor_position_estimator(
+    bldc_rotor_estimator::ElectricalRotorPosEstimator::EstimatorInputs& estimator_inputs, utime_t current_time_us) {
+    estimator_inputs.time = current_time_us;
+
+    bridge_.read_bemf(estimator_inputs.phase_voltage);
+    bridge_.read_current(estimator_inputs.phase_current);
+
+    // Get the commutation step
+    estimator_inputs.current_commutation_step = Bldc6StepCommutationTypes::determine_commutation_step_from_theta(rotor_position_);
+
+    // Set the phase params
+    estimator_inputs.phase_resistance = params_->foc_params.phase_resistance;
+    estimator_inputs.phase_inductance = params_->foc_params.phase_inductance;
+
+    // Set the PM flux linkage
+    estimator_inputs.pm_flux_linkage = params_->foc_params.pm_flux_linkage;
+
+    // Set the V alpha and V beta
+    estimator_inputs.V_alpha = V_alpha_;
+    estimator_inputs.V_beta = V_beta_;
+
+    primary_rotor_position_estimator_.update(estimator_inputs);
+
+    // TODO: For now we are just going to use the primary rotor position estimator
+    // but the secondary rotor position estimator should be used if it is valid and the
+    // primary rotor position estimator is not valid
+    if (secondary_rotor_position_estimator_ != nullptr) {
+        secondary_rotor_position_estimator_->update(estimator_inputs);
+    }
+}
+
 void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t last_run_time_us,
+                                   hwbridge::Bridge3Phase::phase_current_t phase_currents,
                                    hwbridge::Bridge3Phase::phase_command_t phase_commands[3]) {
     // Get the bus voltage
     float bus_voltage = 0.0f;
@@ -207,11 +236,7 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
 
         } break;
         case BrushlessControlLoopType::CLOSED_LOOP: {
-            // Get the FOC current
-            hwbridge::Bridge3Phase::phase_current_t phase_currents;
-            bridge_.read_current(phase_currents);
-
-            rotor_position_estimator_.get_rotor_position(rotor_position_);
+            primary_rotor_position_estimator_.get_rotor_position(rotor_position_);
 
             // Do a Clarke transform
             math::clarke_transform_result_t clarke_transform =
@@ -257,7 +282,7 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
 
 void BrushlessControlLoop::run_trap(float speed, hwbridge::Bridge3Phase::phase_command_t phase_commands[3]) {
     // Get the rotor position
-    rotor_position_estimator_.get_rotor_position(rotor_position_);
+    primary_rotor_position_estimator_.get_rotor_position(rotor_position_);
 
     // Get the commutation step
     Bldc6StepCommutationTypes::commutation_step_t current_commutation_step =

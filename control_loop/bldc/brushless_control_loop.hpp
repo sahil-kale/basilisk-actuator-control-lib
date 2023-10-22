@@ -42,6 +42,11 @@ class BrushlessControlLoop : public ControlLoop {
     class BrushlessFocControLoopParams {
        public:
         float current_control_bandwidth_rad_per_sec;  // The bandwidth of the current control loop
+
+        float phase_resistance;
+        float phase_inductance;
+        float pm_flux_linkage;
+
         utime_t foc_start_timeout_period_us;
         bool disable_ki;  // Disable the ki term of the current controller
 
@@ -91,10 +96,12 @@ class BrushlessControlLoop : public ControlLoop {
     const BrushlessControlLoopStatus& get_status() const { return status_; }
 
     BrushlessControlLoop(hwbridge::Bridge3Phase& motor, basilisk_hal::HAL_CLOCK& clock,
-                         bldc_rotor_estimator::BldcElectricalRotorPositionEstimator& rotor_position_estimator)
+                         bldc_rotor_estimator::ElectricalRotorPosEstimator& rotor_position_estimator,
+                         bldc_rotor_estimator::ElectricalRotorPosEstimator* secondary_rotor_position_estimator = nullptr)
         : bridge_(motor),
           clock_(clock),
-          rotor_position_estimator_(rotor_position_estimator),
+          primary_rotor_position_estimator_(rotor_position_estimator),
+          secondary_rotor_position_estimator_(secondary_rotor_position_estimator),
           pid_q_current_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, clock),
           pid_d_current_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, clock) {}
 
@@ -127,7 +134,8 @@ class BrushlessControlLoop : public ControlLoop {
     BrushlessControlLoopState state_ = BrushlessControlLoopState::NOT_INITIALIZED;
     hwbridge::Bridge3Phase& bridge_;
     basilisk_hal::HAL_CLOCK& clock_;
-    bldc_rotor_estimator::BldcElectricalRotorPositionEstimator& rotor_position_estimator_;
+    bldc_rotor_estimator::ElectricalRotorPosEstimator& primary_rotor_position_estimator_;
+    bldc_rotor_estimator::ElectricalRotorPosEstimator* secondary_rotor_position_estimator_;
     // Control loop parameters
     BrushlessControlLoopParams* params_ = nullptr;
     BrushlessControlLoopStatus status_;
@@ -166,13 +174,24 @@ class BrushlessControlLoop : public ControlLoop {
     BrushlessControlLoopType get_desired_control_loop_type(bool is_estimator_valid);
 
     /**
+     * @brief update the rotor position estimator
+     * @param estimator_inputs The inputs to the rotor position estimator
+     * @param current_time_us The current time
+     * @return void
+     */
+    void update_rotor_position_estimator(bldc_rotor_estimator::ElectricalRotorPosEstimator::EstimatorInputs& estimator_inputs,
+                                         utime_t current_time_us);
+
+    /**
      * @brief Run the FOC control loop
      * @param motor_speed The desired speed of the motor (note: this is multiplied by the speed_to_iq_gain)
      * @param current_time The current time
      * @param last_run_time The last time the control loop was run
+     * @param phase_currents The phase current
      * @param phase_commands The phase commands to be filled in
      */
     void run_foc(float speed, utime_t current_time_us, utime_t last_run_time,
+                 hwbridge::Bridge3Phase::phase_current_t phase_currents,
                  hwbridge::Bridge3Phase::phase_command_t phase_commands[3]);
 
     /**

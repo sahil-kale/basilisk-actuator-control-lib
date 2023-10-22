@@ -92,7 +92,7 @@ class Bridge3PhaseDRV8323 : public Bridge3Phase {
     }
 
     // Define a function to read the BEMF voltage
-    app_hal_status_E read_bemf(bemf_voltage_t& bemf_voltage) {
+    app_hal_status_E read_bemf(phase_voltage_t& bemf_voltage) {
         app_hal_status_E status = app_hal_status_E::APP_HAL_OK;
         if (u_.bemf_sense_adc == nullptr || v_.bemf_sense_adc == nullptr || w_.bemf_sense_adc == nullptr) {
             status = app_hal_status_E::APP_HAL_NOT_INITIALIZED;
@@ -122,10 +122,10 @@ class Bridge3PhaseDRV8323 : public Bridge3Phase {
         return app_hal_status_E::APP_HAL_NOT_IMPLEMENTED;
     }
 
-    // Define a function that averages out the BEMF voltage readings. Returns a bemf_voltage_t object that contains the
+    // Define a function that averages out the BEMF voltage readings. Returns a phase_voltage_t object that contains the
     // average of the BEMF voltage readings.
-    bemf_voltage_t average_bemf_readings(const bemf_voltage_t& new_reading) {
-        bemf_voltage_t average_bemf_voltage = {0, 0, 0};
+    phase_voltage_t average_bemf_readings(const phase_voltage_t& new_reading) {
+        phase_voltage_t average_bemf_voltage = {0, 0, 0};
         for (uint8_t i = 0; i < BEMF_VOLTAGE_AVERAGE_SIZE - 1; i++) {
             bemf_voltage_[i] = bemf_voltage_[i + 1];
             average_bemf_voltage.u += bemf_voltage_[i].u;
@@ -151,7 +151,7 @@ class Bridge3PhaseDRV8323 : public Bridge3Phase {
     uint32_t frequency_;
     static constexpr uint8_t BEMF_VOLTAGE_AVERAGE_SIZE = 10;
     // Define an array of bemf voltage objects to average out the readings
-    bemf_voltage_t bemf_voltage_[BEMF_VOLTAGE_AVERAGE_SIZE];
+    phase_voltage_t bemf_voltage_[BEMF_VOLTAGE_AVERAGE_SIZE];
 };
 
 }  // namespace hwbridge

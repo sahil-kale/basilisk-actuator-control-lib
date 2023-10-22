@@ -6,15 +6,35 @@
 
 namespace bldc_rotor_estimator {
 
-class BldcElectricalRotorPositionEstimator {
+class ElectricalRotorPosEstimator {
    public:
-    BldcElectricalRotorPositionEstimator() = default;
-    virtual ~BldcElectricalRotorPositionEstimator() = default;
+    ElectricalRotorPosEstimator() = default;
+    virtual ~ElectricalRotorPosEstimator() = default;
+
+    // Define a struct for estimator inputs
+    // Note that not all estimators will use all of these inputs
+    // nor is it expected that all parameters are populated for all estimators
+    class EstimatorInputs {
+       public:
+        utime_t time = 0;
+        hwbridge::Bridge3Phase::phase_voltage_t phase_voltage = {0.0f, 0.0f, 0.0f};
+        control_loop::Bldc6StepCommutationTypes::commutation_step_t current_commutation_step = {
+            control_loop::Bldc6StepCommutationTypes::CommutationSignal::Z_FALLING,
+            control_loop::Bldc6StepCommutationTypes::CommutationSignal::HIGH,
+            control_loop::Bldc6StepCommutationTypes::CommutationSignal::LOW};
+
+        hwbridge::Bridge3Phase::phase_current_t phase_current = {0.0f, 0.0f, 0.0f};
+        float V_alpha = 0.0f;
+        float V_beta = 0.0f;
+        float phase_resistance = 0.0f;
+        float phase_inductance = 0.0f;
+        float pm_flux_linkage = 0.0f;  // Permanent magnet flux linkage (Wb)
+    };
 
     /**
      * @brief Update the rotor position estimator
      */
-    virtual app_hal_status_E update(utime_t time) = 0;
+    virtual app_hal_status_E update(const EstimatorInputs& inputs) = 0;
 
     /**
      * @brief Get the rotor position
@@ -71,7 +91,7 @@ class BldcSensorlessRotorSectorSensor : public BldcRotorSectorSensor {
     app_hal_status_E get_electrical_angle(float& angle) override;
 
    protected:
-    bool zero_crossing_detected(const hwbridge::Bridge3Phase::bemf_voltage_t& bemf_voltage,
+    bool zero_crossing_detected(const hwbridge::Bridge3Phase::phase_voltage_t& bemf_voltage,
                                 control_loop::Bldc6StepCommutationTypes::commutation_step_t current_commutation_step);
     hwbridge::Bridge3Phase& bridge_;
     float estimated_electrical_angle_ = 0.0f;
@@ -81,13 +101,13 @@ class BldcSensorlessRotorSectorSensor : public BldcRotorSectorSensor {
     utime_t time_of_last_commutation_ = 0;
 };
 
-class BldcElectricalRotorPositionEstimatorFromHall : public BldcElectricalRotorPositionEstimator {
+class ElectricalRotorPosEstimatorFromHall : public ElectricalRotorPosEstimator {
    public:
-    BldcElectricalRotorPositionEstimatorFromHall(basilisk_hal::HAL_CLOCK& clock,
-                                                 bldc_rotor_estimator::BldcRotorSectorSensor& sector_sensor)
+    ElectricalRotorPosEstimatorFromHall(basilisk_hal::HAL_CLOCK& clock,
+                                        bldc_rotor_estimator::BldcRotorSectorSensor& sector_sensor)
         : clock_(clock), sector_sensor_(sector_sensor) {}
 
-    class BldcElectricalRotorPositionEstimatorFromHallParams {
+    class ElectricalRotorPosEstimatorFromHallParams {
        public:
         uint16_t num_hall_updates_to_start;
         float max_estimate_angle_overrun;  // How much to allow the estimator to overrun the hall angle (radians)
@@ -101,14 +121,14 @@ class BldcElectricalRotorPositionEstimatorFromHall : public BldcElectricalRotorP
      * @param params The rotor position estimator parameters
      * @return app_hal_status_E the status of the initialization
      */
-    app_hal_status_E init(BldcElectricalRotorPositionEstimatorFromHallParams* params);
+    app_hal_status_E init(ElectricalRotorPosEstimatorFromHallParams* params);
 
     /**
      * @brief Update the rotor position estimator
      * @param time The current time
      * @return app_hal_status_E the status of the update
      */
-    app_hal_status_E update(utime_t time) override;
+    app_hal_status_E update(const EstimatorInputs& inputs) override;
 
     /**
      * @brief Get the rotor position
@@ -176,7 +196,97 @@ class BldcElectricalRotorPositionEstimatorFromHall : public BldcElectricalRotorP
     utime_t time_at_last_hall_update_ = 0;
     utime_t time_update_last_called_ = 0;
     uint64_t number_of_hall_updates_ = 0;
-    BldcElectricalRotorPositionEstimatorFromHallParams* params_ = nullptr;
+    ElectricalRotorPosEstimatorFromHallParams* params_ = nullptr;
+};
+
+/**
+ * @brief A sensorless rotor flux observer based on the paper below:
+ * @link https://cas.mines-paristech.fr/~praly/Telechargement/Journaux/2010-IEEE_TPEL-Lee-Hong-Nam-Ortega-Praly-Astolfi.pdf
+ */
+class SensorlessRotorFluxObserver : public ElectricalRotorPosEstimator {
+   public:
+    explicit SensorlessRotorFluxObserver(basilisk_hal::HAL_CLOCK& clock) : clock_(clock) {}
+
+    class SensorlessRotorFluxObserverParams {
+       public:
+        float observer_gain;                // Referred to as gamma in the paper eqn, the observer gain, rad/s
+        float minimum_estimation_velocity;  // The minimum velocity to use for estimation (rad/s)
+    };
+
+    app_hal_status_E init(SensorlessRotorFluxObserverParams* params);
+
+    app_hal_status_E update(const EstimatorInputs& inputs) override;
+
+    app_hal_status_E get_rotor_position(float& rotor_position) override;
+
+    app_hal_status_E get_rotor_velocity(float& rotor_velocity) override;
+
+    app_hal_status_E reset_estimation() override;
+
+    bool is_estimation_valid() override;
+
+   private:
+    /**
+     * @brief Determine the flux driving voltage (y) in the paper
+     * @param phase_resistance The phase resistance of the motor
+     * @param V_frame The applied voltage in the frame of reference of the rotor (alpha or beta)
+     * @param i_frame The current in the frame of reference of the rotor (alpha or beta)
+     * @return The flux driving voltage (y) in the paper
+     * @note Implements the equation (4) from the paper, which is really just finding
+     *       the voltage on the inductor and back-emf voltage by subtracting the
+     *       voltage drop across the phase resistance from the phase voltage from the
+     *       V_alpha and V_beta applied voltages (can be treated like a regular DC motor in this frame)
+     */
+    float determine_flux_driving_voltage(const float& phase_resistance, const float& V_frame, const float& i_frame);
+
+    /**
+     * @brief Determine the flux deviation (eta)
+     * @param x_frame The state variable x in the frame of reference of the rotor (alpha or beta)
+     * @param phase_inductance The phase inductance of the motor
+     * @param i_frame The current in the frame of reference of the rotor (alpha or beta)
+     * @return The flux deviation (eta)
+     * @note Implements the equation (6) from the paper by calculating the flux deviation from the permanent magnet flux linkage
+     * due to the inductance
+     */
+    float determine_flux_deviation(float x_frame, float phase_inductance, float i_frame);
+
+    /**
+     * @brief Determine the state variable delta (x_dot)
+     * @param flux_driving_voltage_frame The flux driving voltage (y) in the paper
+     * @param observer_gain The observer gain (gamma)
+     * @param eta The flux deviation (eta)
+     * @param estimated_flux_linkage_squared The estimated flux linkage squared (eta^2)
+     * @param pm_flux_squared The permanent magnet flux linkage squared (psi^2)
+     * @return The state variable delta (x_dot)
+     * @note Implements the equation (6 and 8) from the paper
+     * @note Determines the flux dynamics (x_dot) based on the current state of the system
+     */
+    float determine_flux_dot(const float& flux_driving_voltage_frame, const float& observer_gain, const float eta,
+                             const float& estimated_flux_linkage_squared, const float& pm_flux_squared);
+
+    /**
+     * @brief Determine the electrical angle of the rotor (theta_hat) from the flux states
+     * @param x_alpha The state variable x_alpha
+     * @param i_alpha The current in the alpha frame
+     * @param x_beta The state variable x_beta
+     * @param i_beta The current in the beta frame
+     * @param phase_inductance The phase inductance of the motor
+     * @return The electrical angle of the rotor (theta_hat)
+     */
+    float determine_theta_hat_from_flux_states(const float& x_alpha, const float& i_alpha, const float& x_beta,
+                                               const float i_beta, const float& phase_inductance);
+
+    basilisk_hal::HAL_CLOCK& clock_;
+
+    // State variables
+    float x_alpha_ = 0.0f;    // Referred to as x1 in the paper eqn (9)
+    float x_beta_ = 0.0f;     // Referred to as x2 in the paper eqn (9)
+    float theta_hat_ = 0.0f;  // Referred to as theta_hat in the paper eqn (9)
+    utime_t last_run_time_ = 0;
+
+    float theta_hat_dot_ = 0.0f;
+
+    SensorlessRotorFluxObserverParams* params_ = nullptr;
 };
 
 }  // namespace bldc_rotor_estimator
