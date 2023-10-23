@@ -69,10 +69,13 @@ class BrushlessControlLoop : public ControlLoop {
         enum class BrushlessControlLoopError {
             NO_ERROR,
             PARAMS_NOT_SET,
+            ROTOR_ESTIMATION_FAILED,
+            NO_VALID_ROTOR_POSITION_ESTIMATOR
         };
         enum class BrushlessControlLoopWarning {
             NO_WARNING,
             CURRENT_CONTROL_NOT_SUPPORTED,
+            PRIMARY_ROTOR_ESTIMATOR_NOT_VALID,
         };
         BrushlessControlLoopStatus() : ControlLoopStatus() {}
         BrushlessControlLoopWarning warning = BrushlessControlLoopWarning::NO_WARNING;
@@ -167,10 +170,11 @@ class BrushlessControlLoop : public ControlLoop {
 
     /**
      * @brief Get the desired control loop type
-     * @param is_estimator_valid Whether the rotor position estimator is valid
+     * @param is_primary_estimator_valid Whether the primary rotor estimator is valid
+     * @param is_secondary_estimator_valid Whether the secondary rotor estimator is valid
      * @return The desired control loop type
      */
-    BrushlessControlLoopType get_desired_control_loop_type(bool is_estimator_valid);
+    BrushlessControlLoopType get_desired_control_loop_type(bool is_primary_estimator_valid, bool is_secondary_estimator_valid);
 
     /**
      * @brief update the rotor position estimator
@@ -180,6 +184,22 @@ class BrushlessControlLoop : public ControlLoop {
      */
     void update_rotor_position_estimator(bldc_rotor_estimator::ElectricalRotorPosEstimator::EstimatorInputs& estimator_inputs,
                                          utime_t current_time_us);
+
+    /**
+     * @brief Exit a state
+     * @param current_state The current state
+     * @param desired_state The desired state to exit
+     * @return void
+     */
+    void exit_state(const BrushlessControlLoopState& current_state, const BrushlessControlLoopState& desired_state);
+
+    /**
+     * @brief Enter a state
+     * @param current_state The current state
+     * @param desired_state The desired state to enter
+     * @return void
+     */
+    void enter_state(const BrushlessControlLoopState& current_state, const BrushlessControlLoopState& desired_state);
 
     /**
      * @brief Run the FOC control loop

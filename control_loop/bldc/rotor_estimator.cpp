@@ -388,7 +388,7 @@ float SensorlessRotorFluxObserver::determine_theta_hat_from_flux_states(const fl
     float theta_hat = atan2f(arg1, arg2);
 
     // Implement a wraparound of the theta_hat value to be between 0 and 2pi
-    math::wraparound(theta_hat, 0.0f, float(2.0f * M_PI));
+    math::wraparound(theta_hat, 0.0f, math::M_PI_FLOAT * 2.0f);
 
     return theta_hat;
 }

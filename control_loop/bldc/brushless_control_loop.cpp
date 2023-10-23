@@ -107,36 +107,11 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
 
         // If the desired state is different from the current state, then we need to transition
         if (desired_state != state_) {
-            switch (desired_state) {
-                case BrushlessControlLoop::BrushlessControlLoopState::RUN: {
-                    if (params_->commutation_type == BrushlessControlLoopCommutationType::FOC) {
-                        // reset the PID controllers
-                        pid_d_current_.reset();
-                        pid_q_current_.reset();
+            // Exit the current state
+            exit_state(state_, desired_state);
 
-                        // Set the PI gains
-                        const float kp =
-                            params_->foc_params.current_control_bandwidth_rad_per_sec * params_->foc_params.phase_inductance;
-                        const float ki = params_->foc_params.phase_resistance / params_->foc_params.phase_inductance *
-                                         kp;  // multiplied by kp to create a series PI controller
-
-                        pid_d_current_.set_kp(kp);
-                        pid_q_current_.set_kp(kp);
-                        if (params_->foc_params.disable_ki == false) {
-                            pid_d_current_.set_ki(ki);
-                            pid_q_current_.set_ki(ki);
-                        }
-
-                        // reset the rotor position estimator
-                        primary_rotor_position_estimator_.reset_estimation();
-                        // Set the desired rotor angle to the current rotor angle
-                        primary_rotor_position_estimator_.get_rotor_position(desired_rotor_angle_open_loop_);
-                    }
-                } break;
-                case BrushlessControlLoop::BrushlessControlLoopState::STOP:
-                default:
-                    break;
-            }
+            // Enter the desired state
+            enter_state(state_, desired_state);
             state_ = desired_state;
         }
 
@@ -145,7 +120,6 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
         update_rotor_position_estimator(estimator_inputs, current_time_us);
 
         // Run the state machine
-        control_loop_type_ = get_desired_control_loop_type(primary_rotor_position_estimator_.is_estimation_valid());
         switch (state_) {
             case BrushlessControlLoop::BrushlessControlLoopState::STOP:
                 break;
@@ -216,9 +190,58 @@ void BrushlessControlLoop::update_rotor_position_estimator(
     }
 }
 
+void BrushlessControlLoop::exit_state(const BrushlessControlLoopState& current_state,
+                                      const BrushlessControlLoopState& desired_state) {
+    IGNORE(current_state);
+    IGNORE(desired_state);
+}
+
+void BrushlessControlLoop::enter_state(const BrushlessControlLoopState& current_state,
+                                       const BrushlessControlLoopState& desired_state) {
+    IGNORE(current_state);
+    switch (desired_state) {
+        case BrushlessControlLoop::BrushlessControlLoopState::RUN: {
+            if (params_->commutation_type == BrushlessControlLoopCommutationType::FOC) {
+                // reset the PID controllers
+                pid_d_current_.reset();
+                pid_q_current_.reset();
+
+                // Set the PI gains
+                const float kp = params_->foc_params.current_control_bandwidth_rad_per_sec * params_->foc_params.phase_inductance;
+                const float ki = params_->foc_params.phase_resistance / params_->foc_params.phase_inductance *
+                                 kp;  // multiplied by kp to create a series PI controller
+
+                pid_d_current_.set_kp(kp);
+                pid_q_current_.set_kp(kp);
+                if (params_->foc_params.disable_ki == false) {
+                    pid_d_current_.set_ki(ki);
+                    pid_q_current_.set_ki(ki);
+                }
+
+                // reset the rotor position estimator
+                primary_rotor_position_estimator_.reset_estimation();
+                if (secondary_rotor_position_estimator_ != nullptr) {
+                    secondary_rotor_position_estimator_->reset_estimation();
+                }
+                // Set the desired rotor angle to the current rotor angle
+                primary_rotor_position_estimator_.get_rotor_position(desired_rotor_angle_open_loop_);
+            }
+        } break;
+        case BrushlessControlLoop::BrushlessControlLoopState::STOP:
+        default:
+            break;
+    }
+}
+
 void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t last_run_time_us,
                                    hwbridge::Bridge3Phase::phase_current_t phase_currents,
                                    hwbridge::Bridge3Phase::phase_command_t phase_commands[3]) {
+    const bool is_primary_estimator_valid = primary_rotor_position_estimator_.is_estimation_valid();
+    bool is_secondary_estimator_valid = false;
+    if (secondary_rotor_position_estimator_ != nullptr) {
+        is_secondary_estimator_valid = secondary_rotor_position_estimator_->is_estimation_valid();
+    }
+    control_loop_type_ = get_desired_control_loop_type(is_primary_estimator_valid, is_secondary_estimator_valid);
     // Get the bus voltage
     float bus_voltage = 0.0f;
     // TODO: ERROR CHECKING!!
@@ -234,13 +257,26 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
                                               (float)(current_time_us - last_run_time_) /
                                               basilisk_hal::HAL_CLOCK::kMicrosecondsPerSecond;
             // Wrap the rotor position around 0 and 2pi
-            math::wraparound(desired_rotor_angle_open_loop_, 0.0f, float(2.0f * M_PI));
+            math::wraparound(desired_rotor_angle_open_loop_, 0.0f, math::M_PI_FLOAT * 2.0f);
 
             rotor_position_ = desired_rotor_angle_open_loop_;
 
         } break;
         case BrushlessControlLoopType::CLOSED_LOOP: {
-            primary_rotor_position_estimator_.get_rotor_position(rotor_position_);
+            // If the primary rotor position estimator is valid, then use it
+            if (primary_rotor_position_estimator_.is_estimation_valid()) {
+                primary_rotor_position_estimator_.get_rotor_position(rotor_position_);
+                status_.warning = BrushlessControlLoopStatus::BrushlessControlLoopWarning::PRIMARY_ROTOR_ESTIMATOR_NOT_VALID;
+            }
+            // Otherwise, if the secondary rotor position estimator is valid, then use it
+            else if ((secondary_rotor_position_estimator_ != nullptr) &&
+                     (secondary_rotor_position_estimator_->is_estimation_valid())) {
+                secondary_rotor_position_estimator_->get_rotor_position(rotor_position_);
+            } else {
+                // Set an error in the status
+                status_.error = BrushlessControlLoopStatus::BrushlessControlLoopError::NO_VALID_ROTOR_POSITION_ESTIMATOR;
+                break;
+            }
 
             // Do a Clarke transform
             math::clarke_transform_result_t clarke_transform =
@@ -352,10 +388,11 @@ void BrushlessControlLoop::determine_inverter_duty_cycles_foc(float theta, float
     phase_command_w.invert_low_side = true;
 }
 
-BrushlessControlLoop::BrushlessControlLoopType BrushlessControlLoop::get_desired_control_loop_type(bool is_estimator_valid) {
+BrushlessControlLoop::BrushlessControlLoopType BrushlessControlLoop::get_desired_control_loop_type(
+    bool is_primary_estimator_valid, bool is_secondary_estimator_valid) {
     BrushlessControlLoop::BrushlessControlLoopType desired_control_loop_type =
         BrushlessControlLoop::BrushlessControlLoopType::OPEN_LOOP;
-    if (is_estimator_valid) {
+    if (is_primary_estimator_valid || is_secondary_estimator_valid) {
         desired_control_loop_type = BrushlessControlLoop::BrushlessControlLoopType::CLOSED_LOOP;
     }
     return desired_control_loop_type;
