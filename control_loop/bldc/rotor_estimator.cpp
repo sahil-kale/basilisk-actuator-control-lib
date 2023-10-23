@@ -311,19 +311,18 @@ app_hal_status_E SensorlessRotorFluxObserver::update(const EstimatorInputs& inpu
     app_hal_status_E ret = APP_HAL_OK;
     do {
         // Clarke transform the current
-        math::clarke_transform_result_t clarke_transform_result =
+        math::clarke_transform_result_t i_ab =
             math::clarke_transform(inputs.phase_current.u, inputs.phase_current.v, inputs.phase_current.w);
         // Get the y_alpha and y_beta values
-        const float y_alpha =
-            determine_flux_driving_voltage(inputs.phase_resistance, inputs.V_alpha, clarke_transform_result.alpha);
-        const float y_beta = determine_flux_driving_voltage(inputs.phase_resistance, inputs.V_beta, clarke_transform_result.beta);
+        const float y_alpha = determine_flux_driving_voltage(inputs.phase_resistance, inputs.V_alpha, i_ab.alpha);
+        const float y_beta = determine_flux_driving_voltage(inputs.phase_resistance, inputs.V_beta, i_ab.beta);
 
         // Get the eta values for the alpha and beta axes
-        const float eta_alpha = determine_flux_deviation(x_alpha_, inputs.phase_inductance, clarke_transform_result.alpha);
-        const float eta_beta = determine_flux_deviation(x_beta_, inputs.phase_inductance, clarke_transform_result.beta);
+        const float eta_alpha = determine_flux_deviation(x_alpha_, inputs.phase_inductance, i_ab.alpha);
+        const float eta_beta = determine_flux_deviation(x_beta_, inputs.phase_inductance, i_ab.beta);
 
         // Get the estimated flux linkage squared
-        const float estimated_flux_linkage_squared = x_alpha_ * x_alpha_ + x_beta_ * x_beta_;
+        const float estimated_flux_linkage_squared = eta_alpha * eta_alpha + eta_beta * eta_beta;
 
         // Get the pm flux squared
         const float pm_flux_squared = inputs.pm_flux_linkage * inputs.pm_flux_linkage;
@@ -342,8 +341,8 @@ app_hal_status_E SensorlessRotorFluxObserver::update(const EstimatorInputs& inpu
         // Store the previous theta_hat value
         const float theta_hat_previous_ = theta_hat_;
         // Now, we should update the estimated electrical angle by using the flux values
-        theta_hat_ = determine_theta_hat_from_flux_states(x_alpha_, clarke_transform_result.alpha, x_beta_,
-                                                          clarke_transform_result.beta, inputs.phase_inductance);
+        theta_hat_ = determine_theta_hat_from_flux_states(x_alpha_, i_ab.alpha, x_beta_, i_ab.beta, inputs.phase_inductance,
+                                                          inputs.rotor_commanded_vel_sign);
 
         // Now, we should update the estimated electrical velocity
         if (dt > 0.0f) {
@@ -381,11 +380,15 @@ float SensorlessRotorFluxObserver::determine_flux_deviation(float x_frame, float
 
 float SensorlessRotorFluxObserver::determine_theta_hat_from_flux_states(const float& x_alpha, const float& i_alpha,
                                                                         const float& x_beta, const float i_beta,
-                                                                        const float& phase_inductance) {
+                                                                        const float& phase_inductance, const float& vel_sign) {
     // equation 9 from the paper in same arg order.
     const float arg1 = x_beta - phase_inductance * i_beta;
     const float arg2 = x_alpha - phase_inductance * i_alpha;
     float theta_hat = atan2f(arg1, arg2);
+
+    // We should add/subtract pi/2 to the theta_hat value to account
+    // for the fact that the flux linkage is lag/leading the current by pi/2
+    theta_hat -= math::M_PI_FLOAT / 2.0f * vel_sign;
 
     // Implement a wraparound of the theta_hat value to be between 0 and 2pi
     math::wraparound(theta_hat, 0.0f, math::M_PI_FLOAT * 2.0f);

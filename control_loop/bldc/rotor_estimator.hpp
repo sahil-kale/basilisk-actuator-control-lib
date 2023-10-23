@@ -28,7 +28,8 @@ class ElectricalRotorPosEstimator {
         float V_beta = 0.0f;
         float phase_resistance = 0.0f;
         float phase_inductance = 0.0f;
-        float pm_flux_linkage = 0.0f;  // Permanent magnet flux linkage (Wb)
+        float pm_flux_linkage = 0.0f;           // Permanent magnet flux linkage (Wb)
+        float rotor_commanded_vel_sign = 0.0f;  // Sign of the rotor velocity (1 or -1)
     };
 
     /**
@@ -271,10 +272,11 @@ class SensorlessRotorFluxObserver : public ElectricalRotorPosEstimator {
      * @param x_beta The state variable x_beta
      * @param i_beta The current in the beta frame
      * @param phase_inductance The phase inductance of the motor
+     * @param vel_sign The sign of the rotor velocity (1 or -1)
      * @return The electrical angle of the rotor (theta_hat)
      */
     float determine_theta_hat_from_flux_states(const float& x_alpha, const float& i_alpha, const float& x_beta,
-                                               const float i_beta, const float& phase_inductance);
+                                               const float i_beta, const float& phase_inductance, const float& vel_sign);
 
     basilisk_hal::HAL_CLOCK& clock_;
 

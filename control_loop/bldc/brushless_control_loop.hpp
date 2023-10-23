@@ -70,7 +70,7 @@ class BrushlessControlLoop : public ControlLoop {
             NO_ERROR,
             PARAMS_NOT_SET,
             ROTOR_ESTIMATION_FAILED,
-            NO_VALID_ROTOR_POSITION_ESTIMATOR
+            NO_VALID_ROTOR_POSITION_ESTIMATOR,
         };
         enum class BrushlessControlLoopWarning {
             NO_WARNING,
@@ -180,10 +180,11 @@ class BrushlessControlLoop : public ControlLoop {
      * @brief update the rotor position estimator
      * @param estimator_inputs The inputs to the rotor position estimator
      * @param current_time_us The current time
+     * @param speed The motor speed
      * @return void
      */
     void update_rotor_position_estimator(bldc_rotor_estimator::ElectricalRotorPosEstimator::EstimatorInputs& estimator_inputs,
-                                         utime_t current_time_us);
+                                         utime_t current_time_us, float speed);
 
     /**
      * @brief Exit a state
