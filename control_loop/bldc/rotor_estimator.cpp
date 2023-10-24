@@ -342,8 +342,15 @@ app_hal_status_E SensorlessRotorFluxObserver::update(const EstimatorInputs& inpu
         theta_hat_ = determine_theta_hat_from_flux_states(x_alpha_, i_ab.alpha, x_beta_, i_ab.beta, inputs.phase_inductance,
                                                           inputs.rotor_commanded_vel_sign);
 
+        const float omega_previous_ = omega_;
         // Now, we should update the omega value
         omega_ = update_and_determine_theta_hat_dot(params_->Kp, params_->Ki, theta_hat_, dt, z1_, z2_);
+
+        // LPF the omega value
+        // First, determine tau with an fc of 10Hz
+        const float tau = math::determine_tau_from_f_c(params_->vel_fc);
+        // Now, LPF the omega value
+        omega_ = math::low_pass_filter(omega_, omega_previous_, tau, dt);
 
     } while (false);
 
@@ -392,12 +399,22 @@ float SensorlessRotorFluxObserver::determine_theta_hat_from_flux_states(const fl
 
 float SensorlessRotorFluxObserver::update_and_determine_theta_hat_dot(const float& Kp, const float Ki, const float& theta_hat,
                                                                       const float& dt, float& z1, float& z2) {
-    const float z1_dot = Kp * (theta_hat - z1) + Ki * z2;
+    float theta_hat_minus_z1 = theta_hat - z1;
+
+    // Implement a wraparound of the theta_hat_minus_z1 value to be between -pi and pi
+    // This is to prevent overflow/underflow of the z1 and z2 values
+    // since Z1 is roughly equal to theta hat.
+    math::wraparound(theta_hat_minus_z1, -math::M_PI_FLOAT, math::M_PI_FLOAT);
+
+    const float z1_dot = Kp * (theta_hat_minus_z1) + Ki * z2;
     const float z2_dot = theta_hat - z1;
 
     // Integrate the z1 and z2 values
     z1 += z1_dot * dt;
     z2 += z2_dot * dt;
+
+    // Now, wrap around the z1 value
+    math::wraparound(z1, 0.0f, math::M_PI_FLOAT * 2.0f);
 
     return z1_dot;  // same as omega
 }

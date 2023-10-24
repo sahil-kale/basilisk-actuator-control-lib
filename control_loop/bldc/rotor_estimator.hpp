@@ -214,6 +214,8 @@ class SensorlessRotorFluxObserver : public ElectricalRotorPosEstimator {
         float minimum_estimation_velocity;  // The minimum velocity to use for estimation (rad/s)
         float Kp;                           // The proportional gain of the speed tracking controller estimate
         float Ki;                           // The integral gain of the speed tracking controller estimate
+
+        float vel_fc;  // The velocity low-pass filter cutoff frequency (rad/s)
     };
 
     app_hal_status_E init(SensorlessRotorFluxObserverParams* params);
@@ -228,7 +230,7 @@ class SensorlessRotorFluxObserver : public ElectricalRotorPosEstimator {
 
     bool is_estimation_valid() override;
 
-   private:
+   protected:
     /**
      * @brief Determine the flux driving voltage (y) in the paper
      * @param phase_resistance The phase resistance of the motor
