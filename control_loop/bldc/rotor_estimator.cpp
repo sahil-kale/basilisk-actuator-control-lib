@@ -338,18 +338,12 @@ app_hal_status_E SensorlessRotorFluxObserver::update(const EstimatorInputs& inpu
         x_alpha_ += flux_dot_alpha * dt;
         x_beta_ += flux_dot_beta * dt;
 
-        // Store the previous theta_hat value
-        const float theta_hat_previous_ = theta_hat_;
         // Now, we should update the estimated electrical angle by using the flux values
         theta_hat_ = determine_theta_hat_from_flux_states(x_alpha_, i_ab.alpha, x_beta_, i_ab.beta, inputs.phase_inductance,
                                                           inputs.rotor_commanded_vel_sign);
 
-        // Now, we should update the estimated electrical velocity
-        if (dt > 0.0f) {
-            theta_hat_dot_ = (theta_hat_ - theta_hat_previous_) / dt;
-        } else {
-            theta_hat_dot_ = 0.0f;
-        }
+        // Now, we should update the omega value
+        omega_ = update_and_determine_theta_hat_dot(params_->Kp, params_->Ki, theta_hat_, dt, z1_, z2_);
 
     } while (false);
 
@@ -396,6 +390,18 @@ float SensorlessRotorFluxObserver::determine_theta_hat_from_flux_states(const fl
     return theta_hat;
 }
 
+float SensorlessRotorFluxObserver::update_and_determine_theta_hat_dot(const float& Kp, const float Ki, const float& theta_hat,
+                                                                      const float& dt, float& z1, float& z2) {
+    const float z1_dot = Kp * (theta_hat - z1) + Ki * z2;
+    const float z2_dot = theta_hat - z1;
+
+    // Integrate the z1 and z2 values
+    z1 += z1_dot * dt;
+    z2 += z2_dot * dt;
+
+    return z1_dot;  // same as omega
+}
+
 app_hal_status_E SensorlessRotorFluxObserver::reset_estimation() {
     app_hal_status_E ret = APP_HAL_OK;
     x_alpha_ = 0.0f;
@@ -403,7 +409,9 @@ app_hal_status_E SensorlessRotorFluxObserver::reset_estimation() {
 
     last_run_time_ = clock_.get_time_us();
     theta_hat_ = 0.0f;
-    theta_hat_dot_ = 0.0f;
+    omega_ = 0.0f;
+    z1_ = 0.0f;
+    z2_ = 0.0f;
 
     return ret;
 }
@@ -415,13 +423,13 @@ app_hal_status_E SensorlessRotorFluxObserver::get_rotor_position(float& rotor_po
 }
 
 bool SensorlessRotorFluxObserver::is_estimation_valid() {
-    const bool is_above_min_velocity = (fabs(theta_hat_dot_) >= params_->minimum_estimation_velocity);
+    const bool is_above_min_velocity = (fabs(omega_) >= params_->minimum_estimation_velocity);
     return is_above_min_velocity;
 }
 
 app_hal_status_E SensorlessRotorFluxObserver::get_rotor_velocity(float& rotor_velocity) {
     app_hal_status_E ret = APP_HAL_OK;
-    rotor_velocity = theta_hat_dot_;
+    rotor_velocity = omega_;
     return ret;
 }
 

@@ -340,6 +340,12 @@ void BrushlessControlLoop::determine_inverter_duty_cycles_foc(float theta, float
                                                               hwbridge::Bridge3Phase::phase_command_t& phase_command_u,
                                                               hwbridge::Bridge3Phase::phase_command_t& phase_command_v,
                                                               hwbridge::Bridge3Phase::phase_command_t& phase_command_w) {
+    // Do an inverse Park transform
+    math::inverse_park_transform_result_t inverse_park_transform = math::inverse_park_transform(Vdirect, Vquadrature, theta);
+
+    V_alpha_ = inverse_park_transform.alpha;
+    V_beta_ = inverse_park_transform.beta;
+
     switch (pwm_control_type) {
         case BrushlessControlLoop::BrushlessFocPwmControlType::SPACE_VECTOR: {
             math::svpwm_duty_cycle_t duty_cycles = math::svpwm(Vdirect, Vquadrature, theta, bus_voltage);
@@ -348,13 +354,6 @@ void BrushlessControlLoop::determine_inverter_duty_cycles_foc(float theta, float
             duty_cycle_w_h_ = duty_cycles.dutyCycleW;
         } break;
         case BrushlessControlLoop::BrushlessFocPwmControlType::SINE: {
-            // Do an inverse Park transform
-            math::inverse_park_transform_result_t inverse_park_transform =
-                math::inverse_park_transform(Vdirect, Vquadrature, theta);
-
-            V_alpha_ = inverse_park_transform.alpha;
-            V_beta_ = inverse_park_transform.beta;
-
             // Do an inverse clarke transform
             math::inverse_clarke_transform_result_t inverse_clarke_transform =
                 math::inverse_clarke_transform(inverse_park_transform.alpha, inverse_park_transform.beta);

@@ -212,6 +212,8 @@ class SensorlessRotorFluxObserver : public ElectricalRotorPosEstimator {
        public:
         float observer_gain;                // Referred to as gamma in the paper eqn, the observer gain, rad/s
         float minimum_estimation_velocity;  // The minimum velocity to use for estimation (rad/s)
+        float Kp;                           // The proportional gain of the speed tracking controller estimate
+        float Ki;                           // The integral gain of the speed tracking controller estimate
     };
 
     app_hal_status_E init(SensorlessRotorFluxObserverParams* params);
@@ -278,6 +280,18 @@ class SensorlessRotorFluxObserver : public ElectricalRotorPosEstimator {
     float determine_theta_hat_from_flux_states(const float& x_alpha, const float& i_alpha, const float& x_beta,
                                                const float i_beta, const float& phase_inductance, const float& vel_sign);
 
+    /**
+     * @brief Determine the velocity of the rotor (theta_hat_dot) using equations 11-13 from the paper
+     * @param Kp The proportional gain of the speed trackiner controller estimate
+     * @param Ki The integral gain of the speed trackiner controller estimate
+     * @param theta_hat The electrical angle of the rotor (theta_hat)
+     * @param dt The time since the last update
+     * @param z1 The state variable z1 (note: this is passed by reference and updated in this function)
+     * @param z2 The state variable z2 (note: this is passed by reference and updated in this function)
+     */
+    float update_and_determine_theta_hat_dot(const float& Kp, const float Ki, const float& theta_hat, const float& dt, float& z1,
+                                             float& z2);
+
     basilisk_hal::HAL_CLOCK& clock_;
 
     // State variables
@@ -286,7 +300,9 @@ class SensorlessRotorFluxObserver : public ElectricalRotorPosEstimator {
     float theta_hat_ = 0.0f;  // Referred to as theta_hat in the paper eqn (9)
     utime_t last_run_time_ = 0;
 
-    float theta_hat_dot_ = 0.0f;
+    float omega_ = 0.0f;
+    float z1_ = 0.0f;
+    float z2_ = 0.0f;
 
     SensorlessRotorFluxObserverParams* params_ = nullptr;
 };
