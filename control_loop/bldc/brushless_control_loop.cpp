@@ -252,9 +252,6 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
 
     switch (control_loop_type_) {
         case BrushlessControlLoopType::OPEN_LOOP: {
-            V_quadrature_ = speed * bus_voltage;
-            V_direct_ = 0.0f;  // TODO: add param for open-loop direct voltage
-
             // increment the rotor position by the speed multiplied by the time since the last run
             desired_rotor_angle_open_loop_ += params_->open_loop_full_speed_theta_velocity * speed *
                                               (float)(current_time_us - last_run_time_) /
@@ -280,34 +277,33 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
                 status_.error = BrushlessControlLoopStatus::BrushlessControlLoopError::NO_VALID_ROTOR_POSITION_ESTIMATOR;
                 break;
             }
-
-            // Do a Clarke transform
-            math::clarke_transform_result_t clarke_transform =
-                math::clarke_transform(phase_currents.u, phase_currents.v, phase_currents.w);
-
-            // Do a Park transform
-            math::park_transform_result_t park_transform_currents =
-                math::park_transform(clarke_transform.alpha, clarke_transform.beta, rotor_position_);
-
-            // Determine the tau for the LPF for the current controller
-            const float tau = math::determine_tau_from_f_c(params_->foc_params.current_lpf_fc);
-            const float dt = clock_.get_dt_s(current_time_us, last_run_time_us);
-
-            // LPF the currents
-            i_direct_ = math::low_pass_filter(park_transform_currents.d, i_direct_, tau, dt);
-            i_quadrature_ = math::low_pass_filter(park_transform_currents.q, i_quadrature_, tau, dt);
-
-            i_direct_ = park_transform_currents.d;
-            i_quadrature_ = park_transform_currents.q;
-
-            // Run the PI controller
-            // The below hack for speed is kinda hacky and should be reverted lol
-            V_quadrature_ += pid_q_current_.calculate(i_quadrature_, speed * params_->foc_params.speed_to_iq_gain);
-            V_direct_ += pid_d_current_.calculate(i_direct_, i_d_reference_);
         } break;
         default:
             break;
     }
+    // Do a Clarke transform
+    math::clarke_transform_result_t clarke_transform =
+        math::clarke_transform(phase_currents.u, phase_currents.v, phase_currents.w);
+
+    // Do a Park transform
+    math::park_transform_result_t park_transform_currents =
+        math::park_transform(clarke_transform.alpha, clarke_transform.beta, rotor_position_);
+
+    // Determine the tau for the LPF for the current controller
+    const float tau = math::determine_tau_from_f_c(params_->foc_params.current_lpf_fc);
+    const float dt = clock_.get_dt_s(current_time_us, last_run_time_us);
+
+    // LPF the currents
+    i_direct_ = math::low_pass_filter(park_transform_currents.d, i_direct_, tau, dt);
+    i_quadrature_ = math::low_pass_filter(park_transform_currents.q, i_quadrature_, tau, dt);
+
+    i_direct_ = park_transform_currents.d;
+    i_quadrature_ = park_transform_currents.q;
+
+    // Run the PI controller
+    // The below hack for speed is kinda hacky and should be reverted lol
+    V_quadrature_ += pid_q_current_.calculate(i_quadrature_, speed * params_->foc_params.speed_to_iq_gain);
+    V_direct_ += pid_d_current_.calculate(i_direct_, i_d_reference_);
     // Limit the Vd and Vq by first calculating the modulus of the vector
     const float V_modulus = sqrtf(V_direct_ * V_direct_ + V_quadrature_ * V_quadrature_);
     // If the modulus is greater than the bus voltage, then we need to scale the voltage vector

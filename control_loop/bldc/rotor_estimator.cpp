@@ -352,6 +352,16 @@ app_hal_status_E SensorlessRotorFluxObserver::update(const EstimatorInputs& inpu
         // Now, LPF the omega value
         omega_ = math::low_pass_filter(omega_, omega_previous_, tau, dt);
 
+        if ((fabs(omega_) >= params_->minimum_estimation_velocity) && (time_of_omega_exceeding_threshold_ == 0)) {
+            time_of_omega_exceeding_threshold_ = inputs.time;
+        }
+        // If required, hysteresis clear condition can be added here
+        else if ((fabs(omega_) < params_->minimum_estimation_velocity) && (time_of_omega_exceeding_threshold_ != 0)) {
+            time_of_omega_exceeding_threshold_ = 0;
+        } else {
+            // do nothing, persist
+        }
+
     } while (false);
 
     last_run_time_ = inputs.time;
@@ -440,8 +450,10 @@ app_hal_status_E SensorlessRotorFluxObserver::get_rotor_position(float& rotor_po
 }
 
 bool SensorlessRotorFluxObserver::is_estimation_valid() {
-    const bool is_above_min_velocity = (fabs(omega_) >= params_->minimum_estimation_velocity);
-    return is_above_min_velocity;
+    const bool met_time_constraint =
+        (time_of_omega_exceeding_threshold_ != 0) &&
+        ((clock_.get_time_us() - time_of_omega_exceeding_threshold_) >= params_->minimum_vel_above_threshold_time);
+    return met_time_constraint;
 }
 
 app_hal_status_E SensorlessRotorFluxObserver::get_rotor_velocity(float& rotor_velocity) {

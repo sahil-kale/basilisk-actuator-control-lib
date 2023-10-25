@@ -210,10 +210,11 @@ class SensorlessRotorFluxObserver : public ElectricalRotorPosEstimator {
 
     class SensorlessRotorFluxObserverParams {
        public:
-        float observer_gain;                // Referred to as gamma in the paper eqn, the observer gain, rad/s
-        float minimum_estimation_velocity;  // The minimum velocity to use for estimation (rad/s)
-        float Kp;                           // The proportional gain of the speed tracking controller estimate
-        float Ki;                           // The integral gain of the speed tracking controller estimate
+        float observer_gain;                       // Referred to as gamma in the paper eqn, the observer gain, rad/s
+        float minimum_estimation_velocity;         // The minimum velocity to use for estimation (rad/s)
+        utime_t minimum_vel_above_threshold_time;  // The time to wait before declaring the estimation valid (us)
+        float Kp;                                  // The proportional gain of the speed tracking controller estimate
+        float Ki;                                  // The integral gain of the speed tracking controller estimate
 
         float vel_fc;  // The velocity low-pass filter cutoff frequency (rad/s)
     };
@@ -303,6 +304,7 @@ class SensorlessRotorFluxObserver : public ElectricalRotorPosEstimator {
     utime_t last_run_time_ = 0;
 
     float omega_ = 0.0f;
+    utime_t time_of_omega_exceeding_threshold_ = 0;  // The time at which the omega threshold was exceeded, 0 if not exceeded
     float z1_ = 0.0f;
     float z2_ = 0.0f;
 
