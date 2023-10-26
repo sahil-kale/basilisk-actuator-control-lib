@@ -377,8 +377,9 @@ TEST(BrushedControlLoopTest, test_init_error) {
     EXPECT_EQ(base_status.status, BrushedControlLoop::BrushedControlLoopStatus::ControlLoopBaseStatus::ERROR);
 
     // Expect the brushed control loop error to be PARAMS_NOT_SET
-    EXPECT_EQ(control_loop.get_status().error,
-              BrushedControlLoop::BrushedControlLoopStatus::BrushedControlLoopError::PARAMS_NOT_SET);
+    EXPECT_EQ(control_loop.get_status().get_error(
+                  BrushedControlLoop::BrushedControlLoopStatus::BrushedControlLoopError::PARAMS_NOT_SET),
+              true);
 
     // Initialize the control loop
     control_loop.init(&params);
@@ -390,7 +391,9 @@ TEST(BrushedControlLoopTest, test_init_error) {
     EXPECT_EQ(base_status, BrushedControlLoop::BrushedControlLoopStatus::ControlLoopBaseStatus::OK);
 
     // Expect the brushed control loop error to be NO_ERROR
-    EXPECT_EQ(control_loop.get_status().error, BrushedControlLoop::BrushedControlLoopStatus::BrushedControlLoopError::NO_ERROR);
+    EXPECT_EQ(control_loop.get_status().get_error(
+                  BrushedControlLoop::BrushedControlLoopStatus::BrushedControlLoopError::PARAMS_NOT_SET),
+              false);
 }
 }  // namespace control_loop
 

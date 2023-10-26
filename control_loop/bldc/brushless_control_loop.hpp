@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 
+#include <array>
+
 #include "bridge_3phase.hpp"
 #include "control_loop.hpp"
 #include "hal_clock.hpp"
@@ -66,26 +68,78 @@ class BrushlessControlLoop : public ControlLoop {
 
     class BrushlessControlLoopStatus : public ControlLoopStatus {
        public:
-        enum class BrushlessControlLoopError {
+        enum class BrushlessControlLoopError : uint8_t {
             NO_ERROR,
             PARAMS_NOT_SET,
             ROTOR_ESTIMATION_FAILED,
             NO_VALID_ROTOR_POSITION_ESTIMATOR,
-        };
-        enum class BrushlessControlLoopWarning {
-            NO_WARNING,
             CURRENT_CONTROL_NOT_SUPPORTED,
-            PRIMARY_ROTOR_ESTIMATOR_NOT_VALID,
+            BUS_VOLTAGE_READ_FAILURE,
+            PHASE_COMMAND_FAILURE,
+            TOTAL_ERROR_COUNT,
         };
+        enum class BrushlessControlLoopWarning : uint8_t {
+            NO_WARNING,
+            PRIMARY_ROTOR_ESTIMATOR_NOT_VALID,
+            ROTOR_ESTIMATOR_UPDATE_FAILURE,
+            TOTAL_WARNING_COUNT,
+        };
+
         BrushlessControlLoopStatus() : ControlLoopStatus() {}
-        BrushlessControlLoopWarning warning = BrushlessControlLoopWarning::NO_WARNING;
-        BrushlessControlLoopError error = BrushlessControlLoopError::NO_ERROR;
+
+        static constexpr uint8_t kNumErrors = static_cast<uint8_t>(BrushlessControlLoopError::TOTAL_ERROR_COUNT);
+        static constexpr uint8_t kNumWarnings = static_cast<uint8_t>(BrushlessControlLoopWarning::TOTAL_WARNING_COUNT);
+
+        // Make an array of the error and warning strings
+        // True means the error is set
+
+        /**
+         * @brief error array
+         * @note True means the error is set
+         */
+        std::array<bool, kNumErrors> errors = {false};
+
+        /**
+         * @brief warning array
+         * @note True means the warning is set
+         */
+        std::array<bool, kNumWarnings> warnings = {false};
 
         /**
          * @brief reset the status
          * @return void
          */
         void reset();
+
+        /**
+         * @brief Set the error
+         * @param error The error to set
+         * @param state The state of the error
+         * @return void
+         */
+        void set_error(const BrushlessControlLoopError& error, bool state);
+
+        /**
+         * @brief Check if the error is set
+         * @param error The error to check
+         * @return True if the error is set
+         */
+        bool has_error(const BrushlessControlLoopError& error) const { return errors[static_cast<uint8_t>(error)]; }
+
+        /**
+         * @brief Set the warning
+         * @param warning The warning to set
+         * @param state The state of the warning
+         * @return void
+         */
+        void set_warning(const BrushlessControlLoopWarning& warning, bool state);
+
+        /**
+         * @brief Check if the warning is set
+         * @param warning The warning to check
+         * @return True if the warning is set
+         */
+        bool has_warning(const BrushlessControlLoopWarning& warning) const { return warnings[static_cast<uint8_t>(warning)]; }
 
         /**
          * @brief compute the base status returned by the class

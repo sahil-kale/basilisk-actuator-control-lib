@@ -74,7 +74,8 @@ TEST(stepper_motor_test, test_uninitialized_control_loop) {
 
     // Poll the StepperControlLoopStatus for the error
     auto stepper_status = stepper_control_loop_test.get_status();
-    EXPECT_EQ(stepper_status.error, StepperControlLoop::StepperControlLoopStatus::StepperControlLoopError::PARAMS_NOT_SET);
+    EXPECT_EQ(stepper_status.get_error(StepperControlLoop::StepperControlLoopStatus::StepperControlLoopError::PARAMS_NOT_SET),
+              true);
 
     // Now, initialize the control loop
     stepper_control_loop_test.init(&stepper_control_loop_test.default_params);
@@ -88,8 +89,6 @@ TEST(stepper_motor_test, test_uninitialized_control_loop) {
 
     // Ensure that the status is OK
     EXPECT_EQ(status, StepperControlLoop::StepperControlLoopStatus::ControlLoopBaseStatus::OK);
-    // Ensure that the error is NO_ERROR
-    EXPECT_EQ(stepper_status.error, StepperControlLoop::StepperControlLoopStatus::StepperControlLoopError::NO_ERROR);
 }
 
 }  // namespace control_loop

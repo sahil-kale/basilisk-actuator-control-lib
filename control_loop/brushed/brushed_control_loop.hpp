@@ -2,6 +2,8 @@
 #define BRUSHED_CONTROL_LOOP_HPP
 #include <stdint.h>
 
+#include <array>
+
 #include "bridge_hbridge.hpp"
 #include "control_loop.hpp"
 #include "hal_clock.hpp"
@@ -41,19 +43,55 @@ class BrushedControlLoop : public ControlLoop {
         enum class BrushedControlLoopError {
             NO_ERROR,
             PARAMS_NOT_SET,
+            TOTAL_ERROR_COUNT,
         };
         enum class BrushedControlLoopWarning {
             NO_WARNING,
+            TOTAL_WARNING_COUNT,
         };
         BrushedControlLoopStatus() : ControlLoopStatus() {}
-        BrushedControlLoopWarning warning = BrushedControlLoopWarning::NO_WARNING;
-        BrushedControlLoopError error = BrushedControlLoopError::NO_ERROR;
+
+        static constexpr uint8_t kNumErrors = static_cast<uint8_t>(BrushedControlLoopError::TOTAL_ERROR_COUNT);
+        static constexpr uint8_t kNumWarnings = static_cast<uint8_t>(BrushedControlLoopWarning::TOTAL_WARNING_COUNT);
+
+        std::array<bool, kNumErrors> errors = {false};
+        std::array<bool, kNumWarnings> warnings = {false};
 
         /**
          * @brief reset the status
          * @return void
          */
         void reset();
+
+        /**
+         * @brief Set the error state
+         * @param error The error to set
+         * @param state The state to set the error to
+         * @return void
+         */
+        void set_error(const BrushedControlLoopError& error, const bool state);
+
+        /**
+         * @brief Set the warning state
+         * @param warning The warning to set
+         * @param state The state to set the warning to
+         * @return void
+         */
+        void set_warning(const BrushedControlLoopWarning& warning, const bool state);
+
+        /**
+         * @brief Get the error state
+         * @param error The error to get
+         * @return The state of the error
+         */
+        bool get_error(const BrushedControlLoopError& error) const { return errors[static_cast<uint8_t>(error)]; }
+
+        /**
+         * @brief Get the warning state
+         * @param warning The warning to get
+         * @return The state of the warning
+         */
+        bool get_warning(const BrushedControlLoopWarning& warning) const { return warnings[static_cast<uint8_t>(warning)]; }
 
         /**
          * @brief compute the base status returned by the class
@@ -85,7 +123,7 @@ class BrushedControlLoop : public ControlLoop {
      * @param current The current to run the motor at
      * @return void
      */
-    void run_constant_current(float current);
+    ControlLoopStatus run_constant_current(float current);
 
    protected:
     hwbridge::HBridge& bridge_;

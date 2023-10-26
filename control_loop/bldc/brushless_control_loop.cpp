@@ -54,29 +54,60 @@ BrushlessControlLoop::BrushlessControlLoopState BrushlessControlLoop::get_desire
 void BrushlessControlLoop::BrushlessControlLoopStatus::reset() {
     // Reset the status
     status = ControlLoopStatus::ControlLoopBaseStatus::OK;
-    error = BrushlessControlLoopError::NO_ERROR;
-    warning = BrushlessControlLoopWarning::NO_WARNING;
+
+    for (auto& error : errors) {
+        error = false;
+    }
+
+    for (auto& warning : warnings) {
+        warning = false;
+    }
 }
 
 void BrushlessControlLoop::BrushlessControlLoopStatus::compute_base_status() {
-    // If there's an error, then set the status to error
-    if (error != BrushlessControlLoopError::NO_ERROR) {
-        status = ControlLoopStatus::ControlLoopBaseStatus::ERROR;
-    }
+    status = ControlLoopStatus::ControlLoopBaseStatus::OK;
+
     // If there's a warning, then set the status to warning
-    else if (warning != BrushlessControlLoopWarning::NO_WARNING) {
-        status = ControlLoopStatus::ControlLoopBaseStatus::WARNING;
+    for (auto warning : warnings) {
+        if (warning != false) {
+            status = ControlLoopStatus::ControlLoopBaseStatus::WARNING;
+            break;
+        }
     }
-    // Otherwise, set the status to OK
-    else {
-        status = ControlLoopStatus::ControlLoopBaseStatus::OK;
+
+    // If there's an error, then set the status to error
+    for (auto error : errors) {
+        if (error != false) {
+            status = ControlLoopStatus::ControlLoopBaseStatus::ERROR;
+            break;
+        }
+    }
+}
+
+void BrushlessControlLoop::BrushlessControlLoopStatus::set_error(
+    const BrushlessControlLoopStatus::BrushlessControlLoopError& error, bool value) {
+    bool& error_ref = errors[static_cast<int>(error)];
+    // This is done to avoid the cost of a branch
+    if (error_ref != value) {
+        error_ref = value;
+        compute_base_status();
+    }
+}
+
+void BrushlessControlLoop::BrushlessControlLoopStatus::set_warning(
+    const BrushlessControlLoopStatus::BrushlessControlLoopWarning& warning, bool value) {
+    bool& warning_ref = warnings[static_cast<int>(warning)];
+    // This is done to avoid the cost of a branch
+    if (warning_ref != value) {
+        warning_ref = value;
+        compute_base_status();
     }
 }
 
 ControlLoop::ControlLoopStatus BrushlessControlLoop::run_current_control(float i_d_reference, float i_q_reference) {
     if (params_->commutation_type != BrushlessControlLoopCommutationType::FOC) {
         // Set a warning in the status
-        status_.warning = BrushlessControlLoopStatus::BrushlessControlLoopWarning::CURRENT_CONTROL_NOT_SUPPORTED;
+        status_.set_error(BrushlessControlLoopStatus::BrushlessControlLoopError::CURRENT_CONTROL_NOT_SUPPORTED, true);
     } else {
         // Update the id reference
         i_d_reference_ = i_d_reference;
@@ -93,7 +124,7 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
     do {
         if (params_ == nullptr) {
             // Set an error in the status
-            status_.error = BrushlessControlLoopStatus::BrushlessControlLoopError::PARAMS_NOT_SET;
+            status_.set_error(BrushlessControlLoopStatus::BrushlessControlLoopError::PARAMS_NOT_SET, true);
             break;
         }
 
@@ -142,12 +173,14 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
         }
 
         // Set the duty cycles
-        this->bridge_.set_phase(phase_commands[0], phase_commands[1], phase_commands[2]);
+        app_hal_status_E status = this->bridge_.set_phase(phase_commands[0], phase_commands[1], phase_commands[2]);
+
+        // Set an error in the status
+        status_.set_error(BrushlessControlLoopStatus::BrushlessControlLoopError::PHASE_COMMAND_FAILURE,
+                          static_cast<bool>(status != app_hal_status_E::APP_HAL_OK));
+
     } while (false);
     last_run_time_ = current_time_us;
-
-    // Compute the base status
-    status_.compute_base_status();
 
     // If the control loop has an error, then we should issue the phase commands to stop the motor
     if (status_.status == ControlLoopStatus::ControlLoopBaseStatus::ERROR) {
@@ -161,36 +194,53 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
 
 void BrushlessControlLoop::update_rotor_position_estimator(
     bldc_rotor_estimator::ElectricalRotorPosEstimator::EstimatorInputs& estimator_inputs, utime_t current_time_us, float speed) {
-    estimator_inputs.time = current_time_us;
+    do {
+        estimator_inputs.time = current_time_us;
 
-    bridge_.read_bemf(estimator_inputs.phase_voltage);
-    bridge_.read_current(estimator_inputs.phase_current);
+        bridge_.read_bemf(estimator_inputs.phase_voltage);
+        bridge_.read_current(estimator_inputs.phase_current);
 
-    // Get the commutation step
-    estimator_inputs.current_commutation_step = Bldc6StepCommutationTypes::determine_commutation_step_from_theta(rotor_position_);
+        // Get the commutation step
+        estimator_inputs.current_commutation_step =
+            Bldc6StepCommutationTypes::determine_commutation_step_from_theta(rotor_position_);
 
-    // Set the phase params
-    estimator_inputs.phase_resistance = params_->foc_params.phase_resistance;
-    estimator_inputs.phase_inductance = params_->foc_params.phase_inductance;
+        // Set the phase params
+        estimator_inputs.phase_resistance = params_->foc_params.phase_resistance;
+        estimator_inputs.phase_inductance = params_->foc_params.phase_inductance;
 
-    // Set the PM flux linkage
-    estimator_inputs.pm_flux_linkage = params_->foc_params.pm_flux_linkage;
+        // Set the PM flux linkage
+        estimator_inputs.pm_flux_linkage = params_->foc_params.pm_flux_linkage;
 
-    // Set the V alpha and V beta
-    estimator_inputs.V_alpha = V_alpha_;
-    estimator_inputs.V_beta = V_beta_;
+        // Set the V alpha and V beta
+        estimator_inputs.V_alpha = V_alpha_;
+        estimator_inputs.V_beta = V_beta_;
 
-    // Set the speed sign
-    estimator_inputs.rotor_commanded_vel_sign = math::sign(speed);
+        // Set the speed sign
+        estimator_inputs.rotor_commanded_vel_sign = math::sign(speed);
 
-    primary_rotor_position_estimator_.update(estimator_inputs);
+        app_hal_status_E status = primary_rotor_position_estimator_.update(estimator_inputs);
 
-    // TODO: For now we are just going to use the primary rotor position estimator
-    // but the secondary rotor position estimator should be used if it is valid and the
-    // primary rotor position estimator is not valid
-    if (secondary_rotor_position_estimator_ != nullptr) {
-        secondary_rotor_position_estimator_->update(estimator_inputs);
-    }
+        if (status != app_hal_status_E::APP_HAL_OK) {
+            // Set an error in the status
+            status_.set_warning(BrushlessControlLoopStatus::BrushlessControlLoopWarning::ROTOR_ESTIMATOR_UPDATE_FAILURE, true);
+            break;
+        }
+
+        // TODO: For now we are just going to use the primary rotor position estimator
+        // but the secondary rotor position estimator should be used if it is valid and the
+        // primary rotor position estimator is not valid
+        if (secondary_rotor_position_estimator_ != nullptr) {
+            status = secondary_rotor_position_estimator_->update(estimator_inputs);
+            if (status != app_hal_status_E::APP_HAL_OK) {
+                // Set an error in the status
+                status_.set_warning(BrushlessControlLoopStatus::BrushlessControlLoopWarning::ROTOR_ESTIMATOR_UPDATE_FAILURE,
+                                    true);
+                break;
+            }
+        }
+
+        status_.set_warning(BrushlessControlLoopStatus::BrushlessControlLoopWarning::ROTOR_ESTIMATOR_UPDATE_FAILURE, false);
+    } while (false);
 }
 
 void BrushlessControlLoop::exit_state(const BrushlessControlLoopState& current_state,
@@ -239,84 +289,96 @@ void BrushlessControlLoop::enter_state(const BrushlessControlLoopState& current_
 void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t last_run_time_us,
                                    hwbridge::Bridge3Phase::phase_current_t phase_currents,
                                    hwbridge::Bridge3Phase::phase_command_t phase_commands[3]) {
-    const bool is_primary_estimator_valid = primary_rotor_position_estimator_.is_estimation_valid();
-    bool is_secondary_estimator_valid = false;
-    if (secondary_rotor_position_estimator_ != nullptr) {
-        is_secondary_estimator_valid = secondary_rotor_position_estimator_->is_estimation_valid();
-    }
-    control_loop_type_ = get_desired_control_loop_type(is_primary_estimator_valid, is_secondary_estimator_valid);
-    // Get the bus voltage
-    float bus_voltage = 0.0f;
-    // TODO: ERROR CHECKING!!
-    bridge_.read_bus_voltage(bus_voltage);
-
-    switch (control_loop_type_) {
-        case BrushlessControlLoopType::OPEN_LOOP: {
-            // increment the rotor position by the speed multiplied by the time since the last run
-            desired_rotor_angle_open_loop_ += params_->open_loop_full_speed_theta_velocity * speed *
-                                              (float)(current_time_us - last_run_time_) /
-                                              basilisk_hal::HAL_CLOCK::kMicrosecondsPerSecond;
-            // Wrap the rotor position around 0 and 2pi
-            math::wraparound(desired_rotor_angle_open_loop_, 0.0f, math::M_PI_FLOAT * 2.0f);
-
-            rotor_position_ = desired_rotor_angle_open_loop_;
-
-        } break;
-        case BrushlessControlLoopType::CLOSED_LOOP: {
-            // If the primary rotor position estimator is valid, then use it
-            if (primary_rotor_position_estimator_.is_estimation_valid()) {
-                primary_rotor_position_estimator_.get_rotor_position(rotor_position_);
-                status_.warning = BrushlessControlLoopStatus::BrushlessControlLoopWarning::PRIMARY_ROTOR_ESTIMATOR_NOT_VALID;
-            }
-            // Otherwise, if the secondary rotor position estimator is valid, then use it
-            else if ((secondary_rotor_position_estimator_ != nullptr) &&
-                     (secondary_rotor_position_estimator_->is_estimation_valid())) {
-                secondary_rotor_position_estimator_->get_rotor_position(rotor_position_);
-            } else {
-                // Set an error in the status
-                status_.error = BrushlessControlLoopStatus::BrushlessControlLoopError::NO_VALID_ROTOR_POSITION_ESTIMATOR;
-                break;
-            }
-        } break;
-        default:
+    do {
+        const bool is_primary_estimator_valid = primary_rotor_position_estimator_.is_estimation_valid();
+        bool is_secondary_estimator_valid = false;
+        if (secondary_rotor_position_estimator_ != nullptr) {
+            is_secondary_estimator_valid = secondary_rotor_position_estimator_->is_estimation_valid();
+        }
+        control_loop_type_ = get_desired_control_loop_type(is_primary_estimator_valid, is_secondary_estimator_valid);
+        // Get the bus voltage
+        float bus_voltage = 0.0f;
+        // TODO: ERROR CHECKING!!
+        app_hal_status_E status = bridge_.read_bus_voltage(bus_voltage);
+        status_.set_error(BrushlessControlLoopStatus::BrushlessControlLoopError::BUS_VOLTAGE_READ_FAILURE,
+                          static_cast<bool>(status != app_hal_status_E::APP_HAL_OK));
+        if (status_.has_error(BrushlessControlLoopStatus::BrushlessControlLoopError::BUS_VOLTAGE_READ_FAILURE)) {
             break;
-    }
-    // Do a Clarke transform
-    math::clarke_transform_result_t clarke_transform =
-        math::clarke_transform(phase_currents.u, phase_currents.v, phase_currents.w);
+        }
 
-    // Do a Park transform
-    math::park_transform_result_t park_transform_currents =
-        math::park_transform(clarke_transform.alpha, clarke_transform.beta, rotor_position_);
+        switch (control_loop_type_) {
+            case BrushlessControlLoopType::OPEN_LOOP: {
+                // increment the rotor position by the speed multiplied by the time since the last run
+                desired_rotor_angle_open_loop_ += params_->open_loop_full_speed_theta_velocity * speed *
+                                                  (float)(current_time_us - last_run_time_) /
+                                                  basilisk_hal::HAL_CLOCK::kMicrosecondsPerSecond;
+                // Wrap the rotor position around 0 and 2pi
+                math::wraparound(desired_rotor_angle_open_loop_, 0.0f, math::M_PI_FLOAT * 2.0f);
 
-    // Determine the tau for the LPF for the current controller
-    const float tau = math::determine_tau_from_f_c(params_->foc_params.current_lpf_fc);
-    const float dt = clock_.get_dt_s(current_time_us, last_run_time_us);
+                rotor_position_ = desired_rotor_angle_open_loop_;
 
-    // LPF the currents
-    i_direct_ = math::low_pass_filter(park_transform_currents.d, i_direct_, tau, dt);
-    i_quadrature_ = math::low_pass_filter(park_transform_currents.q, i_quadrature_, tau, dt);
+            } break;
+            case BrushlessControlLoopType::CLOSED_LOOP: {
+                // If the primary rotor position estimator is valid, then use it
+                if (primary_rotor_position_estimator_.is_estimation_valid()) {
+                    primary_rotor_position_estimator_.get_rotor_position(rotor_position_);
+                    status_.set_warning(
+                        BrushlessControlLoopStatus::BrushlessControlLoopWarning::PRIMARY_ROTOR_ESTIMATOR_NOT_VALID, false);
+                }
+                // Otherwise, if the secondary rotor position estimator is valid, then use it
+                else if ((secondary_rotor_position_estimator_ != nullptr) &&
+                         (secondary_rotor_position_estimator_->is_estimation_valid())) {
+                    secondary_rotor_position_estimator_->get_rotor_position(rotor_position_);
+                    status_.set_warning(
+                        BrushlessControlLoopStatus::BrushlessControlLoopWarning::PRIMARY_ROTOR_ESTIMATOR_NOT_VALID, true);
+                } else {
+                    // Set an error in the status
+                    status_.set_error(BrushlessControlLoopStatus::BrushlessControlLoopError::NO_VALID_ROTOR_POSITION_ESTIMATOR,
+                                      true);
+                    break;
+                }
+            } break;
+            default:
+                break;
+        }
+        // Do a Clarke transform
+        math::clarke_transform_result_t clarke_transform =
+            math::clarke_transform(phase_currents.u, phase_currents.v, phase_currents.w);
 
-    i_direct_ = park_transform_currents.d;
-    i_quadrature_ = park_transform_currents.q;
+        // Do a Park transform
+        math::park_transform_result_t park_transform_currents =
+            math::park_transform(clarke_transform.alpha, clarke_transform.beta, rotor_position_);
 
-    // Run the PI controller
-    // The below hack for speed is kinda hacky and should be reverted lol
-    V_quadrature_ += pid_q_current_.calculate(i_quadrature_, speed * params_->foc_params.speed_to_iq_gain);
-    V_direct_ += pid_d_current_.calculate(i_direct_, i_d_reference_);
-    // Limit the Vd and Vq by first calculating the modulus of the vector
-    const float V_modulus = sqrtf(V_direct_ * V_direct_ + V_quadrature_ * V_quadrature_);
-    // If the modulus is greater than the bus voltage, then we need to scale the voltage vector
-    if (V_modulus > bus_voltage) {
-        // Scale the voltage vector
-        V_direct_ = V_direct_ * bus_voltage / V_modulus;
-        V_quadrature_ = V_quadrature_ * bus_voltage / V_modulus;
-    }
+        // Determine the tau for the LPF for the current controller
+        const float tau = math::determine_tau_from_f_c(params_->foc_params.current_lpf_fc);
+        const float dt = clock_.get_dt_s(current_time_us, last_run_time_us);
 
-    // Determine the appropriate duty cycles for the inverter
-    determine_inverter_duty_cycles_foc(rotor_position_, V_direct_, V_quadrature_, bus_voltage,
-                                       params_->foc_params.pwm_control_type, phase_commands[0], phase_commands[1],
-                                       phase_commands[2]);
+        // LPF the currents
+        i_direct_ = math::low_pass_filter(park_transform_currents.d, i_direct_, tau, dt);
+        i_quadrature_ = math::low_pass_filter(park_transform_currents.q, i_quadrature_, tau, dt);
+
+        i_direct_ = park_transform_currents.d;
+        i_quadrature_ = park_transform_currents.q;
+
+        // Run the PI controller
+        // The below hack for speed is kinda hacky and should be reverted lol
+        V_quadrature_ += pid_q_current_.calculate(i_quadrature_, speed * params_->foc_params.speed_to_iq_gain);
+        V_direct_ += pid_d_current_.calculate(i_direct_, i_d_reference_);
+        // Limit the Vd and Vq by first calculating the modulus of the vector
+        const float V_modulus = sqrtf(V_direct_ * V_direct_ + V_quadrature_ * V_quadrature_);
+        const float max_Vmod = bus_voltage * 3.0f / 2.0f;
+        // If the modulus is greater than the bus voltage, then we need to scale the voltage vector
+        if (V_modulus > max_Vmod) {
+            // Scale the voltage vector
+            V_direct_ = V_direct_ * max_Vmod / V_modulus;
+            V_quadrature_ = V_quadrature_ * max_Vmod / V_modulus;
+        }
+
+        // Determine the appropriate duty cycles for the inverter
+        determine_inverter_duty_cycles_foc(rotor_position_, V_direct_, V_quadrature_, bus_voltage,
+                                           params_->foc_params.pwm_control_type, phase_commands[0], phase_commands[1],
+                                           phase_commands[2]);
+    } while (false);
 }
 
 void BrushlessControlLoop::run_trap(float speed, hwbridge::Bridge3Phase::phase_command_t phase_commands[3]) {

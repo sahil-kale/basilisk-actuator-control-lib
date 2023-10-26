@@ -21,18 +21,50 @@ void BrushedControlLoop::init(BrushedControlLoopParams* params) {
 void BrushedControlLoop::BrushedControlLoopStatus::reset() {
     // Reset the status
     status = ControlLoopStatus::ControlLoopBaseStatus::OK;
-    error = BrushedControlLoopError::NO_ERROR;
-    warning = BrushedControlLoopWarning::NO_WARNING;
+    // Reset the errors
+    for (auto& error : errors) {
+        error = false;
+    }
+
+    // Reset the warnings
+    for (auto& warning : warnings) {
+        warning = false;
+    }
 }
 
 void BrushedControlLoop::BrushedControlLoopStatus::compute_base_status() {
-    // Set the error and warning
-    if (error != BrushedControlLoopError::NO_ERROR) {
-        status = ControlLoopStatus::ControlLoopBaseStatus::ERROR;
-    } else if (warning != BrushedControlLoopWarning::NO_WARNING) {
-        status = ControlLoopStatus::ControlLoopBaseStatus::WARNING;
-    } else {
-        status = ControlLoopStatus::ControlLoopBaseStatus::OK;
+    status = ControlLoopStatus::ControlLoopBaseStatus::OK;
+
+    // If a warning is set, then set the status to WARNING
+    for (auto& warning : warnings) {
+        if (warning) {
+            status = ControlLoopStatus::ControlLoopBaseStatus::WARNING;
+            break;
+        }
+    }
+
+    // If an error is set, then set the status to ERROR
+    for (auto& error : errors) {
+        if (error) {
+            status = ControlLoopStatus::ControlLoopBaseStatus::ERROR;
+            break;
+        }
+    }
+}
+
+void BrushedControlLoop::BrushedControlLoopStatus::set_error(const BrushedControlLoopError& error, const bool state) {
+    bool& error_ref = errors[static_cast<uint8_t>(error)];
+    if (error_ref != state) {
+        error_ref = state;
+        compute_base_status();
+    }
+}
+
+void BrushedControlLoop::BrushedControlLoopStatus::set_warning(const BrushedControlLoopWarning& warning, const bool state) {
+    bool& warning_ref = warnings[static_cast<uint8_t>(warning)];
+    if (warning_ref != state) {
+        warning_ref = state;
+        compute_base_status();
     }
 }
 
@@ -40,8 +72,10 @@ ControlLoop::ControlLoopStatus BrushedControlLoop::run(float speed) {
     do {
         // if the params are not set, then return an error
         if (params_ == nullptr) {
-            status_.error = BrushedControlLoopStatus::BrushedControlLoopError::PARAMS_NOT_SET;
+            status_.set_error(BrushedControlLoopStatus::BrushedControlLoopError::PARAMS_NOT_SET, true);
             break;
+        } else {
+            status_.set_error(BrushedControlLoopStatus::BrushedControlLoopError::PARAMS_NOT_SET, false);
         }
         // Get the current time
         utime_t current_time = clock_.get_time_us();
@@ -79,9 +113,6 @@ ControlLoop::ControlLoopStatus BrushedControlLoop::run(float speed) {
         // Update the last speed
         last_speed_ = speed;
     } while (false);
-
-    // Compute the base status
-    status_.compute_base_status();
 
     return status_;
 }
@@ -177,7 +208,7 @@ hwbridge::HBridge::HBridgeInput BrushedControlLoop::run_state(float speed, const
 }
 
 // Write the run_constant_current function
-void BrushedControlLoop::run_constant_current(float current) {
+ControlLoop::ControlLoopStatus BrushedControlLoop::run_constant_current(float current) {
     // Get the current bridge current
     float bridge_current = 0.0f;
     bridge_.get_current(bridge_current);
@@ -186,6 +217,8 @@ void BrushedControlLoop::run_constant_current(float current) {
     current_controller_duty_cycle_ += current_controller_.calculate(current, bridge_current);
 
     run(current_controller_duty_cycle_);
+
+    return status_;
 }
 
 }  // namespace control_loop

@@ -18,6 +18,9 @@ class ControlLoop {
 
         // Define an equal operator that checks whether a status class is equal to a ControlLoopBaseStatus
         bool operator==(ControlLoopBaseStatus status) const { return this->status == status; }
+
+        // Define a not equal operator that checks whether a status class is not equal to a ControlLoopBaseStatus
+        bool operator!=(ControlLoopBaseStatus status) const { return this->status != status; }
     };
     virtual ControlLoopStatus run(float speed) = 0;
     // Define a max motor_speed member constant

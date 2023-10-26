@@ -40,7 +40,7 @@ class Bridge3Phase {
     virtual app_hal_status_E init() = 0;
 
     // Define a virtual function to set the individual phases' duty cycles and enable/disable the phase
-    virtual void set_phase(const phase_command_t& u, const phase_command_t& v, const phase_command_t& w) = 0;
+    virtual app_hal_status_E set_phase(const phase_command_t& u, const phase_command_t& v, const phase_command_t& w) = 0;
 
     // Define a virtual function to get the back emf voltage
     virtual app_hal_status_E read_bemf(phase_voltage_t& bemf_voltage) = 0;

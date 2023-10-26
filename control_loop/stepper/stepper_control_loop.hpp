@@ -27,13 +27,49 @@ class StepperControlLoop : public ControlLoop {
             NO_ERROR,
             MOTOR_SPEED_TOO_HIGH,
             PARAMS_NOT_SET,
+            BRIDGE_A_FAILURE,
+            BRIDGE_B_FAILURE,
+            TOTAL_ERROR_COUNT,
         };
         enum class StepperControlLoopWarning {
             NO_WARNING,
+            TOTAL_WARNING_COUNT,
         };
         StepperControlLoopStatus() : ControlLoopStatus() {}
-        StepperControlLoopWarning warning = StepperControlLoopWarning::NO_WARNING;
-        StepperControlLoopError error = StepperControlLoopError::NO_ERROR;
+
+        static constexpr uint8_t kNumErrors = static_cast<uint8_t>(StepperControlLoopError::TOTAL_ERROR_COUNT);
+        static constexpr uint8_t kNumWarnings = static_cast<uint8_t>(StepperControlLoopWarning::TOTAL_WARNING_COUNT);
+
+        std::array<bool, kNumErrors> errors = {false};
+        std::array<bool, kNumWarnings> warnings = {false};
+
+        /**
+         * @brief set the error
+         * @param error The error to set
+         * @param state The state to set the error to
+         * @return void
+         */
+        void set_error(const StepperControlLoopError& error, const bool state);
+
+        /**
+         * @brief set the warning
+         * @param warning The warning to set
+         * @param state The state to set the warning to
+         * @return void
+         */
+        void set_warning(const StepperControlLoopWarning& warning, const bool state);
+
+        /**
+         * @brief compute the base status returned by the class
+         * @return True if the error is set
+         */
+        bool get_error(const StepperControlLoopError& error) const { return errors[static_cast<uint8_t>(error)]; }
+
+        /**
+         * @brief compute the base status returned by the class
+         * @return True if the warning is set
+         */
+        bool get_warning(const StepperControlLoopWarning& warning) const { return warnings[static_cast<uint8_t>(warning)]; }
 
         /**
          * @brief reset the status
