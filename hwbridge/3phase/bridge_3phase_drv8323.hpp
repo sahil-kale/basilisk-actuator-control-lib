@@ -24,8 +24,8 @@ class Bridge3PhaseDRV8323 : public Bridge3Phase {
         basilisk_hal::HAL_ADC* bemf_sense_adc;
         uint8_t bemf_sense_adc_channel;
         // TODO: add current sense support. For now, only 6 step is supported.
-        // basilisk_hal::HAL_ADC* current_sense_adc;
-        // uint8_t current_sense_adc_channel;
+        basilisk_hal::HAL_ADC* current_sense_adc;
+        uint8_t current_sense_adc_channel;
     } drv8323_phase_config_info_t;
 
     Bridge3PhaseDRV8323(basilisk_hal::HAL_ComplementaryPWM_Timer& timer, drv8323_phase_config_info_t& u,
@@ -59,7 +59,7 @@ class Bridge3PhaseDRV8323 : public Bridge3Phase {
     }
 
     // Define a virtual function to set the individual phases' duty cycles and enable/disable the phase
-    void set_phase(const phase_command_t& u, const phase_command_t& v, const phase_command_t& w) {
+    app_hal_status_E set_phase(const phase_command_t& u, const phase_command_t& v, const phase_command_t& w) {
         // Determine the appropriate amount of ticks by getting the timer period
         uint32_t period = pwm_timer_->get_period();
         uint32_t ticks_u =
@@ -89,6 +89,8 @@ class Bridge3PhaseDRV8323 : public Bridge3Phase {
         pwm_timer_->set_channel_with_complementary_phase(ticks_u, u_.channel, u_complementary_phase);
         pwm_timer_->set_channel_with_complementary_phase(ticks_v, v_.channel, v_complementary_phase);
         pwm_timer_->set_channel_with_complementary_phase(ticks_w, w_.channel, w_complementary_phase);
+
+        return app_hal_status_E::APP_HAL_OK;
     }
 
     // Define a function to read the BEMF voltage
@@ -117,29 +119,28 @@ class Bridge3PhaseDRV8323 : public Bridge3Phase {
     }
 
     // Define a function to read the current
-    app_hal_status_E read_current(const phase_current_t& current) {
-        IGNORE(current);
-        return app_hal_status_E::APP_HAL_NOT_IMPLEMENTED;
-    }
-
-    // Define a function that averages out the BEMF voltage readings. Returns a phase_voltage_t object that contains the
-    // average of the BEMF voltage readings.
-    phase_voltage_t average_bemf_readings(const phase_voltage_t& new_reading) {
-        phase_voltage_t average_bemf_voltage = {0, 0, 0};
-        for (uint8_t i = 0; i < BEMF_VOLTAGE_AVERAGE_SIZE - 1; i++) {
-            bemf_voltage_[i] = bemf_voltage_[i + 1];
-            average_bemf_voltage.u += bemf_voltage_[i].u;
-            average_bemf_voltage.v += bemf_voltage_[i].v;
-            average_bemf_voltage.w += bemf_voltage_[i].w;
+    app_hal_status_E read_current(phase_current_t& current) {
+        app_hal_status_E status = app_hal_status_E::APP_HAL_OK;
+        if (u_.current_sense_adc == nullptr || v_.current_sense_adc == nullptr || w_.current_sense_adc == nullptr) {
+            status = app_hal_status_E::APP_HAL_NOT_INITIALIZED;
+        } else {
+            do {
+                status = u_.current_sense_adc->read_adc(current.u, u_.current_sense_adc_channel);
+                if (status != app_hal_status_E::APP_HAL_OK) {
+                    break;
+                }
+                status = v_.current_sense_adc->read_adc(current.v, v_.current_sense_adc_channel);
+                if (status != app_hal_status_E::APP_HAL_OK) {
+                    break;
+                }
+                status = w_.current_sense_adc->read_adc(current.w, w_.current_sense_adc_channel);
+                if (status != app_hal_status_E::APP_HAL_OK) {
+                    break;
+                }
+            } while (0);
         }
-        bemf_voltage_[BEMF_VOLTAGE_AVERAGE_SIZE - 1] = new_reading;
-        average_bemf_voltage.u += new_reading.u;
-        average_bemf_voltage.v += new_reading.v;
-        average_bemf_voltage.w += new_reading.w;
-        average_bemf_voltage.u /= BEMF_VOLTAGE_AVERAGE_SIZE;
-        average_bemf_voltage.v /= BEMF_VOLTAGE_AVERAGE_SIZE;
-        average_bemf_voltage.w /= BEMF_VOLTAGE_AVERAGE_SIZE;
-        return average_bemf_voltage;
+
+        return status;
     }
 
    private:
