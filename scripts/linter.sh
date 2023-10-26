@@ -11,7 +11,7 @@ files=$(echo "$files" | grep -v "libs/")
 files=$(echo "$files" | grep -v "test/")
 
 # Store a variable to hold the suppressions
-suppressions="--suppress=missingIncludeSystem --suppress=missingInclude --suppress=unusedFunction --suppress=unusedStructMember --suppress=unmatchedSuppression"
+suppressions="--suppress=missingIncludeSystem --suppress=missingInclude --suppress=unusedFunction --suppress=unusedStructMember --suppress=unmatchedSuppression --suppress=useStlAlgorithm"
 
 # Of the files glob, find only the hpp files
 hpp_files=$(echo "$files" | grep -E "\.hpp$")
