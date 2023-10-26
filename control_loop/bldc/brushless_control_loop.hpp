@@ -214,6 +214,7 @@ class BrushlessControlLoop : public ControlLoop {
     float duty_cycle_u_h_ = 0.0f, duty_cycle_v_h_ = 0.0f, duty_cycle_w_h_ = 0.0f;
 
     // FOC variables
+    float i_alpha_ = 0.0f, i_beta_ = 0.0f;
     float i_quadrature_ = 0.0f, i_direct_ = 0.0f, V_quadrature_ = 0.0f, V_direct_ = 0.0f, V_alpha_ = 0.0f, V_beta_ = 0.0f;
     float i_d_reference_ = 0.0f;
 

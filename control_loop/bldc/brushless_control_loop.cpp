@@ -26,6 +26,9 @@ void BrushlessControlLoop::init(BrushlessControlLoop::BrushlessControlLoopParams
 
     // reset the status
     status_.reset();
+
+    // Set the state to stop
+    state_ = BrushlessControlLoop::BrushlessControlLoopState::STOP;
 }
 
 BrushlessControlLoop::BrushlessControlLoopState BrushlessControlLoop::get_desired_state(
@@ -344,6 +347,9 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
         // Do a Clarke transform
         math::clarke_transform_result_t clarke_transform =
             math::clarke_transform(phase_currents.u, phase_currents.v, phase_currents.w);
+
+        i_alpha_ = clarke_transform.alpha;
+        i_beta_ = clarke_transform.beta;
 
         // Do a Park transform
         math::park_transform_result_t park_transform_currents =

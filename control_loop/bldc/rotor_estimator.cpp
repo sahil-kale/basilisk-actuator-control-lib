@@ -4,6 +4,7 @@
 #include "math.h"
 #include "math_foc.hpp"
 #include "math_util.hpp"
+#include "util.hpp"
 
 namespace bldc_rotor_estimator {
 
@@ -392,14 +393,11 @@ float SensorlessRotorFluxObserver::determine_flux_deviation(float x_frame, float
 float SensorlessRotorFluxObserver::determine_theta_hat_from_flux_states(const float& x_alpha, const float& i_alpha,
                                                                         const float& x_beta, const float i_beta,
                                                                         const float& phase_inductance, const float& vel_sign) {
+    IGNORE(vel_sign);
     // equation 9 from the paper in same arg order.
     const float arg1 = x_beta - phase_inductance * i_beta;
     const float arg2 = x_alpha - phase_inductance * i_alpha;
     float theta_hat = atan2f(arg1, arg2);
-
-    // We should add/subtract pi/2 to the theta_hat value to account
-    // for the fact that the flux linkage is lag/leading the current by pi/2
-    theta_hat -= math::M_PI_FLOAT / 2.0f * vel_sign;
 
     // Implement a wraparound of the theta_hat value to be between 0 and 2pi
     math::wraparound(theta_hat, 0.0f, math::M_PI_FLOAT * 2.0f);
