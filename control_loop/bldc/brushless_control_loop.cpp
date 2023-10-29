@@ -372,7 +372,7 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
         V_direct_ += pid_d_current_.calculate(i_direct_, i_d_reference_);
         // Limit the Vd and Vq by first calculating the modulus of the vector
         const float V_modulus = sqrtf(V_direct_ * V_direct_ + V_quadrature_ * V_quadrature_);
-        const float max_Vmod = bus_voltage * 3.0f / 2.0f;
+        const float max_Vmod = bus_voltage * 3.0f / 4.0f;
         // If the modulus is greater than the bus voltage, then we need to scale the voltage vector
         if (V_modulus > max_Vmod) {
             // Scale the voltage vector

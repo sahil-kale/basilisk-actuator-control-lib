@@ -16,9 +16,7 @@ class StepperControlLoop : public ControlLoop {
         float i_hold;  // The current to hold the motor at when not moving at the specific electrical angle
         float i_run;   // The current to run the motor at when moving at the specific electrical angle
 
-        float max_speed;  // The maximum electrical speed of the motor (radians / second)
-        // NOTE: the maximum speed is not the same as the maximum mechanical speed, which is the maximum electrical speed divided
-        // by the number of pole pairs
+        float max_speed;  // steps per second (note: the electrical speed is then 2pi * max_speed)
     };
 
     class StepperControlLoopStatus : public ControlLoopStatus {
@@ -101,6 +99,22 @@ class StepperControlLoop : public ControlLoop {
 
     ControlLoopStatus run(float speed) override;
 
+    /**
+     * @brief get the number of steps the motor has taken
+     * @return float The number of steps the motor has taken
+     * @note This is the number of steps the motor has taken since the last call to init()
+     */
+    float get_steps() const { return steps_; }
+
+    /**
+     * @brief set the number of steps the motor has taken
+     * @param step The number of steps the motor has taken
+     * @note The steps_ variable also determines the electrical angle of the motor, as a result,
+     *       this function may cause the motor to jump to a new electrical angle to align the rotor.
+     *       It is expected that on most systems, the minor movement of the rotor will not be noticeable.
+     */
+    void set_steps(float step) { steps_ = step; }
+
    protected:
     /**
      * @brief determine the current setpoint scalars based on the electrical angle
@@ -112,7 +126,9 @@ class StepperControlLoop : public ControlLoop {
     BrushedControlLoop& bridge_a_;
     BrushedControlLoop& bridge_b_;
     basilisk_hal::HAL_CLOCK& clock_;
-    float electrical_angle_ = 0;  // The electrical angle of the motor (radians)
+
+    float steps_ = 0;  // The number of steps the motor has taken
+
     uint32_t previous_time_ = 0;
     StepperControlLoopParams* params_ = nullptr;
 

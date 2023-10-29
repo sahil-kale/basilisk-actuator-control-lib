@@ -14,6 +14,8 @@ void StepperControlLoop::init(StepperControlLoopParams* params) {
 
     // Reset the status
     status_.reset();
+
+    steps_ = 0;
 }
 
 void StepperControlLoop::StepperControlLoopStatus::reset() {
@@ -79,16 +81,25 @@ ControlLoop::ControlLoopStatus StepperControlLoop::run(float speed) {
             status_.set_error(StepperControlLoopStatus::StepperControlLoopError::PARAMS_NOT_SET, false);
         }
         // First, integrate the electrical angle based on the speed
-        const float dt = (clock_.get_time_us() - previous_time_) / clock_.kMicrosecondsPerSecond;
-        electrical_angle_ += speed * params_->max_speed * dt;
-        // Wrap the electrical angle around 0 and 2pi
-        math::wraparound(electrical_angle_, 0.0f, 2.0f * math::M_PI_FLOAT);
+        const float dt = clock_.get_dt_s(clock_.get_time_us(), previous_time_);
+        steps_ += speed * params_->max_speed * dt;
+
+        float integral_part = 0.0f;
+
+        // Populate electrical_angle from the fractional part of steps_
+        float electrical_angle = modf(steps_, &integral_part) * 2 * math::M_PI_FLOAT;
+        IGNORE(integral_part);
+
+        // Wrap the electrical angle to be between 0 and 2pi
+        // This technically isn't necessary, but it makes debugging easier since the electrical angle is always positive
+        // rather than sometimes being negative
+        math::wraparound(electrical_angle, 0.0f, 2 * math::M_PI_FLOAT);
 
         // If the fabs speed is 0, then we are not moving, so set the current setpoints to the hold current
         const float current_setpoint = (fabs(speed) < math::ACCEPTABLE_FLOAT_ERROR) ? params_->i_hold : params_->i_run;
 
         // Determine the current setpoints
-        auto current_setpoint_scalars = determine_current_setpoints(current_setpoint, electrical_angle_);
+        auto current_setpoint_scalars = determine_current_setpoints(current_setpoint, electrical_angle);
 
         // Run the current controllers of the 2 brushed control loops
         ControlLoopStatus status_a = bridge_a_.run_constant_current(current_setpoint_scalars.first);

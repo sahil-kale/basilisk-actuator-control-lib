@@ -36,9 +36,6 @@ class StepperControlLoopTest : public control_loop::StepperControlLoop {
 
     // Make the private functions public so we can test them
     using StepperControlLoop::determine_current_setpoints;
-
-    // Make the protected variables public so we can test them
-    using StepperControlLoop::electrical_angle_;
 };
 
 TEST(stepper_motor_test, test_current_setpoint) {
@@ -89,6 +86,23 @@ TEST(stepper_motor_test, test_uninitialized_control_loop) {
 
     // Ensure that the status is OK
     EXPECT_EQ(status, StepperControlLoop::StepperControlLoopStatus::ControlLoopBaseStatus::OK);
+}
+
+// Test that on init, the number of steps is reset to 0.0f. Further, test that setting the steps to a non-zero value
+// makes us return that value
+TEST(stepper_motor_test, reset_and_set_steps) {
+    StepperControlLoopTest stepper_control_loop_test;
+    // Init the control loop
+    stepper_control_loop_test.init(&stepper_control_loop_test.default_params);
+
+    // Expect the number of steps to be 0.0f
+    EXPECT_EQ(stepper_control_loop_test.get_steps(), 0.0f);
+
+    // Set the number of steps to 10.0f
+    stepper_control_loop_test.set_steps(10.0f);
+
+    // Expect the number of steps to be 10.0f
+    EXPECT_EQ(stepper_control_loop_test.get_steps(), 10.0f);
 }
 
 }  // namespace control_loop
