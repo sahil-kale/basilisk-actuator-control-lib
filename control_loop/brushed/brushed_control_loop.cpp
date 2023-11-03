@@ -14,6 +14,8 @@ void BrushedControlLoop::init(BrushedControlLoopParams* params) {
     current_controller_.set_ki(params_->current_controller_params.ki);
     current_controller_.set_kd(params_->current_controller_params.kd);
 
+    current_controller_duty_cycle_ = 0.0f;
+
     // reset the status
     status_.reset();
 }
@@ -108,7 +110,13 @@ ControlLoop::ControlLoopStatus BrushedControlLoop::run(float speed) {
         hwbridge::HBridge::HBridgeInput bridge_input = run_state(speed, state_);
 
         // Run the bridge
-        bridge_.run(bridge_input);
+        app_hal_status_E status = bridge_.run(bridge_input);
+        if (status != APP_HAL_OK) {
+            status_.set_error(BrushedControlLoopStatus::BrushedControlLoopError::BRIDGE_FAILURE, true);
+            break;
+        } else {
+            status_.set_error(BrushedControlLoopStatus::BrushedControlLoopError::BRIDGE_FAILURE, false);
+        }
 
         // Update the last speed
         last_speed_ = speed;
@@ -209,14 +217,22 @@ hwbridge::HBridge::HBridgeInput BrushedControlLoop::run_state(float speed, const
 
 // Write the run_constant_current function
 ControlLoop::ControlLoopStatus BrushedControlLoop::run_constant_current(float current) {
-    // Get the current bridge current
-    float bridge_current = 0.0f;
-    bridge_.get_current(bridge_current);
+    do {
+        // Get the current bridge current
+        float bridge_current = 0.0f;
+        app_hal_status_E status = bridge_.get_current(bridge_current);
+        if (status != APP_HAL_OK) {
+            status_.set_error(BrushedControlLoopStatus::BrushedControlLoopError::GET_CURRENT_FAILED, true);
+            break;
+        } else {
+            status_.set_error(BrushedControlLoopStatus::BrushedControlLoopError::GET_CURRENT_FAILED, false);
+        }
 
-    // Run the current controller
-    current_controller_duty_cycle_ += current_controller_.calculate(current, bridge_current);
+        // Run the current controller
+        current_controller_duty_cycle_ += current_controller_.calculate(current, bridge_current);
 
-    run(current_controller_duty_cycle_);
+        run(current_controller_duty_cycle_);
+    } while (false);
 
     return status_;
 }

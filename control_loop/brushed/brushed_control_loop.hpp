@@ -16,7 +16,7 @@ namespace control_loop {
 class BrushedControlLoop : public ControlLoop {
    public:
     BrushedControlLoop(hwbridge::HBridge& bridge, basilisk_hal::HAL_CLOCK& clock)
-        : bridge_(bridge), clock_(clock), current_controller_{0, 0, 0, 1.0f, -1.0f, 0, clock_} {}
+        : bridge_(bridge), clock_(clock), current_controller_{0, 0, 0, -1.0f, 1.0f, 0, clock_} {}
 
     class BrushedControlLoopCurrentControllerParams {
        public:
@@ -43,6 +43,8 @@ class BrushedControlLoop : public ControlLoop {
         enum class BrushedControlLoopError {
             NO_ERROR,
             PARAMS_NOT_SET,
+            GET_CURRENT_FAILED,
+            BRIDGE_FAILURE,
             TOTAL_ERROR_COUNT,
         };
         enum class BrushedControlLoopWarning {

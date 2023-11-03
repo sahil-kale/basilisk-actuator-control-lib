@@ -13,6 +13,7 @@ namespace control_loop {
 void BrushlessControlLoop::init(BrushlessControlLoop::BrushlessControlLoopParams* params) {
     // Initialize the rotor position estimator
     primary_rotor_position_estimator_.reset_estimation();
+    secondary_rotor_position_estimator_->reset_estimation();
 
     // Set the internal params pointer
     params_ = params;
