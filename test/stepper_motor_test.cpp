@@ -1,4 +1,3 @@
-#include "bridge_hbridge_drv8801.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "math_util.hpp"

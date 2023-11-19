@@ -6,9 +6,7 @@
 #include "math.h"
 #include "math_foc.hpp"
 #include "mock_bridge_3phase.hpp"
-#include "mock_hal_adc.hpp"
 #include "mock_hal_clock.hpp"
-#include "mock_hal_timer.hpp"
 #include "mock_rotor_estimator.hpp"
 
 namespace control_loop {
