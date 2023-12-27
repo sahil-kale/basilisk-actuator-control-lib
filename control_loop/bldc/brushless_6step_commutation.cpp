@@ -1,5 +1,7 @@
 #include "brushless_6step_commutation.hpp"
 
+#include <cmath>
+
 #include "math_util.hpp"
 
 namespace control_loop {
@@ -36,5 +38,22 @@ commutation_step_t determine_commutation_step_from_theta(float electrical_theta)
 
     return commutation_step;
 }
+
+void determine_inverter_duty_cycles_trap(hwbridge::Bridge3Phase::phase_command_t phase_command[3],
+                                         Bldc6Step::commutation_step_t current_commutation_step, float motor_speed) {
+    for (int i = 0; i < 3; i++) {
+        if (current_commutation_step.signals[i] == Bldc6Step::CommutationSignal::HIGH) {
+            phase_command[i].duty_cycle_high_side = fabs(motor_speed);
+            phase_command[i].invert_low_side = true;
+        } else if (current_commutation_step.signals[i] == Bldc6Step::CommutationSignal::LOW) {
+            phase_command[i].duty_cycle_high_side = 0.0f;
+            phase_command[i].invert_low_side = true;
+        } else {
+            phase_command[i].duty_cycle_high_side = 0.0f;
+            phase_command[i].invert_low_side = false;
+        }
+    }
+}
+
 }  // namespace Bldc6Step
 }  // namespace control_loop

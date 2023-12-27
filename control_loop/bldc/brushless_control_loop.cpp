@@ -394,7 +394,7 @@ void BrushlessControlLoop::run_trap(float speed, hwbridge::Bridge3Phase::phase_c
     Bldc6Step::commutation_step_t current_commutation_step = Bldc6Step::determine_commutation_step_from_theta(rotor_position_);
 
     // Determine the duty cycles for the inverter
-    determine_inverter_duty_cycles_trap(phase_commands, current_commutation_step, speed);
+    Bldc6Step::determine_inverter_duty_cycles_trap(phase_commands, current_commutation_step, speed);
 }
 
 void BrushlessControlLoop::determine_inverter_duty_cycles_foc(float theta, float Vdirect, float Vquadrature, float bus_voltage,
@@ -460,23 +460,6 @@ BrushlessControlLoop::BrushlessControlLoopType BrushlessControlLoop::get_desired
         desired_control_loop_type = BrushlessControlLoop::BrushlessControlLoopType::CLOSED_LOOP;
     }
     return desired_control_loop_type;
-}
-
-void BrushlessControlLoop::determine_inverter_duty_cycles_trap(hwbridge::Bridge3Phase::phase_command_t phase_command[3],
-                                                               Bldc6Step::commutation_step_t current_commutation_step,
-                                                               float motor_speed) {
-    for (int i = 0; i < 3; i++) {
-        if (current_commutation_step.signals[i] == Bldc6Step::CommutationSignal::HIGH) {
-            phase_command[i].duty_cycle_high_side = fabs(motor_speed);
-            phase_command[i].invert_low_side = true;
-        } else if (current_commutation_step.signals[i] == Bldc6Step::CommutationSignal::LOW) {
-            phase_command[i].duty_cycle_high_side = 0.0f;
-            phase_command[i].invert_low_side = true;
-        } else {
-            phase_command[i].duty_cycle_high_side = 0.0f;
-            phase_command[i].invert_low_side = false;
-        }
-    }
 }
 
 }  // namespace control_loop

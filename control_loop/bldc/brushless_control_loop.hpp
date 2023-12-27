@@ -292,15 +292,6 @@ class BrushlessControlLoop : public ControlLoop {
                                             hwbridge::Bridge3Phase::phase_command_t& phase_command_u,
                                             hwbridge::Bridge3Phase::phase_command_t& phase_command_v,
                                             hwbridge::Bridge3Phase::phase_command_t& phase_command_w);
-
-    /**
-     * @brief Generate the duty cycles for the 3 phases based on the commutation step
-     * @param phase_command array of phase commands to be filled in, u-v-w
-     * @param commutation_step the commutation step to generate the duty cycles for
-     * @param motor_speed the motor speed to generate the duty cycles for. 0 - 1.0f
-     */
-    void determine_inverter_duty_cycles_trap(hwbridge::Bridge3Phase::phase_command_t phase_command[3],
-                                             Bldc6Step::commutation_step_t current_commutation_step, float motor_speed);
 };
 
 }  // namespace control_loop

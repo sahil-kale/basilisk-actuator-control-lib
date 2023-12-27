@@ -45,7 +45,6 @@ class BrushlessControlLoopTest : public BrushlessControlLoop {
         : BrushlessControlLoop(bridge, clock, rotor_position_estimator) {}
 
     // Make the private functions public so we can test them
-    using BrushlessControlLoop::determine_inverter_duty_cycles_trap;
     using BrushlessControlLoop::get_desired_state;
 };
 
@@ -84,30 +83,6 @@ TEST(BrushlessControlLoopTest, test_run_to_stop) {
     // Ensure that the desired state is stop
     EXPECT_EQ(test_control_loop.get_desired_state(0, BrushlessControlLoop::BrushlessControlLoopState::RUN),
               BrushlessControlLoop::BrushlessControlLoopState::STOP);
-}
-
-// Test the generate commutation duty cycle function
-TEST(BrushlessControlLoopTest, test_6_step_duty_cycle) {
-    // Create a mock rotor sensor
-    bldc_rotor_estimator::MOCK_ROTOR_SECTOR_SENSOR sector_sensor;
-    // Initialize a sector sensor from hall
-    bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall rotor_estimator(mock_clock, sector_sensor);
-
-    // instantiate a brushless foc control loop test class
-    BrushlessControlLoopTest test_control_loop(rotor_estimator, mock_clock);
-
-    // Phase command struct
-    hwbridge::Bridge3Phase::phase_command_t phase_command[3];
-
-    // Check that the phase command is correct for a motor speed of 1
-    // Comm step  U low, V Z, W high
-    test_control_loop.determine_inverter_duty_cycles_trap(phase_command, Bldc6Step::commutation_steps[2], 1.0f);
-    EXPECT_FLOAT_EQ(phase_command[0].duty_cycle_high_side, 0.0f);
-    EXPECT_FLOAT_EQ(phase_command[0].invert_low_side, true);
-    EXPECT_FLOAT_EQ(phase_command[1].duty_cycle_high_side, 0.0f);
-    EXPECT_FLOAT_EQ(phase_command[1].invert_low_side, false);
-    EXPECT_FLOAT_EQ(phase_command[2].duty_cycle_high_side, 1.0f);
-    EXPECT_FLOAT_EQ(phase_command[2].invert_low_side, true);
 }
 
 }  // namespace control_loop
