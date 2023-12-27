@@ -15,6 +15,15 @@ constexpr float M_PI_FLOAT = static_cast<float>(M_PI);
 
 constexpr float ACCEPTABLE_FLOAT_ERROR = 0.000001;
 
+// Make a floated function to determine whether two floats are equal
+/**
+ * @brief Determine whether two floats are equal.
+ * @param a The first float
+ * @param b The second float
+ * @return bool Whether the floats are equal
+ */
+bool float_equals(float a, float b);
+
 /**
  * @brief Integrate the given value using the trapezoidal rule.
  * @param x The current x value

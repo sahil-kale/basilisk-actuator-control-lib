@@ -1,5 +1,4 @@
 #include "brushless_6step_commutation.hpp"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "math_util.hpp"
 

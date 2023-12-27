@@ -26,12 +26,6 @@ typedef struct {
     float c;
 } inverse_clarke_transform_result_t;
 
-typedef struct {
-    float dutyCycleU;
-    float dutyCycleV;
-    float dutyCycleW;
-} svpwm_duty_cycle_t;
-
 /**
  * @brief Perform a clarke transform on the given 3-phase variable values.
  * @param a phase A value to transform to alpha-beta frame
@@ -66,16 +60,6 @@ inverse_park_transform_result_t inverse_park_transform(float d, float q, float t
  * @return inverse_clarke_transform_result_t The result of the inverse clarke transform
  */
 inverse_clarke_transform_result_t inverse_clarke_transform(float alpha, float beta);
-
-/**
- * @brief Perform a space vector pulse width modulation on the given alpha/beta voltage values.
- * @param Vd Voltage in the d frame
- * @param Vq Voltage in the q frame
- * @param theta_el The electrical angle of the rotor
- * @param Vbus The bus voltage
- * @return svpwm_duty_cycle_t The result of the svpwm
- */
-svpwm_duty_cycle_t svpwm(float Vd, float Vq, float theta_el, float Vbus);
 
 }  // namespace math
 
