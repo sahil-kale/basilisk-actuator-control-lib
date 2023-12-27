@@ -6,6 +6,7 @@
 #include <array>
 
 #include "bridge_3phase.hpp"
+#include "brushless_foc.hpp"
 #include "control_loop.hpp"
 #include "hal_clock.hpp"
 #include "math_foc.hpp"
@@ -33,12 +34,6 @@ class BrushlessControlLoop : public ControlLoop {
         FOC,
     };
 
-    // Define a pwm control type (Sine or Space-Vector)
-    enum class BrushlessFocPwmControlType {
-        SINE,
-        SPACE_VECTOR,
-    };
-
     // Define FOC control-loop specific parameters
     class BrushlessFocControLoopParams {
        public:
@@ -56,7 +51,7 @@ class BrushlessControlLoop : public ControlLoop {
 
         float current_lpf_fc;  // The cutoff frequency of the low pass filter for the current controller
 
-        BrushlessFocPwmControlType pwm_control_type;
+        BldcFoc::BrushlessFocPwmControlType pwm_control_type;
     };
 
     class BrushlessControlLoopParams {
@@ -275,23 +270,6 @@ class BrushlessControlLoop : public ControlLoop {
      * @param phase_commands The phase commands to be filled in
      */
     void run_trap(float speed, hwbridge::Bridge3Phase::phase_command_t phase_commands[3]);
-
-    /**
-     * @brief Determine the duty cycles for the inverter using the FOC algorithm by doing inverse park and vector control algo
-     * (inverse clarke or foc)
-     * @param theta The rotor angle (radians)
-     * @param Vdirect The alpha component of the voltage vector
-     * @param Vquardature The beta component of the voltage vector
-     * @param bus_voltage The bus voltage
-     * @param phase_command_u The duty cycle for phase u
-     * @param phase_command_v The duty cycle for phase v
-     * @param phase_command_w The duty cycle for phase w
-     */
-    void determine_inverter_duty_cycles_foc(float theta, float Vdirect, float Vquadrature, float bus_voltage,
-                                            BrushlessFocPwmControlType pwm_control_type,
-                                            hwbridge::Bridge3Phase::phase_command_t& phase_command_u,
-                                            hwbridge::Bridge3Phase::phase_command_t& phase_command_v,
-                                            hwbridge::Bridge3Phase::phase_command_t& phase_command_w);
 };
 
 }  // namespace control_loop

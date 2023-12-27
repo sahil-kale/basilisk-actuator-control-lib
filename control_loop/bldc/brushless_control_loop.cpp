@@ -2,6 +2,7 @@
 
 #include "bridge_3phase.hpp"
 #include "brushless_6step_commutation.hpp"
+#include "brushless_foc.hpp"
 #include "math.h"
 #include "math_foc.hpp"
 #include "math_util.hpp"
@@ -380,9 +381,9 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
         }
 
         // Determine the appropriate duty cycles for the inverter
-        determine_inverter_duty_cycles_foc(rotor_position_, V_direct_, V_quadrature_, bus_voltage,
-                                           params_->foc_params.pwm_control_type, phase_commands[0], phase_commands[1],
-                                           phase_commands[2]);
+        BldcFoc::determine_inverter_duty_cycles_foc(rotor_position_, V_direct_, V_quadrature_, bus_voltage,
+                                                    params_->foc_params.pwm_control_type, phase_commands[0], phase_commands[1],
+                                                    phase_commands[2]);
     } while (false);
 }
 
@@ -395,61 +396,6 @@ void BrushlessControlLoop::run_trap(float speed, hwbridge::Bridge3Phase::phase_c
 
     // Determine the duty cycles for the inverter
     Bldc6Step::determine_inverter_duty_cycles_trap(phase_commands, current_commutation_step, speed);
-}
-
-void BrushlessControlLoop::determine_inverter_duty_cycles_foc(float theta, float Vdirect, float Vquadrature, float bus_voltage,
-                                                              BrushlessControlLoop::BrushlessFocPwmControlType pwm_control_type,
-                                                              hwbridge::Bridge3Phase::phase_command_t& phase_command_u,
-                                                              hwbridge::Bridge3Phase::phase_command_t& phase_command_v,
-                                                              hwbridge::Bridge3Phase::phase_command_t& phase_command_w) {
-    // Do an inverse Park transform
-    math::inverse_park_transform_result_t inverse_park_transform = math::inverse_park_transform(Vdirect, Vquadrature, theta);
-
-    V_alpha_ = inverse_park_transform.alpha;
-    V_beta_ = inverse_park_transform.beta;
-
-    switch (pwm_control_type) {
-        case BrushlessControlLoop::BrushlessFocPwmControlType::SPACE_VECTOR: {
-            math::svpwm_duty_cycle_t duty_cycles = math::svpwm(Vdirect, Vquadrature, theta, bus_voltage);
-            duty_cycle_u_h_ = duty_cycles.dutyCycleU;
-            duty_cycle_v_h_ = duty_cycles.dutyCycleV;
-            duty_cycle_w_h_ = duty_cycles.dutyCycleW;
-        } break;
-        case BrushlessControlLoop::BrushlessFocPwmControlType::SINE: {
-            // Do an inverse clarke transform
-            math::inverse_clarke_transform_result_t inverse_clarke_transform =
-                math::inverse_clarke_transform(inverse_park_transform.alpha, inverse_park_transform.beta);
-
-            // load the results into the phase commands
-            duty_cycle_u_h_ = inverse_clarke_transform.a / bus_voltage;
-            duty_cycle_v_h_ = inverse_clarke_transform.b / bus_voltage;
-            duty_cycle_w_h_ = inverse_clarke_transform.c / bus_voltage;
-
-            // Duty cycles can be between -1 and 1, and those should linearly map to 0 -> 1
-            duty_cycle_u_h_ = (duty_cycle_u_h_ + this->MAX_MOTOR_SPEED) / (this->MAX_MOTOR_SPEED * 2.0f);
-            duty_cycle_v_h_ = (duty_cycle_v_h_ + this->MAX_MOTOR_SPEED) / (this->MAX_MOTOR_SPEED * 2.0f);
-            duty_cycle_w_h_ = (duty_cycle_w_h_ + this->MAX_MOTOR_SPEED) / (this->MAX_MOTOR_SPEED * 2.0f);
-        } break;
-        default:
-            // Set the duty cycles to 0
-            duty_cycle_u_h_ = 0.0f;
-            duty_cycle_v_h_ = 0.0f;
-            duty_cycle_w_h_ = 0.0f;
-            break;
-    }
-
-    // No matter what, the duty cycles should be between 0 and 1
-    math::clamp(duty_cycle_u_h_, 0.0f, 1.0f);
-    math::clamp(duty_cycle_v_h_, 0.0f, 1.0f);
-    math::clamp(duty_cycle_w_h_, 0.0f, 1.0f);
-
-    // Set the duty cycles
-    phase_command_u.duty_cycle_high_side = duty_cycle_u_h_;
-    phase_command_u.invert_low_side = true;
-    phase_command_v.duty_cycle_high_side = duty_cycle_v_h_;
-    phase_command_v.invert_low_side = true;
-    phase_command_w.duty_cycle_high_side = duty_cycle_w_h_;
-    phase_command_w.invert_low_side = true;
 }
 
 BrushlessControlLoop::BrushlessControlLoopType BrushlessControlLoop::get_desired_control_loop_type(

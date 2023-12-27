@@ -18,22 +18,21 @@ class BrushlessControlLoopTest : public BrushlessControlLoop {
    public:
     hwbridge::MOCK_BRIDGE_3PHASE bridge;
 
-    BrushlessControlLoop::BrushlessFocControLoopParams foc_params_{
-        .current_control_bandwidth_rad_per_sec = 0.0f,
+    BrushlessControlLoop::BrushlessFocControLoopParams foc_params_{.current_control_bandwidth_rad_per_sec = 0.0f,
 
-        .phase_resistance = 0.0f,
-        .phase_inductance = 0.0f,
-        .pm_flux_linkage = 0.0f,
+                                                                   .phase_resistance = 0.0f,
+                                                                   .phase_inductance = 0.0f,
+                                                                   .pm_flux_linkage = 0.0f,
 
-        .foc_start_timeout_period_us = 0,
-        .disable_ki = false,
+                                                                   .foc_start_timeout_period_us = 0,
+                                                                   .disable_ki = false,
 
-        .speed_to_iq_gain = 0.0f,
-        .i_d_reference_default = 0.0f,
+                                                                   .speed_to_iq_gain = 0.0f,
+                                                                   .i_d_reference_default = 0.0f,
 
-        .current_lpf_fc = 0.0f,
+                                                                   .current_lpf_fc = 0.0f,
 
-        .pwm_control_type = BrushlessControlLoop::BrushlessFocPwmControlType::SINE};
+                                                                   .pwm_control_type = BldcFoc::BrushlessFocPwmControlType::SINE};
 
     BrushlessControlLoop::BrushlessControlLoopParams test_params_{
         .commutation_type = BrushlessControlLoop::BrushlessControlLoopCommutationType::TRAPEZOIDAL,
