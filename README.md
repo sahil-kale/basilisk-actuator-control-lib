@@ -5,6 +5,8 @@ Note: This library is currently under development. The architecture is fluid and
 This library is a hardware-agnostic library intended to support basic commutation of actuators.
 As of now, the following actuator types with associated commutation strategy are supported by this C++ library:
 - BLDC/PMSM (Sensored & Sensorless Trap, Sensored FOC)
+
+The following were, at one point, WIP, but are deprioritized in favour of a focus on BLDC software development.
 - Stepper Motor Commutation (Note: SW commutation of stepper motors should be avoided as the motor will commutate far slower)
 - Brushed Motor (Torque and Open-Loop Speed)
 
