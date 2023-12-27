@@ -347,23 +347,20 @@ TEST(RotorEstimatorTest, test_zero_crossing_detection) {
     bemf_voltage.w = 1.0f;
 
     // With this, we should not detect a zero crossing
-    EXPECT_FALSE(
-        sensorless_sensor.zero_crossing_detected(bemf_voltage, control_loop::Bldc6StepCommutationTypes::commutation_steps[4]));
+    EXPECT_FALSE(sensorless_sensor.zero_crossing_detected(bemf_voltage, control_loop::Bldc6Step::commutation_steps[4]));
 
     // Load the bemf with a voltage of 1.0f, 0.0f, and 0.51f
     bemf_voltage.w = 0.51f;
 
     // With this, we should not detect a zero crossing
-    EXPECT_FALSE(
-        sensorless_sensor.zero_crossing_detected(bemf_voltage, control_loop::Bldc6StepCommutationTypes::commutation_steps[4]));
+    EXPECT_FALSE(sensorless_sensor.zero_crossing_detected(bemf_voltage, control_loop::Bldc6Step::commutation_steps[4]));
 
     // Load the bemf with a voltage of 1.0f, 0.0f, and 0.49f
 
     bemf_voltage.w = 0.49f;
 
     // With this, we should detect a zero crossing
-    EXPECT_TRUE(
-        sensorless_sensor.zero_crossing_detected(bemf_voltage, control_loop::Bldc6StepCommutationTypes::commutation_steps[4]));
+    EXPECT_TRUE(sensorless_sensor.zero_crossing_detected(bemf_voltage, control_loop::Bldc6Step::commutation_steps[4]));
 }
 
 // Test the sensorless sector estimator reporting a sector change for the same duration of time as when a zero crossing was

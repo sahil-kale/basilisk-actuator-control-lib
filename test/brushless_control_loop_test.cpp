@@ -101,7 +101,7 @@ TEST(BrushlessControlLoopTest, test_6_step_duty_cycle) {
 
     // Check that the phase command is correct for a motor speed of 1
     // Comm step  U low, V Z, W high
-    test_control_loop.determine_inverter_duty_cycles_trap(phase_command, Bldc6StepCommutationTypes::commutation_steps[2], 1.0f);
+    test_control_loop.determine_inverter_duty_cycles_trap(phase_command, Bldc6Step::commutation_steps[2], 1.0f);
     EXPECT_FLOAT_EQ(phase_command[0].duty_cycle_high_side, 0.0f);
     EXPECT_FLOAT_EQ(phase_command[0].invert_low_side, true);
     EXPECT_FLOAT_EQ(phase_command[1].duty_cycle_high_side, 0.0f);

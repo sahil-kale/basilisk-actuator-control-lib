@@ -3,7 +3,7 @@
 #include "math_util.hpp"
 
 namespace control_loop {
-namespace Bldc6StepCommutationTypes {
+namespace Bldc6Step {
 
 commutation_step_t determine_commutation_step_from_theta(float electrical_theta) {
     commutation_step_t commutation_step = {CommutationSignal::LOW, CommutationSignal::LOW, CommutationSignal::LOW};
@@ -36,5 +36,5 @@ commutation_step_t determine_commutation_step_from_theta(float electrical_theta)
 
     return commutation_step;
 }
-}  // namespace Bldc6StepCommutationTypes
+}  // namespace Bldc6Step
 }  // namespace control_loop
