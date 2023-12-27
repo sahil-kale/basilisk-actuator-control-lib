@@ -5,7 +5,7 @@
 
 namespace control_loop {
 
-namespace Bldc6StepCommutationTypes {
+namespace Bldc6Step {
 enum class CommutationSignal {
     HIGH,
     LOW,
@@ -39,7 +39,7 @@ constexpr commutation_step_t commutation_steps[num_commutation_steps] = {
  */
 commutation_step_t determine_commutation_step_from_theta(float electrical_theta);
 
-};  // namespace Bldc6StepCommutationTypes
+};  // namespace Bldc6Step
 
 }  // namespace control_loop
 

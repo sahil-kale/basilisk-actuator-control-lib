@@ -27,8 +27,8 @@ app_hal_status_E BldcSensorlessRotorSectorSensor::get_electrical_angle(float& an
         }
 
         // Get the commutation step as a function of the electrical angle
-        control_loop::Bldc6StepCommutationTypes::commutation_step_t step =
-            control_loop::Bldc6StepCommutationTypes::determine_commutation_step_from_theta(estimated_electrical_angle_);
+        control_loop::Bldc6Step::commutation_step_t step =
+            control_loop::Bldc6Step::determine_commutation_step_from_theta(estimated_electrical_angle_);
 
         // Check if a zero crossing has occurred
         const bool zero_crossing = zero_crossing_detected(bemf_voltage, step);
@@ -68,17 +68,16 @@ app_hal_status_E BldcSensorlessRotorSectorSensor::get_electrical_angle(float& an
 
 bool BldcSensorlessRotorSectorSensor::zero_crossing_detected(
     const hwbridge::Bridge3Phase::phase_voltage_t& bemf_voltage,
-    control_loop::Bldc6StepCommutationTypes::commutation_step_t current_commutation_step) {
+    control_loop::Bldc6Step::commutation_step_t current_commutation_step) {
     float phase_sum = 0.0f;
-    control_loop::Bldc6StepCommutationTypes::CommutationSignal zero_crossing_signal =
-        control_loop::Bldc6StepCommutationTypes::CommutationSignal::Z_RISING;
+    control_loop::Bldc6Step::CommutationSignal zero_crossing_signal = control_loop::Bldc6Step::CommutationSignal::Z_RISING;
     float undriven_phase_voltage = 0.0f;
 
     const float bemf_voltages[hwbridge::Bridge3Phase::NUM_PHASES] = {bemf_voltage.u, bemf_voltage.v, bemf_voltage.w};
 
     for (uint8_t i = 0; i < hwbridge::Bridge3Phase::NUM_PHASES; i++) {
-        if ((current_commutation_step.signals[i] != control_loop::Bldc6StepCommutationTypes::CommutationSignal::Z_FALLING) &&
-            (current_commutation_step.signals[i] != control_loop::Bldc6StepCommutationTypes::CommutationSignal::Z_RISING)) {
+        if ((current_commutation_step.signals[i] != control_loop::Bldc6Step::CommutationSignal::Z_FALLING) &&
+            (current_commutation_step.signals[i] != control_loop::Bldc6Step::CommutationSignal::Z_RISING)) {
             phase_sum += bemf_voltages[i];
         } else {
             zero_crossing_signal = current_commutation_step.signals[i];
@@ -88,7 +87,7 @@ bool BldcSensorlessRotorSectorSensor::zero_crossing_detected(
 
     float zero_crossing_threshold = phase_sum / 2.0f;  // NOTE: This requires the bemf voltage to run when the PWM is ON
     bool return_value = false;
-    if (zero_crossing_signal == control_loop::Bldc6StepCommutationTypes::CommutationSignal::Z_RISING) {
+    if (zero_crossing_signal == control_loop::Bldc6Step::CommutationSignal::Z_RISING) {
         if (undriven_phase_voltage > zero_crossing_threshold) {
             return_value = true;
         }

@@ -300,8 +300,7 @@ class BrushlessControlLoop : public ControlLoop {
      * @param motor_speed the motor speed to generate the duty cycles for. 0 - 1.0f
      */
     void determine_inverter_duty_cycles_trap(hwbridge::Bridge3Phase::phase_command_t phase_command[3],
-                                             Bldc6StepCommutationTypes::commutation_step_t current_commutation_step,
-                                             float motor_speed);
+                                             Bldc6Step::commutation_step_t current_commutation_step, float motor_speed);
 };
 
 }  // namespace control_loop

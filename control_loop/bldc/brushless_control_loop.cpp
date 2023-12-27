@@ -205,8 +205,7 @@ void BrushlessControlLoop::update_rotor_position_estimator(
         bridge_.read_current(estimator_inputs.phase_current);
 
         // Get the commutation step
-        estimator_inputs.current_commutation_step =
-            Bldc6StepCommutationTypes::determine_commutation_step_from_theta(rotor_position_);
+        estimator_inputs.current_commutation_step = Bldc6Step::determine_commutation_step_from_theta(rotor_position_);
 
         // Set the phase params
         estimator_inputs.phase_resistance = params_->foc_params.phase_resistance;
@@ -302,7 +301,6 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
         control_loop_type_ = get_desired_control_loop_type(is_primary_estimator_valid, is_secondary_estimator_valid);
         // Get the bus voltage
         float bus_voltage = 0.0f;
-        // TODO: ERROR CHECKING!!
         app_hal_status_E status = bridge_.read_bus_voltage(bus_voltage);
         status_.set_error(BrushlessControlLoopStatus::BrushlessControlLoopError::BUS_VOLTAGE_READ_FAILURE,
                           static_cast<bool>(status != app_hal_status_E::APP_HAL_OK));
@@ -393,8 +391,7 @@ void BrushlessControlLoop::run_trap(float speed, hwbridge::Bridge3Phase::phase_c
     primary_rotor_position_estimator_.get_rotor_position(rotor_position_);
 
     // Get the commutation step
-    Bldc6StepCommutationTypes::commutation_step_t current_commutation_step =
-        Bldc6StepCommutationTypes::determine_commutation_step_from_theta(rotor_position_);
+    Bldc6Step::commutation_step_t current_commutation_step = Bldc6Step::determine_commutation_step_from_theta(rotor_position_);
 
     // Determine the duty cycles for the inverter
     determine_inverter_duty_cycles_trap(phase_commands, current_commutation_step, speed);
@@ -465,14 +462,14 @@ BrushlessControlLoop::BrushlessControlLoopType BrushlessControlLoop::get_desired
     return desired_control_loop_type;
 }
 
-void BrushlessControlLoop::determine_inverter_duty_cycles_trap(
-    hwbridge::Bridge3Phase::phase_command_t phase_command[3],
-    Bldc6StepCommutationTypes::commutation_step_t current_commutation_step, float motor_speed) {
+void BrushlessControlLoop::determine_inverter_duty_cycles_trap(hwbridge::Bridge3Phase::phase_command_t phase_command[3],
+                                                               Bldc6Step::commutation_step_t current_commutation_step,
+                                                               float motor_speed) {
     for (int i = 0; i < 3; i++) {
-        if (current_commutation_step.signals[i] == Bldc6StepCommutationTypes::CommutationSignal::HIGH) {
+        if (current_commutation_step.signals[i] == Bldc6Step::CommutationSignal::HIGH) {
             phase_command[i].duty_cycle_high_side = fabs(motor_speed);
             phase_command[i].invert_low_side = true;
-        } else if (current_commutation_step.signals[i] == Bldc6StepCommutationTypes::CommutationSignal::LOW) {
+        } else if (current_commutation_step.signals[i] == Bldc6Step::CommutationSignal::LOW) {
             phase_command[i].duty_cycle_high_side = 0.0f;
             phase_command[i].invert_low_side = true;
         } else {
