@@ -48,11 +48,12 @@ FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect
                                                       hwbridge::Bridge3Phase::phase_command_t& phase_command_v,
                                                       hwbridge::Bridge3Phase::phase_command_t& phase_command_w);
 
-typedef struct {
-    float dutyCycleU;
-    float dutyCycleV;
-    float dutyCycleW;
-} svpwm_duty_cycle_t;
+class svpwm_duty_cycle {
+   public:
+    float dutyCycleU = 0.0f;
+    float dutyCycleV = 0.0f;
+    float dutyCycleW = 0.0f;
+};
 
 /**
  * @brief Perform a space vector pulse width modulation on the given alpha/beta voltage values.
@@ -60,9 +61,30 @@ typedef struct {
  * @param Vq Voltage in the q frame
  * @param theta_el The electrical angle of the rotor
  * @param Vbus The bus voltage
- * @return svpwm_duty_cycle_t The result of the svpwm
+ * @return svpwm_duty_cycle The result of the svpwm
  */
-svpwm_duty_cycle_t svpwm(float Vd, float Vq, float theta_el, float Vbus);
+svpwm_duty_cycle svpwm(float Vd, float Vq, float theta_el, float Vbus);
+
+class FOCDebugVars {
+   public:
+    // Inputs
+    float theta_e = 0.0f;
+    float i_direct = 0.0f;
+    float i_quadrature = 0.0f;
+    // Note: it is possible to calculate i_alpha and i_beta from i_direct and i_quadrature,
+    // but we want to capture the actual values we calculated.
+    float i_alpha = 0.0f;
+    float i_beta = 0.0f;
+
+    // Outputs
+    float duty_cycle_u_h = 0.0f;
+    float duty_cycle_v_h = 0.0f;
+    float duty_cycle_w_h = 0.0f;
+    float V_direct = 0.0f;
+    float V_quadrature = 0.0f;
+    float V_alpha = 0.0f;
+    float V_beta = 0.0f;
+};
 
 }  // namespace BldcFoc
 

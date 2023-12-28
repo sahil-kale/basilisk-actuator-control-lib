@@ -24,7 +24,7 @@ FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect
 
     switch (pwm_control_type) {
         case BldcFoc::BrushlessFocPwmControlType::SPACE_VECTOR: {
-            svpwm_duty_cycle_t duty_cycles = svpwm(Vdirect, Vquadrature, theta, bus_voltage);
+            svpwm_duty_cycle duty_cycles = svpwm(Vdirect, Vquadrature, theta, bus_voltage);
             duty_cycle_u_h = duty_cycles.dutyCycleU;
             duty_cycle_v_h = duty_cycles.dutyCycleV;
             duty_cycle_w_h = duty_cycles.dutyCycleW;
@@ -84,8 +84,8 @@ FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect
     return result;
 }
 
-svpwm_duty_cycle_t svpwm(float Vd, float Vq, float theta_el, float Vbus) {
-    svpwm_duty_cycle_t result = {0.0f, 0.0f, 0.0f};
+svpwm_duty_cycle svpwm(float Vd, float Vq, float theta_el, float Vbus) {
+    svpwm_duty_cycle result;
     do {
         if (math::float_equals(Vbus, 0.0f)) {
             break;

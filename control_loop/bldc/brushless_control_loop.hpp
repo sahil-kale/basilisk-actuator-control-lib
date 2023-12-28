@@ -179,6 +179,12 @@ class BrushlessControlLoop : public ControlLoop {
      */
     ControlLoopStatus run_current_control(float i_d_reference, float i_q_reference);
 
+    /**
+     * @brief Get the FOC debug variables of the most recent control loop iteration
+     * @return The FOC debug variables
+     */
+    BldcFoc::FOCDebugVars get_foc_debug_vars() const;
+
     ~BrushlessControlLoop() = default;
 
    protected:
@@ -205,13 +211,13 @@ class BrushlessControlLoop : public ControlLoop {
     pid::PID<float> pid_d_current_;
     float desired_rotor_angle_open_loop_ = 0.0f;
 
-    // duty cycles
-    float duty_cycle_u_h_ = 0.0f, duty_cycle_v_h_ = 0.0f, duty_cycle_w_h_ = 0.0f;
-
     // FOC variables
     float i_alpha_ = 0.0f, i_beta_ = 0.0f;
     float i_quadrature_ = 0.0f, i_direct_ = 0.0f, V_quadrature_ = 0.0f, V_direct_ = 0.0f, V_alpha_ = 0.0f, V_beta_ = 0.0f;
     float i_d_reference_ = 0.0f;
+
+    // FOC debug variables
+    BldcFoc::FOCDebugVars foc_debug_vars_;
 
     /**
      * @brief Get the desired state of the control loop

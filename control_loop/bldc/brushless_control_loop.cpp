@@ -282,6 +282,9 @@ void BrushlessControlLoop::enter_state(const BrushlessControlLoopState& current_
                 }
                 // Set the desired rotor angle to the current rotor angle
                 primary_rotor_position_estimator_.get_rotor_position(desired_rotor_angle_open_loop_);
+
+                // Reset the debug vars
+                foc_debug_vars_ = BldcFoc::FOCDebugVars();
             }
         } break;
         case BrushlessControlLoop::BrushlessControlLoopState::STOP:
@@ -381,9 +384,22 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
         }
 
         // Determine the appropriate duty cycles for the inverter
-        BldcFoc::determine_inverter_duty_cycles_foc(rotor_position_, V_direct_, V_quadrature_, bus_voltage,
-                                                    params_->foc_params.pwm_control_type, phase_commands[0], phase_commands[1],
-                                                    phase_commands[2]);
+        BldcFoc::FocDutyCycleResult result = BldcFoc::determine_inverter_duty_cycles_foc(
+            rotor_position_, V_direct_, V_quadrature_, bus_voltage, params_->foc_params.pwm_control_type, phase_commands[0],
+            phase_commands[1], phase_commands[2]);
+        V_alpha_ = result.V_alpha;
+        V_beta_ = result.V_beta;
+
+        // Set the debug vars
+        foc_debug_vars_.theta_e = rotor_position_;
+        foc_debug_vars_.i_direct = i_direct_;
+        foc_debug_vars_.i_quadrature = i_quadrature_;
+        foc_debug_vars_.V_direct = V_direct_;
+        foc_debug_vars_.V_quadrature = V_quadrature_;
+        foc_debug_vars_.duty_cycle_u_h = result.duty_cycle_u_h;
+        foc_debug_vars_.duty_cycle_v_h = result.duty_cycle_v_h;
+        foc_debug_vars_.duty_cycle_w_h = result.duty_cycle_w_h;
+
     } while (false);
 }
 
