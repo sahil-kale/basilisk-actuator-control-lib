@@ -394,6 +394,8 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
         foc_debug_vars_.theta_e = rotor_position_;
         foc_debug_vars_.i_direct = i_direct_;
         foc_debug_vars_.i_quadrature = i_quadrature_;
+        foc_debug_vars_.i_alpha = i_alpha_;
+        foc_debug_vars_.i_beta = i_beta_;
         foc_debug_vars_.V_direct = V_direct_;
         foc_debug_vars_.V_quadrature = V_quadrature_;
         foc_debug_vars_.duty_cycle_u_h = result.duty_cycle_u_h;
