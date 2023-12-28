@@ -84,6 +84,8 @@ class FOCDebugVars {
     float V_quadrature = 0.0f;
     float V_alpha = 0.0f;
     float V_beta = 0.0f;
+    float d_voltage_delta = 0.0f;
+    float q_voltage_delta = 0.0f;
 };
 
 }  // namespace BldcFoc

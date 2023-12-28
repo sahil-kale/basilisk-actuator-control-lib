@@ -285,6 +285,15 @@ void BrushlessControlLoop::enter_state(const BrushlessControlLoopState& current_
 
                 // Reset the debug vars
                 foc_debug_vars_ = BldcFoc::FOCDebugVars();
+
+                // Reset the internal state
+                i_direct_ = 0.0f;
+                i_quadrature_ = 0.0f;
+                V_direct_ = 0.0f;
+                V_quadrature_ = 0.0f;
+                V_alpha_ = 0.0f;
+                V_beta_ = 0.0f;
+                i_d_reference_ = params_->foc_params.i_d_reference_default;
             }
         } break;
         case BrushlessControlLoop::BrushlessControlLoopState::STOP:
@@ -371,8 +380,10 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
 
         // Run the PI controller
         // The below hack for speed is kinda hacky and should be reverted lol
-        V_quadrature_ += pid_q_current_.calculate(i_quadrature_, speed * params_->foc_params.speed_to_iq_gain);
-        V_direct_ += pid_d_current_.calculate(i_direct_, i_d_reference_);
+        const float q_voltage_delta = pid_q_current_.calculate(speed * params_->foc_params.speed_to_iq_gain, i_quadrature_);
+        const float d_voltage_delta = pid_d_current_.calculate(i_d_reference_, i_direct_);
+        V_quadrature_ += q_voltage_delta;
+        V_direct_ += d_voltage_delta;
         // Limit the Vd and Vq by first calculating the modulus of the vector
         const float V_modulus = sqrtf(V_direct_ * V_direct_ + V_quadrature_ * V_quadrature_);
         const float max_Vmod = bus_voltage * 3.0f / 4.0f;
@@ -396,11 +407,15 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
         foc_debug_vars_.i_quadrature = i_quadrature_;
         foc_debug_vars_.i_alpha = i_alpha_;
         foc_debug_vars_.i_beta = i_beta_;
+        foc_debug_vars_.V_alpha = V_alpha_;
+        foc_debug_vars_.V_beta = V_beta_;
         foc_debug_vars_.V_direct = V_direct_;
         foc_debug_vars_.V_quadrature = V_quadrature_;
         foc_debug_vars_.duty_cycle_u_h = result.duty_cycle_u_h;
         foc_debug_vars_.duty_cycle_v_h = result.duty_cycle_v_h;
         foc_debug_vars_.duty_cycle_w_h = result.duty_cycle_w_h;
+        foc_debug_vars_.d_voltage_delta = d_voltage_delta;
+        foc_debug_vars_.q_voltage_delta = q_voltage_delta;
 
     } while (false);
 }
