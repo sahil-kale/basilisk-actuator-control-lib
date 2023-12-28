@@ -55,8 +55,8 @@ class PID {
     // Calculate the control value given the setpoint and feedback value
     /**
      * @brief Calculate the control value given the setpoint and feedback value
-     * @param setpoint The setpoint value
      * @param actual The actual value
+     * @param setpoint The setpoint value
      */
     T calculate(T actual, T setpoint);
 

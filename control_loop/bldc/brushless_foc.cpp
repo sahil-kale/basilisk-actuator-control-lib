@@ -42,9 +42,10 @@ FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect
                 duty_cycle_w_h = 0.0f;
                 break;
             }
-            duty_cycle_u_h = inverse_clarke_transform.a / bus_voltage;
-            duty_cycle_v_h = inverse_clarke_transform.b / bus_voltage;
-            duty_cycle_w_h = inverse_clarke_transform.c / bus_voltage;
+            // Not fully sure why the scale is required, see https://github.com/sahil-kale/basilisk-actuator-control-lib/issues/26
+            duty_cycle_u_h = inverse_clarke_transform.a * (3.0f / 2.0f) / (bus_voltage);
+            duty_cycle_v_h = inverse_clarke_transform.b * (3.0f / 2.0f) / (bus_voltage);
+            duty_cycle_w_h = inverse_clarke_transform.c * (3.0f / 2.0f) / (bus_voltage);
 
             // Duty cycles can be between -1 and 1, and those should linearly map to 0 -> 1
             duty_cycle_u_h = (duty_cycle_u_h + max_duty_cycle) / (max_duty_cycle * 2.0f);

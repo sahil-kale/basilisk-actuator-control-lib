@@ -6,6 +6,7 @@
 namespace math {
 
 clarke_transform_result_t clarke_transform(float a, float b, float c) {
+    // Note: uses simplification that ia + ib + ic = 0 to derive the simplified version
     clarke_transform_result_t result;
     result.alpha = a;
     result.beta = (b - c) / sqrt_3;
@@ -14,9 +15,9 @@ clarke_transform_result_t clarke_transform(float a, float b, float c) {
 
 park_transform_result_t park_transform(float alpha, float beta, float theta) {
     park_transform_result_t result;
-    float theta_rad = theta;
-    float cos_theta = cos(theta_rad);
-    float sin_theta = sin(theta_rad);
+    const float theta_rad = theta;
+    const float cos_theta = cos(theta_rad);
+    const float sin_theta = sin(theta_rad);
     result.d = alpha * cos_theta + beta * sin_theta;
     result.q = -alpha * sin_theta + beta * cos_theta;
     return result;
@@ -24,9 +25,9 @@ park_transform_result_t park_transform(float alpha, float beta, float theta) {
 
 inverse_park_transform_result_t inverse_park_transform(float d, float q, float theta) {
     inverse_park_transform_result_t result;
-    float theta_rad = theta;
-    float cos_theta = cos(theta_rad);
-    float sin_theta = sin(theta_rad);
+    const float theta_rad = theta;
+    const float cos_theta = cos(theta_rad);
+    const float sin_theta = sin(theta_rad);
     result.alpha = d * cos_theta - q * sin_theta;
     result.beta = d * sin_theta + q * cos_theta;
     return result;
