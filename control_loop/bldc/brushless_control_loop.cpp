@@ -424,4 +424,6 @@ BrushlessControlLoop::BrushlessControlLoopType BrushlessControlLoop::get_desired
     return desired_control_loop_type;
 }
 
+BldcFoc::FOCDebugVars get_foc_debug_vars() const { return foc_debug_vars_; }
+
 }  // namespace control_loop
