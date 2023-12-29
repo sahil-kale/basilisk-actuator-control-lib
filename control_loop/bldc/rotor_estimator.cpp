@@ -311,7 +311,7 @@ app_hal_status_E SensorlessRotorFluxObserver::update(const EstimatorInputs& inpu
     app_hal_status_E ret = APP_HAL_OK;
     do {
         // Clarke transform the current
-        math::clarke_transform_result_t i_ab =
+        math::alpha_beta_pair_t i_ab =
             math::clarke_transform(inputs.phase_current.u, inputs.phase_current.v, inputs.phase_current.w);
         // Get the y_alpha and y_beta values
         const float y_alpha = determine_flux_driving_voltage(inputs.phase_resistance, inputs.V_alpha, i_ab.alpha);

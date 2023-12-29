@@ -212,8 +212,9 @@ class BrushlessControlLoop : public ControlLoop {
     float desired_rotor_angle_open_loop_ = 0.0f;
 
     // FOC variables
-    float i_alpha_ = 0.0f, i_beta_ = 0.0f;
-    float i_quadrature_ = 0.0f, i_direct_ = 0.0f, V_quadrature_ = 0.0f, V_direct_ = 0.0f, V_alpha_ = 0.0f, V_beta_ = 0.0f;
+    math::dq_pair_t i_dq_;                  // Amps
+    math::dq_pair_t V_dq_;                  // Volts
+    math::alpha_beta_pair_t V_alpha_beta_;  // Volts
     float i_d_reference_ = 0.0f;
 
     // FOC debug variables
