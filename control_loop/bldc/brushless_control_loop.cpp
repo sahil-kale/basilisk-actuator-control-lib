@@ -273,6 +273,9 @@ void BrushlessControlLoop::enter_state(const BrushlessControlLoopState& current_
                 if (params_->foc_params.disable_ki == false) {
                     pid_d_current_.set_ki(ki);
                     pid_q_current_.set_ki(ki);
+                } else {
+                    pid_d_current_.set_ki(0.0f);
+                    pid_q_current_.set_ki(0.0f);
                 }
 
                 // reset the rotor position estimator
