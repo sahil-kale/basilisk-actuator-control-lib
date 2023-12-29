@@ -380,8 +380,8 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
 
         // Run the PI controller
         // The below hack for speed is kinda hacky and should be reverted lol
-        const float q_voltage_delta = pid_q_current_.calculate(speed * params_->foc_params.speed_to_iq_gain, i_quadrature_);
-        const float d_voltage_delta = pid_d_current_.calculate(i_d_reference_, i_direct_);
+        const float q_voltage_delta = pid_q_current_.calculate(i_quadrature_, speed * params_->foc_params.speed_to_iq_gain);
+        const float d_voltage_delta = pid_d_current_.calculate(i_direct_, i_d_reference_);
         V_quadrature_ += q_voltage_delta;
         V_direct_ += d_voltage_delta;
         // Limit the Vd and Vq by first calculating the modulus of the vector
