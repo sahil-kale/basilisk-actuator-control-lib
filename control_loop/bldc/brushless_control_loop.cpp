@@ -364,8 +364,8 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
         const float dt = clock_.get_dt_s(current_time_us, last_run_time_us);
 
         // LPF the currents
-        i_dq_.d = math::low_pass_filter(i_dq_new.d, i_dq_.d, tau, dt);
-        i_dq_.q = math::low_pass_filter(i_dq_new.q, i_dq_.q, tau, dt);
+        i_dq_.direct = math::low_pass_filter(i_dq_new.direct, i_dq_.direct, tau, dt);
+        i_dq_.quadrature = math::low_pass_filter(i_dq_new.quadrature, i_dq_.quadrature, tau, dt);
 
         // Run the PI controller
         // The below hack for speed is kinda hacky and should be reverted lol
@@ -387,10 +387,10 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
 
         // Set the debug vars
         foc_debug_vars_.theta_e = rotor_position_;
-        foc_debug_vars_.i_dq.d = i_dq_.d;
-        foc_debug_vars_.i_dq.q = i_dq_.q;
-        foc_debug_vars_.V_dq.d = V_dq_.d;
-        foc_debug_vars_.V_dq.q = V_dq_.q;
+        foc_debug_vars_.i_dq.direct = i_dq_.direct;
+        foc_debug_vars_.i_dq.quadrature = i_dq_.quadrature;
+        foc_debug_vars_.V_dq.direct = V_dq_.direct;
+        foc_debug_vars_.V_dq.quadrature = V_dq_.quadrature;
         foc_debug_vars_.duty_cycle_result = result;
 
     } while (false);

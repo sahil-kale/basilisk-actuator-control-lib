@@ -11,8 +11,8 @@ typedef struct {
 } alpha_beta_pair_t;
 
 typedef struct {
-    float d = 0.0f;
-    float q = 0.0f;
+    float direct = 0.0f;
+    float quadrature = 0.0f;
 } dq_pair_t;
 
 typedef struct {

@@ -11,8 +11,8 @@ namespace BldcFoc {
 TEST(BldcFoc, test_theta_valpha_beta) {
     // Get the alpha and beta components of the voltage vector
     math::dq_pair_t V_dq;
-    V_dq.d = 1.0f;
-    V_dq.q = 0.0f;
+    V_dq.direct = 1.0f;
+    V_dq.quadrature = 0.0f;
     float theta = 0.0f;
     float bus_voltage = 1.0f;
     BrushlessFocPwmControlType pwm_control_type = BrushlessFocPwmControlType::SINE;
@@ -40,8 +40,8 @@ TEST(BldcFoc, test_theta_valpha_beta) {
 TEST(BldcFoc, test_theta_valpha_beta_bus_voltage_0_sine) {
     // Get the alpha and beta components of the voltage vector
     math::dq_pair_t V_dq;
-    V_dq.d = 1.0f;
-    V_dq.q = 0.0f;
+    V_dq.direct = 1.0f;
+    V_dq.quadrature = 0.0f;
     float theta = 0.0f;
     float bus_voltage = 0.0f;
     BrushlessFocPwmControlType pwm_control_type = BrushlessFocPwmControlType::SINE;
@@ -74,8 +74,8 @@ TEST(BldcFoc, test_theta_valpha_beta_bus_voltage_0_sine) {
 TEST(BldcFoc, test_theta_valpha_beta_bus_voltage_0_svpwm) {
     // Get the alpha and beta components of the voltage vector
     math::dq_pair_t V_dq;
-    V_dq.d = 1.0f;
-    V_dq.q = 0.0f;
+    V_dq.direct = 1.0f;
+    V_dq.quadrature = 0.0f;
     float theta = 0.0f;
     float bus_voltage = 0.0f;
     BrushlessFocPwmControlType pwm_control_type = BrushlessFocPwmControlType::SPACE_VECTOR;

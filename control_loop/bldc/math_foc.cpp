@@ -18,8 +18,8 @@ dq_pair_t park_transform(float alpha, float beta, float theta) {
     const float theta_rad = theta;
     const float cos_theta = cos(theta_rad);
     const float sin_theta = sin(theta_rad);
-    result.d = alpha * cos_theta + beta * sin_theta;
-    result.q = -alpha * sin_theta + beta * cos_theta;
+    result.direct = alpha * cos_theta + beta * sin_theta;
+    result.quadrature = -alpha * sin_theta + beta * cos_theta;
     return result;
 }
 
