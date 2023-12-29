@@ -331,7 +331,12 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
                 // Wrap the rotor position around 0 and 2pi
                 math::wraparound(desired_rotor_angle_open_loop_, 0.0f, math::M_PI_FLOAT * 2.0f);
 
-                rotor_position_ = desired_rotor_angle_open_loop_;
+                // Compensate for the fact that we're actually leading/lagging the rotor by 90 degrees
+                // This is done by subtracting (or adding depending on the sign) pi/2 from the desired rotor angle
+                const float open_loop_full_speed_theta_velocity_sign = math::sign(params_->open_loop_full_speed_theta_velocity);
+                rotor_position_ =
+                    desired_rotor_angle_open_loop_ - math::M_PI_FLOAT / 2.0f * open_loop_full_speed_theta_velocity_sign;
+                math::wraparound(rotor_position_, 0.0f, math::M_PI_FLOAT * 2.0f);
 
             } break;
             case BrushlessControlLoopType::CLOSED_LOOP: {
@@ -374,8 +379,8 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
         i_direct_quad.quad = math::low_pass_filter(park_transform_currents.quadrature, i_direct_quad.quad, tau, dt);
 #else
         IGNORE(last_run_time_us);
-#endif
         i_direct_quad_ = park_transform_currents;
+#endif
 
         // Run the PI controller
         // The below hack for speed is kinda hacky and should be reverted lol
