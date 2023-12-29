@@ -216,8 +216,8 @@ void BrushlessControlLoop::update_rotor_position_estimator(
         estimator_inputs.pm_flux_linkage = params_->foc_params.pm_flux_linkage;
 
         // Set the V alpha and V beta
-        estimator_inputs.V_alpha = V_alpha_;
-        estimator_inputs.V_beta = V_beta_;
+        estimator_inputs.V_alpha = V_alpha_beta_.alpha;
+        estimator_inputs.V_beta = V_alpha_beta_.beta;
 
         // Set the speed sign
         estimator_inputs.rotor_commanded_vel_sign = math::sign(speed);
@@ -290,12 +290,9 @@ void BrushlessControlLoop::enter_state(const BrushlessControlLoopState& current_
                 foc_debug_vars_ = BldcFoc::FOCDebugVars();
 
                 // Reset the internal state
-                i_direct_ = 0.0f;
-                i_quadrature_ = 0.0f;
-                V_direct_ = 0.0f;
-                V_quadrature_ = 0.0f;
-                V_alpha_ = 0.0f;
-                V_beta_ = 0.0f;
+                i_dq_ = math::dq_pair_t();
+                V_dq_ = math::dq_pair_t();
+                V_alpha_beta_ = math::alpha_beta_pair_t();
                 i_d_reference_ = params_->foc_params.i_d_reference_default;
             }
         } break;
@@ -359,66 +356,42 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
             default:
                 break;
         }
-        // Do a Clarke transform
-        math::clarke_transform_result_t clarke_transform =
-            math::clarke_transform(phase_currents.u, phase_currents.v, phase_currents.w);
 
-        i_alpha_ = clarke_transform.alpha;
-        i_beta_ = clarke_transform.beta;
-
-        // Do a Park transform
-        math::park_transform_result_t park_transform_currents =
-            math::park_transform(clarke_transform.alpha, clarke_transform.beta, rotor_position_);
+        const math::dq_pair_t i_dq_new = BldcFoc::convert_current_to_dq_frame(phase_currents, rotor_position_);
 
         // Determine the tau for the LPF for the current controller
         const float tau = math::determine_tau_from_f_c(params_->foc_params.current_lpf_fc);
         const float dt = clock_.get_dt_s(current_time_us, last_run_time_us);
 
         // LPF the currents
-        i_direct_ = math::low_pass_filter(park_transform_currents.d, i_direct_, tau, dt);
-        i_quadrature_ = math::low_pass_filter(park_transform_currents.q, i_quadrature_, tau, dt);
-
-        i_direct_ = park_transform_currents.d;
-        i_quadrature_ = park_transform_currents.q;
+        i_dq_.d = math::low_pass_filter(i_dq_new.d, i_dq_.d, tau, dt);
+        i_dq_.q = math::low_pass_filter(i_dq_new.q, i_dq_.q, tau, dt);
 
         // Run the PI controller
         // The below hack for speed is kinda hacky and should be reverted lol
-        const float q_voltage_delta = pid_q_current_.calculate(i_quadrature_, speed * params_->foc_params.speed_to_iq_gain);
-        const float d_voltage_delta = pid_d_current_.calculate(i_direct_, i_d_reference_);
-        V_quadrature_ += q_voltage_delta;
-        V_direct_ += d_voltage_delta;
+        const float i_q_reference = speed * params_->foc_params.speed_to_iq_gain;
+
+        V_dq_ =
+            BldcFoc::determine_voltage_vector_foc(pid_d_current_, pid_q_current_, i_q_reference, i_d_reference_, i_dq_, V_dq_);
+
         // Limit the Vd and Vq by first calculating the modulus of the vector
-        const float V_modulus = sqrtf(V_direct_ * V_direct_ + V_quadrature_ * V_quadrature_);
-        const float max_Vmod = bus_voltage * 3.0f / 4.0f;
-        // If the modulus is greater than the bus voltage, then we need to scale the voltage vector
-        if (V_modulus > max_Vmod) {
-            // Scale the voltage vector
-            V_direct_ = V_direct_ * max_Vmod / V_modulus;
-            V_quadrature_ = V_quadrature_ * max_Vmod / V_modulus;
-        }
+        V_dq_ = BldcFoc::clamp_Vdq_vector(V_dq_, bus_voltage);
 
         // Determine the appropriate duty cycles for the inverter
-        BldcFoc::FocDutyCycleResult result = BldcFoc::determine_inverter_duty_cycles_foc(
-            rotor_position_, V_direct_, V_quadrature_, bus_voltage, params_->foc_params.pwm_control_type, phase_commands[0],
-            phase_commands[1], phase_commands[2]);
-        V_alpha_ = result.V_alpha;
-        V_beta_ = result.V_beta;
+        const BldcFoc::FocDutyCycleResult result =
+            BldcFoc::determine_inverter_duty_cycles_foc(rotor_position_, V_dq_, bus_voltage, params_->foc_params.pwm_control_type,
+                                                        phase_commands[0], phase_commands[1], phase_commands[2]);
+
+        // These terms are required for the estimator feedforward
+        V_alpha_beta_ = result.V_alpha_beta;
 
         // Set the debug vars
         foc_debug_vars_.theta_e = rotor_position_;
-        foc_debug_vars_.i_direct = i_direct_;
-        foc_debug_vars_.i_quadrature = i_quadrature_;
-        foc_debug_vars_.i_alpha = i_alpha_;
-        foc_debug_vars_.i_beta = i_beta_;
-        foc_debug_vars_.V_alpha = V_alpha_;
-        foc_debug_vars_.V_beta = V_beta_;
-        foc_debug_vars_.V_direct = V_direct_;
-        foc_debug_vars_.V_quadrature = V_quadrature_;
-        foc_debug_vars_.duty_cycle_u_h = result.duty_cycle_u_h;
-        foc_debug_vars_.duty_cycle_v_h = result.duty_cycle_v_h;
-        foc_debug_vars_.duty_cycle_w_h = result.duty_cycle_w_h;
-        foc_debug_vars_.d_voltage_delta = d_voltage_delta;
-        foc_debug_vars_.q_voltage_delta = q_voltage_delta;
+        foc_debug_vars_.i_dq.d = i_dq_.d;
+        foc_debug_vars_.i_dq.q = i_dq_.q;
+        foc_debug_vars_.V_dq.d = V_dq_.d;
+        foc_debug_vars_.V_dq.q = V_dq_.q;
+        foc_debug_vars_.duty_cycle_result = result;
 
     } while (false);
 }

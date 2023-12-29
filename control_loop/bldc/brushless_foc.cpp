@@ -8,7 +8,7 @@
 namespace control_loop {
 namespace BldcFoc {
 
-FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect, float Vquadrature, float bus_voltage,
+FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, math::dq_pair_t V_dq, float bus_voltage,
                                                       BrushlessFocPwmControlType pwm_control_type,
                                                       hwbridge::Bridge3Phase::phase_command_t& phase_command_u,
                                                       hwbridge::Bridge3Phase::phase_command_t& phase_command_v,
@@ -17,21 +17,21 @@ FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect
     // Create the result
     FocDutyCycleResult result;
     // Do an inverse Park transform
-    math::inverse_park_transform_result_t inverse_park_transform = math::inverse_park_transform(Vdirect, Vquadrature, theta);
+    math::alpha_beta_pair_t inverse_park_transform = math::inverse_park_transform(V_dq.d, V_dq.q, theta);
     float duty_cycle_u_h = 0.0f;
     float duty_cycle_v_h = 0.0f;
     float duty_cycle_w_h = 0.0f;
 
     switch (pwm_control_type) {
         case BldcFoc::BrushlessFocPwmControlType::SPACE_VECTOR: {
-            svpwm_duty_cycle duty_cycles = svpwm(Vdirect, Vquadrature, theta, bus_voltage);
+            svpwm_duty_cycle duty_cycles = svpwm(V_dq.d, V_dq.q, theta, bus_voltage);
             duty_cycle_u_h = duty_cycles.dutyCycleU;
             duty_cycle_v_h = duty_cycles.dutyCycleV;
             duty_cycle_w_h = duty_cycles.dutyCycleW;
         } break;
         case BldcFoc::BrushlessFocPwmControlType::SINE: {
             // Do an inverse clarke transform
-            math::inverse_clarke_transform_result_t inverse_clarke_transform =
+            math::abc_pair_t inverse_clarke_transform =
                 math::inverse_clarke_transform(inverse_park_transform.alpha, inverse_park_transform.beta);
 
             // load the results into the phase commands
@@ -69,8 +69,8 @@ FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect
     math::clamp(duty_cycle_w_h, 0.0f, 1.0f);
 
     // Set the alpha and beta components of the voltage vector
-    result.V_alpha = inverse_park_transform.alpha;
-    result.V_beta = inverse_park_transform.beta;
+    result.V_alpha_beta.alpha = inverse_park_transform.alpha;
+    result.V_alpha_beta.beta = inverse_park_transform.beta;
 
     result.duty_cycle_u_h = duty_cycle_u_h;
     result.duty_cycle_v_h = duty_cycle_v_h;
@@ -154,6 +154,45 @@ svpwm_duty_cycle svpwm(float Vd, float Vq, float theta_el, float Vbus) {
         }
     } while (0);
 
+    return result;
+}
+
+math::dq_pair_t convert_current_to_dq_frame(const hwbridge::Bridge3Phase::phase_current_t& phase_currents, float theta) {
+    // Do a Clarke transform
+    math::alpha_beta_pair_t clarke_transform = math::clarke_transform(phase_currents.u, phase_currents.v, phase_currents.w);
+
+    // Do a Park transform
+    math::dq_pair_t park_transform_currents = math::park_transform(clarke_transform.alpha, clarke_transform.beta, theta);
+
+    return park_transform_currents;
+}
+
+math::dq_pair_t determine_voltage_vector_foc(pid::PID<float>& pi_id, pid::PID<float>& pi_iq, float i_q_reference,
+                                             float i_d_reference, math::dq_pair_t i_dq, math::dq_pair_t V_dq_ff) {
+    math::dq_pair_t result;
+    // Run the PI controller
+    // The below hack for speed is kinda hacky and should be reverted lol
+    const float q_voltage_delta = pi_iq.calculate(i_dq.q, i_q_reference);
+    const float d_voltage_delta = pi_id.calculate(i_dq.d, i_d_reference);
+    result.q = q_voltage_delta + V_dq_ff.q;
+    result.d = d_voltage_delta + V_dq_ff.d;
+
+    return result;
+}
+
+math::dq_pair_t clamp_Vdq_vector(math::dq_pair_t V_dq, float bus_voltage) {
+    math::dq_pair_t result;
+    const float V_direct = V_dq.d;
+    const float V_quadrature = V_dq.q;
+    // Limit the Vd and Vq by first calculating the modulus of the vector
+    const float V_modulus = sqrtf(V_direct * V_direct + V_quadrature * V_quadrature);
+    const float max_Vmod = bus_voltage * 3.0f / 4.0f;
+    // If the modulus is greater than the bus voltage, then we need to scale the voltage vector
+    if (V_modulus > max_Vmod) {
+        // Scale the voltage vector
+        result.d = V_direct * max_Vmod / V_modulus;
+        result.q = V_quadrature * max_Vmod / V_modulus;
+    }
     return result;
 }
 
