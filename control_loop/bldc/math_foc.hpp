@@ -6,19 +6,19 @@
 namespace math {
 
 typedef struct {
-    float alpha;
-    float beta;
+    float alpha = 0.0f;
+    float beta = 0.0f;
 } alpha_beta_t;
 
 typedef struct {
-    float direct;
-    float quadrature;
+    float direct = 0.0f;
+    float quadrature = 0.0f;
 } direct_quad_t;
 
 typedef struct {
-    float a;
-    float b;
-    float c;
+    float a = 0.0f;
+    float b = 0.0f;
+    float c = 0.0f;
 } abc_t;
 
 /**

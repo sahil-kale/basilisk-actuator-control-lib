@@ -1,6 +1,7 @@
 #ifndef BRUSHLESS_FOC_HPP
 #define BRUSHLESS_FOC_HPP
 #include "bridge_3phase.hpp"
+#include "math_foc.hpp"
 
 namespace control_loop {
 namespace BldcFoc {
@@ -15,14 +16,11 @@ enum class BrushlessFocPwmControlType {
 // other useful values
 class FocDutyCycleResult {
    public:
-    FocDutyCycleResult() : duty_cycle_u_h(0.0f), duty_cycle_v_h(0.0f), duty_cycle_w_h(0.0f), V_alpha(0.0f), V_beta(0.0f) {}
+    float duty_cycle_u_h = 0.0f;
+    float duty_cycle_v_h = 0.0f;
+    float duty_cycle_w_h = 0.0f;
 
-    float duty_cycle_u_h;
-    float duty_cycle_v_h;
-    float duty_cycle_w_h;
-
-    float V_alpha;
-    float V_beta;
+    math::alpha_beta_t V_alpha_beta;
 };
 
 /**
@@ -69,21 +67,17 @@ class FOCDebugVars {
    public:
     // Inputs
     float theta_e = 0.0f;
-    float i_direct = 0.0f;
-    float i_quadrature = 0.0f;
+    math::direct_quad_t i_direct_quad;
     // Note: it is possible to calculate i_alpha and i_beta from i_direct and i_quadrature,
     // but we want to capture the actual values we calculated.
-    float i_alpha = 0.0f;
-    float i_beta = 0.0f;
+    math::alpha_beta_t i_alpha_beta;
 
     // Outputs
     float duty_cycle_u_h = 0.0f;
     float duty_cycle_v_h = 0.0f;
     float duty_cycle_w_h = 0.0f;
-    float V_direct = 0.0f;
-    float V_quadrature = 0.0f;
-    float V_alpha = 0.0f;
-    float V_beta = 0.0f;
+    math::direct_quad_t V_direct_quad;
+    math::alpha_beta_t V_alpha_beta;
     float d_voltage_delta = 0.0f;
     float q_voltage_delta = 0.0f;
 };

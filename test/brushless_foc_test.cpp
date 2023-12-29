@@ -26,8 +26,8 @@ TEST(BldcFoc, test_theta_valpha_beta) {
                                                                    phase_command_u, phase_command_v, phase_command_w);
 
     // Check the alpha and beta components of the voltage vector
-    EXPECT_FLOAT_EQ(result.V_alpha, 1.0f);
-    EXPECT_FLOAT_EQ(result.V_beta, 0.0f);
+    EXPECT_FLOAT_EQ(result.V_alpha_beta.alpha, 1.0f);
+    EXPECT_FLOAT_EQ(result.V_alpha_beta.beta, 0.0f);
 
     // Test that the duty cycles are equal
     EXPECT_FLOAT_EQ(result.duty_cycle_u_h, phase_command_u.duty_cycle_high_side);
@@ -54,8 +54,8 @@ TEST(BldcFoc, test_theta_valpha_beta_bus_voltage_0_sine) {
                                                                    phase_command_u, phase_command_v, phase_command_w);
 
     // Check the alpha and beta components of the voltage vector
-    EXPECT_FLOAT_EQ(result.V_alpha, 1.0f);
-    EXPECT_FLOAT_EQ(result.V_beta, 0.0f);
+    EXPECT_FLOAT_EQ(result.V_alpha_beta.alpha, 1.0f);
+    EXPECT_FLOAT_EQ(result.V_alpha_beta.beta, 0.0f);
 
     // Test that the duty cycles are equal
     EXPECT_FLOAT_EQ(result.duty_cycle_u_h, phase_command_u.duty_cycle_high_side);
@@ -87,8 +87,8 @@ TEST(BldcFoc, test_theta_valpha_beta_bus_voltage_0_svpwm) {
                                                                    phase_command_u, phase_command_v, phase_command_w);
 
     // Check the alpha and beta components of the voltage vector
-    EXPECT_FLOAT_EQ(result.V_alpha, 1.0f);
-    EXPECT_FLOAT_EQ(result.V_beta, 0.0f);
+    EXPECT_FLOAT_EQ(result.V_alpha_beta.alpha, 1.0f);
+    EXPECT_FLOAT_EQ(result.V_alpha_beta.beta, 0.0f);
 
     // Test that the duty cycles are equal
     EXPECT_FLOAT_EQ(result.duty_cycle_u_h, phase_command_u.duty_cycle_high_side);

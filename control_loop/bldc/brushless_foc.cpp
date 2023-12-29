@@ -69,8 +69,7 @@ FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect
     math::clamp(duty_cycle_w_h, 0.0f, 1.0f);
 
     // Set the alpha and beta components of the voltage vector
-    result.V_alpha = inverse_park_transform.alpha;
-    result.V_beta = inverse_park_transform.beta;
+    result.V_alpha_beta = inverse_park_transform;
 
     result.duty_cycle_u_h = duty_cycle_u_h;
     result.duty_cycle_v_h = duty_cycle_v_h;
