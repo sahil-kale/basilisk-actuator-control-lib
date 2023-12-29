@@ -384,16 +384,9 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
         const float d_voltage_delta = pid_d_current_.calculate(i_direct_quad_.direct, i_d_reference_);
         V_direct_quad_.quadrature += q_voltage_delta;
         V_direct_quad_.direct += d_voltage_delta;
-        // Limit the Vd and Vq by first calculating the modulus of the vector
-        const float V_modulus =
-            sqrtf(V_direct_quad_.direct * V_direct_quad_.direct + V_direct_quad_.quadrature * V_direct_quad_.quadrature);
-        const float max_Vmod = bus_voltage * 3.0f / 4.0f;
-        // If the modulus is greater than the bus voltage, then we need to scale the voltage vector
-        if (V_modulus > max_Vmod) {
-            // Scale the voltage vector
-            V_direct_quad_.direct = V_direct_quad_.direct * max_Vmod / V_modulus;
-            V_direct_quad_.quadrature = V_direct_quad_.quadrature * max_Vmod / V_modulus;
-        }
+
+        // Clamp the Vq and Vd
+        V_direct_quad_ = BldcFoc::clamp_Vdq(V_direct_quad_, bus_voltage);
 
         // Determine the appropriate duty cycles for the inverter
         BldcFoc::FocDutyCycleResult result = BldcFoc::determine_inverter_duty_cycles_foc(
@@ -405,13 +398,8 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
         foc_debug_vars_.theta_e = rotor_position_;
         foc_debug_vars_.i_direct_quad = i_direct_quad_;
         foc_debug_vars_.i_alpha_beta = i_alpha_beta_;
-        foc_debug_vars_.V_alpha_beta = V_alpha_beta_;
         foc_debug_vars_.V_direct_quad = V_direct_quad_;
-        foc_debug_vars_.duty_cycle_u_h = result.duty_cycle_u_h;
-        foc_debug_vars_.duty_cycle_v_h = result.duty_cycle_v_h;
-        foc_debug_vars_.duty_cycle_w_h = result.duty_cycle_w_h;
-        foc_debug_vars_.d_voltage_delta = d_voltage_delta;
-        foc_debug_vars_.q_voltage_delta = q_voltage_delta;
+        foc_debug_vars_.duty_cycle_result = result;
 
     } while (false);
 }

@@ -24,6 +24,16 @@ class FocDutyCycleResult {
 };
 
 /**
+ * @brief Clamp the given DQ voltage vector to the given bus voltage
+ * @param V_dq The voltage vector to clamp
+ * @param V_bus The bus voltage
+ * @return math::direct_quad_t The clamped voltage vector
+ * @note The voltage vector magnitude is limited to be a max of 3/4 of the bus voltage due to how much maximum voltage
+ * differential can be provided and scales the D/Q components accordingly
+ */
+math::direct_quad_t clamp_Vdq(math::direct_quad_t V_dq, float V_bus);
+
+/**
  * @brief Determine the duty cycles for the inverter using the FOC algorithm by doing inverse park and vector control algo
  * (inverse clarke or foc)
  * @param theta The rotor angle (radians)
@@ -73,13 +83,8 @@ class FOCDebugVars {
     math::alpha_beta_t i_alpha_beta;
 
     // Outputs
-    float duty_cycle_u_h = 0.0f;
-    float duty_cycle_v_h = 0.0f;
-    float duty_cycle_w_h = 0.0f;
     math::direct_quad_t V_direct_quad;
-    math::alpha_beta_t V_alpha_beta;
-    float d_voltage_delta = 0.0f;
-    float q_voltage_delta = 0.0f;
+    FocDutyCycleResult duty_cycle_result;
 };
 
 }  // namespace BldcFoc

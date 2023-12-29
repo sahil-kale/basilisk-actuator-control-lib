@@ -156,5 +156,19 @@ svpwm_duty_cycle svpwm(float Vd, float Vq, float theta_el, float Vbus) {
     return result;
 }
 
+math::direct_quad_t clamp_Vdq(math::direct_quad_t V_dq, float V_bus) {
+    // Limit the Vd and Vq by first calculating the modulus of the vector
+    const float V_modulus = sqrtf(V_dq.direct * V_dq.direct + V_dq.quadrature * V_dq.quadrature);
+    const float max_Vmod = V_bus * 3.0f / 4.0f;
+    // If the modulus is greater than the bus voltage, then we need to scale the voltage vector
+    if (V_modulus > max_Vmod) {
+        // Scale the voltage vector
+        V_dq.direct = V_dq.direct * max_Vmod / V_modulus;
+        V_dq.quadrature = V_dq.quadrature * max_Vmod / V_modulus;
+    }
+
+    return V_dq;
+}
+
 }  // namespace BldcFoc
 }  // namespace control_loop
