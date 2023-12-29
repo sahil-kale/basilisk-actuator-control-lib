@@ -5,26 +5,26 @@
 
 namespace math {
 
-clarke_transform_result_t clarke_transform(float a, float b, float c) {
+alpha_beta_t clarke_transform(float a, float b, float c) {
     // Note: uses simplification that ia + ib + ic = 0 to derive the simplified version
-    clarke_transform_result_t result;
+    alpha_beta_t result;
     result.alpha = a;
     result.beta = (b - c) / sqrt_3;
     return result;
 }
 
-park_transform_result_t park_transform(float alpha, float beta, float theta) {
-    park_transform_result_t result;
+direct_quad_t park_transform(float alpha, float beta, float theta) {
+    direct_quad_t result;
     const float theta_rad = theta;
     const float cos_theta = cos(theta_rad);
     const float sin_theta = sin(theta_rad);
-    result.d = alpha * cos_theta + beta * sin_theta;
-    result.q = -alpha * sin_theta + beta * cos_theta;
+    result.direct = alpha * cos_theta + beta * sin_theta;
+    result.quadrature = -alpha * sin_theta + beta * cos_theta;
     return result;
 }
 
-inverse_park_transform_result_t inverse_park_transform(float d, float q, float theta) {
-    inverse_park_transform_result_t result;
+alpha_beta_t inverse_park_transform(float d, float q, float theta) {
+    alpha_beta_t result;
     const float theta_rad = theta;
     const float cos_theta = cos(theta_rad);
     const float sin_theta = sin(theta_rad);
@@ -33,8 +33,8 @@ inverse_park_transform_result_t inverse_park_transform(float d, float q, float t
     return result;
 }
 
-inverse_clarke_transform_result_t inverse_clarke_transform(float alpha, float beta) {
-    inverse_clarke_transform_result_t result;
+abc_t inverse_clarke_transform(float alpha, float beta) {
+    abc_t result;
     result.a = alpha;
     result.b = (-alpha + sqrt_3 * beta) / 2.0f;
     result.c = (-alpha - sqrt_3 * beta) / 2.0f;

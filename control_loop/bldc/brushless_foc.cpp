@@ -17,7 +17,7 @@ FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect
     // Create the result
     FocDutyCycleResult result;
     // Do an inverse Park transform
-    math::inverse_park_transform_result_t inverse_park_transform = math::inverse_park_transform(Vdirect, Vquadrature, theta);
+    math::alpha_beta_t inverse_park_transform = math::inverse_park_transform(Vdirect, Vquadrature, theta);
     float duty_cycle_u_h = 0.0f;
     float duty_cycle_v_h = 0.0f;
     float duty_cycle_w_h = 0.0f;
@@ -31,7 +31,7 @@ FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect
         } break;
         case BldcFoc::BrushlessFocPwmControlType::SINE: {
             // Do an inverse clarke transform
-            math::inverse_clarke_transform_result_t inverse_clarke_transform =
+            math::abc_t inverse_clarke_transform =
                 math::inverse_clarke_transform(inverse_park_transform.alpha, inverse_park_transform.beta);
 
             // load the results into the phase commands

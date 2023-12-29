@@ -360,14 +360,13 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
                 break;
         }
         // Do a Clarke transform
-        math::clarke_transform_result_t clarke_transform =
-            math::clarke_transform(phase_currents.u, phase_currents.v, phase_currents.w);
+        math::alpha_beta_t clarke_transform = math::clarke_transform(phase_currents.u, phase_currents.v, phase_currents.w);
 
         i_alpha_ = clarke_transform.alpha;
         i_beta_ = clarke_transform.beta;
 
         // Do a Park transform
-        math::park_transform_result_t park_transform_currents =
+        math::direct_quad_t park_transform_currents =
             math::park_transform(clarke_transform.alpha, clarke_transform.beta, rotor_position_);
 
         // Determine the tau for the LPF for the current controller
@@ -375,11 +374,11 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
         const float dt = clock_.get_dt_s(current_time_us, last_run_time_us);
 
         // LPF the currents
-        i_direct_ = math::low_pass_filter(park_transform_currents.d, i_direct_, tau, dt);
-        i_quadrature_ = math::low_pass_filter(park_transform_currents.q, i_quadrature_, tau, dt);
+        i_direct_ = math::low_pass_filter(park_transform_currents.direct, i_direct_, tau, dt);
+        i_quadrature_ = math::low_pass_filter(park_transform_currents.quadrature, i_quadrature_, tau, dt);
 
-        i_direct_ = park_transform_currents.d;
-        i_quadrature_ = park_transform_currents.q;
+        i_direct_ = park_transform_currents.direct;
+        i_quadrature_ = park_transform_currents.quadrature;
 
         // Run the PI controller
         // The below hack for speed is kinda hacky and should be reverted lol
