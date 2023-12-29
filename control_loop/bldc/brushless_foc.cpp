@@ -17,14 +17,14 @@ FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, math::dq_pair
     // Create the result
     FocDutyCycleResult result;
     // Do an inverse Park transform
-    math::alpha_beta_pair_t inverse_park_transform = math::inverse_park_transform(V_dq.d, V_dq.q, theta);
+    math::alpha_beta_pair_t inverse_park_transform = math::inverse_park_transform(V_dq.direct, V_dq.quadrature, theta);
     float duty_cycle_u_h = 0.0f;
     float duty_cycle_v_h = 0.0f;
     float duty_cycle_w_h = 0.0f;
 
     switch (pwm_control_type) {
         case BldcFoc::BrushlessFocPwmControlType::SPACE_VECTOR: {
-            svpwm_duty_cycle duty_cycles = svpwm(V_dq.d, V_dq.q, theta, bus_voltage);
+            svpwm_duty_cycle duty_cycles = svpwm(V_dq.direct, V_dq.quadrature, theta, bus_voltage);
             duty_cycle_u_h = duty_cycles.dutyCycleU;
             duty_cycle_v_h = duty_cycles.dutyCycleV;
             duty_cycle_w_h = duty_cycles.dutyCycleW;
@@ -172,26 +172,26 @@ math::dq_pair_t determine_voltage_vector_foc(pid::PID<float>& pi_id, pid::PID<fl
     math::dq_pair_t result;
     // Run the PI controller
     // The below hack for speed is kinda hacky and should be reverted lol
-    const float q_voltage_delta = pi_iq.calculate(i_dq.q, i_q_reference);
-    const float d_voltage_delta = pi_id.calculate(i_dq.d, i_d_reference);
-    result.q = q_voltage_delta + V_dq_ff.q;
-    result.d = d_voltage_delta + V_dq_ff.d;
+    const float q_voltage_delta = pi_iq.calculate(i_dq.quadrature, i_q_reference);
+    const float d_voltage_delta = pi_id.calculate(i_dq.direct, i_d_reference);
+    result.quadrature = q_voltage_delta + V_dq_ff.quadrature;
+    result.direct = d_voltage_delta + V_dq_ff.direct;
 
     return result;
 }
 
 math::dq_pair_t clamp_Vdq_vector(math::dq_pair_t V_dq, float bus_voltage) {
     math::dq_pair_t result;
-    const float V_direct = V_dq.d;
-    const float V_quadrature = V_dq.q;
+    const float V_direct = V_dq.direct;
+    const float V_quadrature = V_dq.quadrature;
     // Limit the Vd and Vq by first calculating the modulus of the vector
     const float V_modulus = sqrtf(V_direct * V_direct + V_quadrature * V_quadrature);
     const float max_Vmod = bus_voltage * 3.0f / 4.0f;
     // If the modulus is greater than the bus voltage, then we need to scale the voltage vector
     if (V_modulus > max_Vmod) {
         // Scale the voltage vector
-        result.d = V_direct * max_Vmod / V_modulus;
-        result.q = V_quadrature * max_Vmod / V_modulus;
+        result.direct = V_direct * max_Vmod / V_modulus;
+        result.quadrature = V_quadrature * max_Vmod / V_modulus;
     }
     return result;
 }
