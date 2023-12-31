@@ -400,6 +400,7 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
         V_alpha_beta_ = result.V_alpha_beta;
 
         // Set the debug vars
+        foc_debug_vars_.timestamp = current_time_us;
         foc_debug_vars_.theta_e = rotor_position_;
         foc_debug_vars_.i_direct_quad = i_direct_quad_;
         foc_debug_vars_.i_alpha_beta = i_alpha_beta_;

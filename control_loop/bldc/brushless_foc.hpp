@@ -8,19 +8,19 @@ namespace BldcFoc {
 
 // Define a pwm control type (Sine or Space-Vector)
 enum class BrushlessFocPwmControlType {
-    SINE,
-    SPACE_VECTOR,
+    SINE,          // Sine PWM control
+    SPACE_VECTOR,  // Space-Vector PWM control
 };
 
 // Define a struct to hold the result of the duty cycle computation for FOC, alongside
 // other useful values
 class FocDutyCycleResult {
    public:
-    float duty_cycle_u_h = 0.0f;
-    float duty_cycle_v_h = 0.0f;
-    float duty_cycle_w_h = 0.0f;
+    float duty_cycle_u_h = 0.0f;  // Duty cycle for phase u
+    float duty_cycle_v_h = 0.0f;  // Duty cycle for phase v
+    float duty_cycle_w_h = 0.0f;  // Duty cycle for phase w
 
-    math::alpha_beta_t V_alpha_beta;
+    math::alpha_beta_t V_alpha_beta;  // The alpha/beta voltage vector
 };
 
 /**
@@ -76,15 +76,16 @@ svpwm_duty_cycle svpwm(float Vd, float Vq, float theta_el, float Vbus);
 class FOCDebugVars {
    public:
     // Inputs
-    float theta_e = 0.0f;
-    math::direct_quad_t i_direct_quad;
+    utime_t timestamp;                  // The timestamp of the FOC calculation
+    float theta_e = 0.0f;               // The electrical theta (radians)
+    math::direct_quad_t i_direct_quad;  // The direct/quadrature current vector
     // Note: it is possible to calculate i_alpha and i_beta from i_direct and i_quadrature,
     // but we want to capture the actual values we calculated.
-    math::alpha_beta_t i_alpha_beta;
+    math::alpha_beta_t i_alpha_beta;  // The alpha/beta current vector
 
     // Outputs
-    math::direct_quad_t V_direct_quad;
-    FocDutyCycleResult duty_cycle_result;
+    math::direct_quad_t V_direct_quad;     // The direct/quadrature voltage vector
+    FocDutyCycleResult duty_cycle_result;  // The duty cycle result
 };
 
 }  // namespace BldcFoc
