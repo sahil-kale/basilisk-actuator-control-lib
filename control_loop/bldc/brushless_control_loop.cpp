@@ -202,7 +202,7 @@ void BrushlessControlLoop::update_rotor_position_estimator(
     do {
         estimator_inputs.time = current_time_us;
 
-        bridge_.read_bemf(estimator_inputs.phase_voltage);
+        bridge_.read_phase_voltage(estimator_inputs.phase_voltage);
         bridge_.read_current(estimator_inputs.phase_current);
 
         // Get the commutation step

@@ -339,28 +339,28 @@ TEST(RotorEstimatorTest, test_zero_crossing_detection) {
     // We expect HIGH, LOW, Z_FALLING
 
     // Make a fake bemf voltage struct
-    hwbridge::Bridge3Phase::phase_voltage_t bemf_voltage = {0.0f, 0.0f, 0.0f};
+    hwbridge::Bridge3Phase::phase_voltage_t phase_voltage = {0.0f, 0.0f, 0.0f};
 
     // Load the bemf with a voltage of 1.0f, 0.0f, and 1.0f
-    bemf_voltage.u = 1.0f;
-    bemf_voltage.v = 0.0f;
-    bemf_voltage.w = 1.0f;
+    phase_voltage.u = 1.0f;
+    phase_voltage.v = 0.0f;
+    phase_voltage.w = 1.0f;
 
     // With this, we should not detect a zero crossing
-    EXPECT_FALSE(sensorless_sensor.zero_crossing_detected(bemf_voltage, control_loop::Bldc6Step::commutation_steps[4]));
+    EXPECT_FALSE(sensorless_sensor.zero_crossing_detected(phase_voltage, control_loop::Bldc6Step::commutation_steps[4]));
 
     // Load the bemf with a voltage of 1.0f, 0.0f, and 0.51f
-    bemf_voltage.w = 0.51f;
+    phase_voltage.w = 0.51f;
 
     // With this, we should not detect a zero crossing
-    EXPECT_FALSE(sensorless_sensor.zero_crossing_detected(bemf_voltage, control_loop::Bldc6Step::commutation_steps[4]));
+    EXPECT_FALSE(sensorless_sensor.zero_crossing_detected(phase_voltage, control_loop::Bldc6Step::commutation_steps[4]));
 
     // Load the bemf with a voltage of 1.0f, 0.0f, and 0.49f
 
-    bemf_voltage.w = 0.49f;
+    phase_voltage.w = 0.49f;
 
     // With this, we should detect a zero crossing
-    EXPECT_TRUE(sensorless_sensor.zero_crossing_detected(bemf_voltage, control_loop::Bldc6Step::commutation_steps[4]));
+    EXPECT_TRUE(sensorless_sensor.zero_crossing_detected(phase_voltage, control_loop::Bldc6Step::commutation_steps[4]));
 }
 
 // Test the sensorless sector estimator reporting a sector change for the same duration of time as when a zero crossing was
@@ -378,16 +378,16 @@ TEST(RotorEstimatorTest, sensorless_estimator_timing_switch) {
 
     // We should be in commutation step 0
     // Make a fake bemf voltage struct
-    hwbridge::Bridge3Phase::phase_voltage_t bemf_voltage = {0.0f, 0.0f, 0.0f};
+    hwbridge::Bridge3Phase::phase_voltage_t phase_voltage = {0.0f, 0.0f, 0.0f};
 
     // In sector 0, we expect Z_FALLING, HIGH, LOW
-    bemf_voltage.u = 1.0f;
-    bemf_voltage.v = 1.0f;
-    bemf_voltage.w = 0.0f;
+    phase_voltage.u = 1.0f;
+    phase_voltage.v = 1.0f;
+    phase_voltage.w = 0.0f;
 
     // Expect a call to the bridge to get the bemf voltage
-    EXPECT_CALL(mock_bridge, read_bemf(_))  // _ allowing any param
-        .WillOnce(DoAll(SetArgReferee<0>(bemf_voltage), Return(APP_HAL_OK)));
+    EXPECT_CALL(mock_bridge, read_phase_voltage(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(phase_voltage), Return(APP_HAL_OK)));
 
     // Expect a call for the clock time, set to 1
     EXPECT_CALL(mock_clock, get_time_us()).WillOnce(Return(1));
@@ -397,13 +397,13 @@ TEST(RotorEstimatorTest, sensorless_estimator_timing_switch) {
     EXPECT_FLOAT_EQ(electrical_angle, 0.0f);
 
     // Now, set the bemf voltage to 0.49, 0.0, 1.0
-    bemf_voltage.u = 0.49f;
-    bemf_voltage.v = 0.0f;
-    bemf_voltage.w = 1.0f;
+    phase_voltage.u = 0.49f;
+    phase_voltage.v = 0.0f;
+    phase_voltage.w = 1.0f;
 
     // Expect a call to the bridge to get the bemf voltage
-    EXPECT_CALL(mock_bridge, read_bemf(_))  // _ allowing any param
-        .WillOnce(DoAll(SetArgReferee<0>(bemf_voltage), Return(APP_HAL_OK)));
+    EXPECT_CALL(mock_bridge, read_phase_voltage(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(phase_voltage), Return(APP_HAL_OK)));
 
     // Expect a call for the clock time, set to 500
     EXPECT_CALL(mock_clock, get_time_us()).WillOnce(Return(501));
@@ -413,8 +413,8 @@ TEST(RotorEstimatorTest, sensorless_estimator_timing_switch) {
     EXPECT_FLOAT_EQ(electrical_angle, 0.0f);
 
     // Expect a call to the bridge to get the bemf voltage
-    EXPECT_CALL(mock_bridge, read_bemf(_))  // _ allowing any param
-        .WillOnce(DoAll(SetArgReferee<0>(bemf_voltage), Return(APP_HAL_OK)));
+    EXPECT_CALL(mock_bridge, read_phase_voltage(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(phase_voltage), Return(APP_HAL_OK)));
 
     // Expect a call for the clock time, set to 999
     EXPECT_CALL(mock_clock, get_time_us()).WillOnce(Return(1000));
@@ -424,8 +424,8 @@ TEST(RotorEstimatorTest, sensorless_estimator_timing_switch) {
     EXPECT_FLOAT_EQ(electrical_angle, 0.0f);
 
     // Expect a call to the bridge to get the bemf voltage
-    EXPECT_CALL(mock_bridge, read_bemf(_))  // _ allowing any param
-        .WillOnce(DoAll(SetArgReferee<0>(bemf_voltage), Return(APP_HAL_OK)));
+    EXPECT_CALL(mock_bridge, read_phase_voltage(_))  // _ allowing any param
+        .WillOnce(DoAll(SetArgReferee<0>(phase_voltage), Return(APP_HAL_OK)));
 
     // Expect a call for the clock time, set to 1000
     EXPECT_CALL(mock_clock, get_time_us()).WillOnce(Return(1001));

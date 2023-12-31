@@ -17,12 +17,12 @@ class ElectricalRotorPosEstimator {
     class EstimatorInputs {
        public:
         utime_t time = 0;
-        hwbridge::Bridge3Phase::phase_voltage_t phase_voltage = {0.0f, 0.0f, 0.0f};
+        hwbridge::Bridge3Phase::phase_voltage_t phase_voltage;
         control_loop::Bldc6Step::commutation_step_t current_commutation_step = {
             control_loop::Bldc6Step::CommutationSignal::Z_FALLING, control_loop::Bldc6Step::CommutationSignal::HIGH,
             control_loop::Bldc6Step::CommutationSignal::LOW};
 
-        hwbridge::Bridge3Phase::phase_current_t phase_current = {0.0f, 0.0f, 0.0f};
+        hwbridge::Bridge3Phase::phase_current_t phase_current;
         float V_alpha = 0.0f;
         float V_beta = 0.0f;
         float phase_resistance = 0.0f;
@@ -91,7 +91,7 @@ class BldcSensorlessRotorSectorSensor : public BldcRotorSectorSensor {
     app_hal_status_E get_electrical_angle(float& angle) override;
 
    protected:
-    bool zero_crossing_detected(const hwbridge::Bridge3Phase::phase_voltage_t& bemf_voltage,
+    bool zero_crossing_detected(const hwbridge::Bridge3Phase::phase_voltage_t& phase_voltage,
                                 control_loop::Bldc6Step::commutation_step_t current_commutation_step);
     hwbridge::Bridge3Phase& bridge_;
     float estimated_electrical_angle_ = 0.0f;

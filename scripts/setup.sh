@@ -2,7 +2,7 @@
 
 set -euxo pipefail
 
-sudo apt install -y git clang-format clang-tidy build-essential gdb 
+sudo apt install -y git clang-format clang-tidy build-essential gdb doxygen
 
 git submodule update --init --recursive
 
