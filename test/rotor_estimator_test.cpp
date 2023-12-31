@@ -145,7 +145,7 @@ TEST(RotorEstimatorTest, test_angle_interpolation_disabled) {
     float rotor_position = 0.0f;
     rotor_estimator.get_rotor_position(rotor_position);
 
-    EXPECT_FLOAT_EQ(rotor_position, 0.5f * 2.0f * M_PI / 6.0f);
+    EXPECT_FLOAT_EQ(rotor_position, 1 * math::M_PI_FLOAT / 3.0);
 
     EXPECT_CALL(sector_sensor, get_electrical_angle(_))  // _ allowing any param
         .WillOnce(DoAll(SetArgReferee<0>(1 * math::M_PI_FLOAT / 3.0), Return(APP_HAL_OK)));
@@ -169,7 +169,7 @@ TEST(RotorEstimatorTest, test_sector_position_offset_compensation) {
     bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall::ElectricalRotorPosEstimatorFromHallParams params{
         .num_hall_updates_to_start = 10,
         .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
-        .enable_interpolation = false,
+        .enable_interpolation = true,
         .enable_sector_position_offset_compensation = true,
         .minimum_estimation_velocity = 0.0f,
     };
@@ -223,7 +223,7 @@ TEST(RotorEstimatorTest, test_sector_position_offset_compensation_disabled) {
         .num_hall_updates_to_start = 10,
         .max_estimate_angle_overrun = 2.0f / 3.0f * M_PI,
         .enable_interpolation = false,
-        .enable_sector_position_offset_compensation = true,
+        .enable_sector_position_offset_compensation = false,
         .minimum_estimation_velocity = 0.0f,
     };
 
@@ -260,8 +260,7 @@ TEST(RotorEstimatorTest, test_sector_position_offset_compensation_disabled) {
     // Get the rotor position
     rotor_estimator.get_rotor_position(rotor_position);
 
-    // Expect the rotor position to be 11pi/6
-    EXPECT_FLOAT_EQ(rotor_position, 11.0f * math::M_PI_FLOAT / 6.0f);
+    EXPECT_FLOAT_EQ(rotor_position, 10.0f * math::M_PI_FLOAT / 6.0f);
 }
 
 // Test that with a position offset compensation flag of 1 with a max angle tolerance of 2PI/3 when
