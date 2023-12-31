@@ -7,10 +7,10 @@ namespace control_loop {
 
 namespace Bldc6Step {
 enum class CommutationSignal {
-    HIGH,
-    LOW,
-    Z_RISING,
-    Z_FALLING,
+    HIGH,       // The phase's DC voltage is set to high (desired voltage)
+    LOW,        // The phase's DC voltage is set to low (ground)
+    Z_RISING,   // The phase is set to high impedance (floating) and the voltage is rising (used for zero crossing detection)
+    Z_FALLING,  // The phase is set to high impedance (floating) and the voltage is falling (used for zero crossing detection)
 };
 
 typedef union {
