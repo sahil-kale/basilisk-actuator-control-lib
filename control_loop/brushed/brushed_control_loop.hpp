@@ -11,52 +11,117 @@
 
 namespace control_loop {
 
-// Define a class BrushedControlLoop that inherits from ControlLoop
-
+/**
+ * @brief A control loop for a brushed motor
+ * @attention This control loop is WIP and not fully implemented
+ */
 class BrushedControlLoop : public ControlLoop {
    public:
+    /**
+     * @brief Construct a new BrushedControlLoop object
+     * @param bridge The h bridge to control
+     * @param clock The clock to use for the control loop
+     */
     BrushedControlLoop(hwbridge::HBridge& bridge, basilisk_hal::HAL_CLOCK& clock)
         : bridge_(bridge), clock_(clock), current_controller_{0, 0, 0, -1.0f, 1.0f, 0, clock_} {}
 
+    /**
+     * @brief The parameters for the current controller when running the control loop through current control mode
+     */
     class BrushedControlLoopCurrentControllerParams {
        public:
-        float kp;  // The proportional gain for the current control loop
-        float ki;  // The integral gain for the current control loop
-        float kd;  // The derivative gain for the current control loop
+        /**
+         * @brief kp The proportional gain for the current control loop
+         */
+        float kp;
+        /**
+         * @brief ki The integral gain for the current control loop
+         */
+        float ki;
+        /**
+         * @brief kd The derivative gain for the current control loop
+         */
+        float kd;
     };
 
+    /**
+     * @brief The type of brake to apply to the motor when the control loop speed is 0
+     */
     enum class BrushedBrakeType {
+        /// Do not brake the motor when the control loop is not running, high-Z the h bridge
         COAST,
+        /// Brake the motor by shorting the low side of the h bridge
         BRAKE_LOW_SIDE,
+        /// Brake the motor by shorting the high side of the h bridge
         BRAKE_HIGH_SIDE,
     };
 
+    /**
+     * @brief The parameters for the control loop
+     * @note The parameters must be set before the control loop can be run
+     */
     class BrushedControlLoopParams {
        public:
-        BrushedBrakeType brake_mode;  // Whether or not to brake the motor when the control loop is not running
-        float deadtime_us;            // The deadtime to apply to the h bridge to prevet shoot through
+        /**
+         * @brief The type of brake to apply to the motor when the control loop speed is 0
+         */
+        BrushedBrakeType brake_mode;
+        /**
+         * @brief The deadtime (us) to apply to the h bridge to prevent shoot through
+         */
+        float deadtime_us;
+        /**
+         * @brief The current controller parameters to use when running the control loop through current control mode
+         */
         BrushedControlLoopCurrentControllerParams current_controller_params;
     };
 
+    /**
+     * @brief The status of the control loop
+     */
     class BrushedControlLoopStatus : public ControlLoopStatus {
        public:
+        /**
+         * @brief The errors of the brushed control loop
+         */
         enum class BrushedControlLoopError {
             NO_ERROR,
+            /// The parameters for the control loop have not been set (the param pointer is null)
             PARAMS_NOT_SET,
+            /// Failed to get the current from the h bridge
             GET_CURRENT_FAILED,
+            /// The h bridge has failed
             BRIDGE_FAILURE,
             TOTAL_ERROR_COUNT,
         };
+        /**
+         * @brief The warnings of the brushed control loop
+         */
         enum class BrushedControlLoopWarning {
             NO_WARNING,
             TOTAL_WARNING_COUNT,
         };
         BrushedControlLoopStatus() : ControlLoopStatus() {}
 
+        /**
+         * @brief The number of errors of the control loop
+         */
         static constexpr uint8_t kNumErrors = static_cast<uint8_t>(BrushedControlLoopError::TOTAL_ERROR_COUNT);
+        /**
+         * @brief The number of warnings in the control loop
+         */
         static constexpr uint8_t kNumWarnings = static_cast<uint8_t>(BrushedControlLoopWarning::TOTAL_WARNING_COUNT);
 
+        /**
+         * @brief The errors of the control loop stored in an array
+         * @note The order of the errors is the same as the order of the enum class
+         */
         std::array<bool, kNumErrors> errors = {false};
+
+        /**
+         * @brief The warnings of the control loop stored in an array
+         * @note The order of the warnings is the same as the order of the enum class
+         */
         std::array<bool, kNumWarnings> warnings = {false};
 
         /**
@@ -102,12 +167,19 @@ class BrushedControlLoop : public ControlLoop {
         void compute_base_status();
     };
 
-    // Provide a const getter for the status
+    /**
+     * @brief Get the status of the control loop
+     * @return The status of the control loop
+     */
     const BrushedControlLoopStatus& get_status() const { return status_; }
 
+    /**
+     * @brief The state of the control loop
+     */
     enum class BrushedControlLoopState {
         STOP,
         RUN,
+        /// The control loop is paused for deadtime
         DEADTIME_PAUSE,
     };
 
@@ -115,9 +187,15 @@ class BrushedControlLoop : public ControlLoop {
      * @brief Initialize the control loop
      * @param params The parameters for the control loop
      * @return void
+     * @attention The parameters are not copied, so the parameters must remain in scope for the lifetime of the control loop
      */
     void init(BrushedControlLoopParams* params);
 
+    /**
+     * @brief Run the control loop
+     * @param speed The speed to run the motor at
+     * @return The status of the control loop
+     */
     ControlLoopStatus run(float speed) override;
 
     /**
@@ -128,6 +206,7 @@ class BrushedControlLoop : public ControlLoop {
     ControlLoopStatus run_constant_current(float current);
 
    protected:
+    /*! \cond PRIVATE */
     hwbridge::HBridge& bridge_;
     basilisk_hal::HAL_CLOCK& clock_;
     BrushedControlLoopParams* params_ = nullptr;
@@ -163,6 +242,7 @@ class BrushedControlLoop : public ControlLoop {
      * @param state The state of the control loop
      */
     hwbridge::HBridge::HBridgeInput run_state(float speed, const BrushedControlLoopState& state);
+    /*! \endcond */
 };
 }  // namespace control_loop
 

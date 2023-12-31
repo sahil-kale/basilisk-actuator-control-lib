@@ -8,19 +8,36 @@ namespace BldcFoc {
 
 // Define a pwm control type (Sine or Space-Vector)
 enum class BrushlessFocPwmControlType {
-    SINE,          // Sine PWM control
-    SPACE_VECTOR,  // Space-Vector PWM control
+    // Sine PWM control
+    SINE,
+    // Space-Vector PWM control
+    SPACE_VECTOR,
 };
 
-// Define a struct to hold the result of the duty cycle computation for FOC, alongside
-// other useful values
+/**
+ * @brief The results of converting a Vdq voltage vector to duty cycles with a given pwm control type
+ * @note The PWM control type is assumed to be known by the caller, as the duty cycles depend on the PWM control type and can vary
+ * but are not included in this frame
+ */
 class FocDutyCycleResult {
    public:
-    float duty_cycle_u_h = 0.0f;  // Duty cycle for phase u
-    float duty_cycle_v_h = 0.0f;  // Duty cycle for phase v
-    float duty_cycle_w_h = 0.0f;  // Duty cycle for phase w
+    /**
+     * @brief The duty cycle for phase u
+     */
+    float duty_cycle_u_h = 0.0f;
+    /**
+     * @brief The duty cycle for phase v
+     */
+    float duty_cycle_v_h = 0.0f;
+    /**
+     * @brief The duty cycle for phase w
+     */
+    float duty_cycle_w_h = 0.0f;
 
-    math::alpha_beta_t V_alpha_beta;  // The alpha/beta voltage vector
+    /**
+     * @brief The alpha/beta voltage vector that was used to determine the duty cycles
+     */
+    math::alpha_beta_t V_alpha_beta;
 };
 
 /**
@@ -56,10 +73,22 @@ FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect
                                                       hwbridge::Bridge3Phase::phase_command_t& phase_command_v,
                                                       hwbridge::Bridge3Phase::phase_command_t& phase_command_w);
 
+/**
+ * @brief The resultant duty cycles of the svpwm calculation
+ */
 class svpwm_duty_cycle {
    public:
+    /**
+     * @brief The duty cycle for phase u
+     */
     float dutyCycleU = 0.0f;
+    /**
+     * @brief The duty cycle for phase v
+     */
     float dutyCycleV = 0.0f;
+    /**
+     * @brief The duty cycle for phase w
+     */
     float dutyCycleW = 0.0f;
 };
 
@@ -73,18 +102,40 @@ class svpwm_duty_cycle {
  */
 svpwm_duty_cycle svpwm(float Vd, float Vq, float theta_el, float Vbus);
 
+/**
+ * @brief FOC Computation 'Frame' that can be used for debugging
+ */
 class FOCDebugVars {
    public:
     // Inputs
-    utime_t timestamp;                  // The timestamp of the FOC calculation
-    float theta_e = 0.0f;               // The electrical theta (radians)
-    math::direct_quad_t i_direct_quad;  // The direct/quadrature current vector
-    // Note: it is possible to calculate i_alpha and i_beta from i_direct and i_quadrature,
-    // but we want to capture the actual values we calculated.
+    /**
+     * @brief The timestamp of the FOC calculation. 0 is invalid
+     */
+    utime_t timestamp = 0;
+    /**
+     * @brief The electrical theta (radians) at the time of the FOC calculation
+     */
+    float theta_e = 0.0f;  // The electrical theta (radians)
+    /**
+     * @brief The Idq current vector at the time of the FOC calculation inferred from the phase currents
+     */
+    math::direct_quad_t i_direct_quad;
+
+    /**
+     * @brief The alpha/beta current vector at the time of the FOC calculation inferred from the phase currents
+     * @note This is the same as i_direct_quad, but rotated by theta_e. These are redundant, but useful for debugging if the
+     * transforms are off
+     */
     math::alpha_beta_t i_alpha_beta;  // The alpha/beta current vector
 
     // Outputs
-    math::direct_quad_t V_direct_quad;     // The direct/quadrature voltage vector
+    /**
+     * @brief The direct and quadrature voltage vector at the time of the FOC calculation
+     */
+    math::direct_quad_t V_direct_quad;
+    /**
+     * @brief The duty cycle result of the FOC calculation
+     */
     FocDutyCycleResult duty_cycle_result;  // The duty cycle result
 };
 

@@ -864,7 +864,7 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = hal/ hwbridge/ util/
+INPUT                  = hal/ hwbridge/ util/ control_loop/
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -893,51 +893,8 @@ INPUT_ENCODING         = UTF-8
 # *.py, *.pyw, *.f90, *.f95, *.f03, *.f08, *.f18, *.f, *.for, *.vhd, *.vhdl,
 # *.ucf, *.qsf and *.ice.
 
-FILE_PATTERNS          = *.c \
-                         *.cc \
-                         *.cxx \
-                         *.cpp \
-                         *.c++ \
-                         *.java \
-                         *.ii \
-                         *.ixx \
-                         *.ipp \
-                         *.i++ \
-                         *.inl \
-                         *.idl \
-                         *.ddl \
-                         *.odl \
-                         *.h \
-                         *.hh \
-                         *.hxx \
+FILE_PATTERNS          = *.h \
                          *.hpp \
-                         *.h++ \
-                         *.cs \
-                         *.d \
-                         *.php \
-                         *.php4 \
-                         *.php5 \
-                         *.phtml \
-                         *.inc \
-                         *.m \
-                         *.markdown \
-                         *.md \
-                         *.mm \
-                         *.dox \
-                         *.py \
-                         *.pyw \
-                         *.f90 \
-                         *.f95 \
-                         *.f03 \
-                         *.f08 \
-                         *.f18 \
-                         *.f \
-                         *.for \
-                         *.vhd \
-                         *.vhdl \
-                         *.ucf \
-                         *.qsf \
-                         *.ice
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
@@ -2244,8 +2201,8 @@ INCLUDE_PATH           =
 # used.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-INCLUDE_FILE_PATTERNS  =
-
+INCLUDE_FILE_PATTERNS  = *.h \
+                         *.hpp \
 # The PREDEFINED tag can be used to specify one or more macro names that are
 # defined before the preprocessor is started (similar to the -D option of e.g.
 # gcc). The argument of the tag is a list of macros of the form: name or

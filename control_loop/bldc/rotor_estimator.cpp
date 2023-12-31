@@ -338,8 +338,7 @@ app_hal_status_E SensorlessRotorFluxObserver::update(const EstimatorInputs& inpu
         x_beta_ += flux_dot_beta * dt;
 
         // Now, we should update the estimated electrical angle by using the flux values
-        theta_hat_ = determine_theta_hat_from_flux_states(x_alpha_, i_ab.alpha, x_beta_, i_ab.beta, inputs.phase_inductance,
-                                                          inputs.rotor_commanded_vel_sign);
+        theta_hat_ = determine_theta_hat_from_flux_states(x_alpha_, i_ab.alpha, x_beta_, i_ab.beta, inputs.phase_inductance);
 
         const float omega_previous_ = omega_;
         // Now, we should update the omega value
@@ -390,8 +389,7 @@ float SensorlessRotorFluxObserver::determine_flux_deviation(float x_frame, float
 
 float SensorlessRotorFluxObserver::determine_theta_hat_from_flux_states(const float& x_alpha, const float& i_alpha,
                                                                         const float& x_beta, const float i_beta,
-                                                                        const float& phase_inductance, const float& vel_sign) {
-    IGNORE(vel_sign);
+                                                                        const float& phase_inductance) {
     // equation 9 from the paper in same arg order.
     const float arg1 = x_beta - phase_inductance * i_beta;
     const float arg2 = x_alpha - phase_inductance * i_alpha;
