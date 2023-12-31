@@ -7,17 +7,30 @@ namespace control_loop {
 
 namespace Bldc6Step {
 enum class CommutationSignal {
-    HIGH,       // The phase's DC voltage is set to high (desired voltage)
-    LOW,        // The phase's DC voltage is set to low (ground)
-    Z_RISING,   // The phase is set to high impedance (floating) and the voltage is rising (used for zero crossing detection)
-    Z_FALLING,  // The phase is set to high impedance (floating) and the voltage is falling (used for zero crossing detection)
+    HIGH,       /// The phase's DC voltage is set to high (desired voltage)
+    LOW,        /// The phase's DC voltage is set to low (ground)
+    Z_RISING,   /// The phase is set to high impedance (floating) and the voltage is rising (used for zero crossing detection)
+    Z_FALLING,  /// The phase is set to high impedance (floating) and the voltage is falling (used for zero crossing detection)
 };
 
+/**
+ * @brief The commutation step and associated signals
+ */
 typedef union {
+    /**
+     * @brief The commutation step signal array
+     */
     CommutationSignal signals[hwbridge::Bridge3Phase::NUM_PHASES];
+    /**
+     * @brief The commutation signals for each phase
+     * @note The order of the phases is u-v-w
+     */
     struct {
+        /** U phase commutation signal */
         CommutationSignal u;
+        /** V phase commutation signal */
         CommutationSignal v;
+        /** W phase commutation signal */
         CommutationSignal w;
     } phase_commutation_signals;
 } commutation_step_t;

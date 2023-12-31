@@ -5,21 +5,40 @@
 
 namespace math {
 
-typedef struct {
+/**
+ * @brief Storage class for alpha/beta values
+ */
+class alpha_beta_t {
+   public:
+    /** Alpha value of the transform */
     float alpha = 0.0f;
+    /** Beta value of the transform */
     float beta = 0.0f;
-} alpha_beta_t;
+};
 
-typedef struct {
+/**
+ *  @brief Storage class for direct/quadrature values
+ */
+class direct_quad_t {
+   public:
+    /** Direct transform */
     float direct = 0.0f;
+    /** Quadrature transform */
     float quadrature = 0.0f;
-} direct_quad_t;
+};
 
-typedef struct {
+/**
+ * @brief Storage class for abc values
+ */
+class abc_t {
+   public:
+    /** A phase value */
     float a = 0.0f;
+    /** B phase value */
     float b = 0.0f;
+    /** C phase value */
     float c = 0.0f;
-} abc_t;
+};
 
 /**
  * @brief Perform a clarke transform on the given 3-phase variable values.

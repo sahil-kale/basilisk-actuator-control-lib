@@ -153,7 +153,7 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
 
         // Update the rotor position estimator
         bldc_rotor_estimator::ElectricalRotorPosEstimator::EstimatorInputs estimator_inputs;
-        update_rotor_position_estimator(estimator_inputs, current_time_us, speed);
+        update_rotor_position_estimator(estimator_inputs, current_time_us);
 
         // Run the state machine
         switch (state_) {
@@ -198,7 +198,7 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
 }
 
 void BrushlessControlLoop::update_rotor_position_estimator(
-    bldc_rotor_estimator::ElectricalRotorPosEstimator::EstimatorInputs& estimator_inputs, utime_t current_time_us, float speed) {
+    bldc_rotor_estimator::ElectricalRotorPosEstimator::EstimatorInputs& estimator_inputs, utime_t current_time_us) {
     do {
         estimator_inputs.time = current_time_us;
 
@@ -218,9 +218,6 @@ void BrushlessControlLoop::update_rotor_position_estimator(
         // Set the V alpha and V beta
         estimator_inputs.V_alpha = V_alpha_beta_.alpha;
         estimator_inputs.V_beta = V_alpha_beta_.beta;
-
-        // Set the speed sign
-        estimator_inputs.rotor_commanded_vel_sign = math::sign(speed);
 
         app_hal_status_E status = primary_rotor_position_estimator_.update(estimator_inputs);
 

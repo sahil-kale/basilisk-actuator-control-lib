@@ -15,74 +15,157 @@
 
 namespace control_loop {
 
-// Define a brushless foc control loop class that inherits from ControlLoop
+/**
+ * @brief A control loop for a brushless motor
+ */
 class BrushlessControlLoop : public ControlLoop {
    public:
+    /**
+     * @brief The state of the control loop
+     */
     enum class BrushlessControlLoopState {
-        STOP,  /// The control loop is stopped
-        RUN,   /// The control loop is running
+        STOP,
+        RUN,
     };
 
-    // Define a control loop type
+    /**
+     * @brief The type of control loop control
+     */
     enum class BrushlessControlLoopType {
-        OPEN_LOOP,    /// The control loop is open loop (not relying on rotor position estimation)
-        CLOSED_LOOP,  /// The control loop is closed loop control
+        /// The control loop is open loop (not relying on rotor position estimation)
+        OPEN_LOOP,
+        /// The control loop is closed loop control
+        CLOSED_LOOP,
     };
 
+    /**
+     * @brief The type of commutation to use
+     */
     enum class BrushlessControlLoopCommutationType {
-        TRAPEZOIDAL,  /// The control loop is using trapezoidal commutation
-        FOC,          /// The control loop using current FOC commutation
+        /// 6 step commutation (requires voltage sensing or sensored operation)
+        TRAPEZOIDAL,
+        /// Field oriented control (requires current sensing)
+        FOC,
     };
 
-    // Define FOC control-loop specific parameters
+    /**
+     * @brief The parameters used by the FOC control loop
+     */
     class BrushlessFocControLoopParams {
        public:
-        float current_control_bandwidth_rad_per_sec;  // The bandwidth of the current control loop
+        /**
+         * @brief The bandwidth of the current control loop
+         */
+        float current_control_bandwidth_rad_per_sec;
 
-        float phase_resistance;  // The phase resistance of the motor (ohms)
-        float phase_inductance;  // The phase inductance of the motor (henries)
-        float pm_flux_linkage;   // The flux linkage of the permanent magnet (weber)
+        /**
+         * @brief The phase resistance of the motor (ohms)
+         */
+        float phase_resistance;
+        /**
+         * @brief The phase inductance of the motor (henries)
+         */
+        float phase_inductance;
+        /**
+         * @brief The flux linkage of the permanent magnet (weber)
+         */
+        float pm_flux_linkage;
 
-        utime_t foc_start_timeout_period_us;  // The timeout period for the foc start (us)
-        bool disable_ki;                      // Disable the ki term of the current controller
+        /**
+         * @brief The timeout period for the foc start (us)
+         */
+        utime_t foc_start_timeout_period_us;
+        /**
+         * @brief Disable the ki term of the current controller
+         * @note Do so if the current controller is unstable in a low bandwidth system, experimentally seems to yield better
+         * results
+         */
+        bool disable_ki;
 
-        float speed_to_iq_gain;       // Converts speed to iq reference
-        float i_d_reference_default;  // The default d current reference
+        /**
+         * @brief Converts a generic -1.0 -> 1.0 speed to a iq reference by multiplying by this value by the speed
+         */
+        float speed_to_iq_gain;  // Converts speed to iq reference
 
-        float current_lpf_fc;  // The cutoff frequency of the low pass filter for the current controller
+        /**
+         * @brief The default d current reference (Amps)
+         */
+        float i_d_reference_default;
 
-        BldcFoc::BrushlessFocPwmControlType pwm_control_type;  // The pwm control type to use
+        /**
+         * @brief The cutoff frequency of the low pass filter for the current controller (Hz)
+         */
+        float current_lpf_fc;
+
+        /**
+         * @brief The PWM control type to use for the FOC control loop
+         */
+        BldcFoc::BrushlessFocPwmControlType pwm_control_type;
     };
 
+    /**
+     * @brief The parameters for the control loop
+     */
     class BrushlessControlLoopParams {
        public:
-        BrushlessControlLoopCommutationType commutation_type;  // The commutation type to use
-        BrushlessFocControLoopParams foc_params;               // The FOC control loop parameters
-        float open_loop_full_speed_theta_velocity;  // The speed at which the open loop control loop is at full speed (rad/s)
+        /**
+         * @brief The commutation type to use *
+         */
+        BrushlessControlLoopCommutationType commutation_type;
+        /**
+         * @brief The FOC control loop parameters
+         */
+        BrushlessFocControLoopParams foc_params;
+        /**
+         * @brief Speed at which the open loop control loop is at full speed (rad/s)
+         */
+        float open_loop_full_speed_theta_velocity;
     };
 
+    /**
+     * @brief The status of the control loop
+     */
     class BrushlessControlLoopStatus : public ControlLoopStatus {
        public:
+        /**
+         * @brief The error conditions for the brushless control loop
+         */
         enum class BrushlessControlLoopError : uint8_t {
-            NO_ERROR,                           /// No error
-            PARAMS_NOT_SET,                     /// The control loop parameters are not set (the pointer is null)
-            ROTOR_ESTIMATION_FAILED,            /// The rotor estimation failed
-            NO_VALID_ROTOR_POSITION_ESTIMATOR,  /// There is no valid rotor position estimator (primary or secondary)
-            CURRENT_CONTROL_NOT_SUPPORTED,      /// The current control mode is not supported as the control loop type is not FOC
-            BUS_VOLTAGE_READ_FAILURE,           /// The bus voltage read failed while running the control loop with FOC
-            PHASE_COMMAND_FAILURE,              /// The phase duty cycle set command failed
-            TOTAL_ERROR_COUNT,                  /// The total number of errors
+            NO_ERROR,
+            /// The control loop parameters are not set (the pointer is null)
+            PARAMS_NOT_SET,
+            /// The rotor estimation failed
+            ROTOR_ESTIMATION_FAILED,
+            /// There is no valid rotor position estimator (primary or secondary)
+            NO_VALID_ROTOR_POSITION_ESTIMATOR,
+            /// The current control mode is not supported as the control loop type is not FOC
+            CURRENT_CONTROL_NOT_SUPPORTED,
+            /// The bus voltage read failed while running the control loop with FOC
+            BUS_VOLTAGE_READ_FAILURE,
+            /// The phase duty cycle set command failed
+            PHASE_COMMAND_FAILURE,
+            /// The total number of errors
+            TOTAL_ERROR_COUNT,
         };
+        /**
+         * @brief The warning conditions for the brushless control loop
+         */
         enum class BrushlessControlLoopWarning : uint8_t {
-            NO_WARNING,                         /// No warning
-            PRIMARY_ROTOR_ESTIMATOR_NOT_VALID,  /// The primary rotor estimator is not valid
-            ROTOR_ESTIMATOR_UPDATE_FAILURE,     /// The rotor estimator update failed
-            TOTAL_WARNING_COUNT,                /// The total number of warnings
+            /// No warning
+            NO_WARNING,
+            /// The primary rotor estimator is not valid
+            PRIMARY_ROTOR_ESTIMATOR_NOT_VALID,
+            /// The rotor estimator update failed
+            ROTOR_ESTIMATOR_UPDATE_FAILURE,
+            /// The total number of warnings
+            TOTAL_WARNING_COUNT,
         };
 
         BrushlessControlLoopStatus() : ControlLoopStatus() {}
 
+        /** The number of warnings for a brushless control loop */
         static constexpr uint8_t kNumErrors = static_cast<uint8_t>(BrushlessControlLoopError::TOTAL_ERROR_COUNT);
+        /** The number of errors for a brushless control loop */
         static constexpr uint8_t kNumWarnings = static_cast<uint8_t>(BrushlessControlLoopWarning::TOTAL_WARNING_COUNT);
 
         // Make an array of the error and warning strings
@@ -143,9 +226,20 @@ class BrushlessControlLoop : public ControlLoop {
         void compute_base_status();
     };
 
-    // Provide a const getter for the status
+    /**
+     * @brief Get the status of the control loop
+     * @return The status of the control loop
+     */
     const BrushlessControlLoopStatus& get_status() const { return status_; }
 
+    /**
+     * @brief Construct a new BrushlessControlLoop object
+     * @param motor The bridge on which a singular BLDC/PMSM motor is connected
+     * @param clock The clock to use for the control loop
+     * @param rotor_position_estimator The rotor position estimator to use
+     * @param secondary_rotor_position_estimator The secondary rotor position estimator to use
+     * @note The secondary rotor position estimator is used when the primary rotor position estimator is not valid
+     */
     BrushlessControlLoop(hwbridge::Bridge3Phase& motor, basilisk_hal::HAL_CLOCK& clock,
                          bldc_rotor_estimator::ElectricalRotorPosEstimator& rotor_position_estimator,
                          bldc_rotor_estimator::ElectricalRotorPosEstimator* secondary_rotor_position_estimator = nullptr)
@@ -159,6 +253,7 @@ class BrushlessControlLoop : public ControlLoop {
     /**
      * @brief Initialize the control loop
      * @param params The control loop parameters
+     * @attention The parameters are not copied, so the parameters must remain in scope for the lifetime of the control loop
      */
     void init(BrushlessControlLoopParams* params);
 
@@ -188,6 +283,8 @@ class BrushlessControlLoop : public ControlLoop {
     ~BrushlessControlLoop() = default;
 
    protected:
+    /*! \cond PRIVATE */
+
     BrushlessControlLoopState state_ = BrushlessControlLoopState::STOP;
     hwbridge::Bridge3Phase& bridge_;
     basilisk_hal::HAL_CLOCK& clock_;
@@ -223,6 +320,9 @@ class BrushlessControlLoop : public ControlLoop {
 
     /**
      * @brief Get the desired state of the control loop
+     * @param motor_speed The desired speed of the motor (note: this is multiplied by the speed_to_iq_gain)
+     * @param current_state The current state
+     * @return The desired state of the control loop
      */
     BrushlessControlLoopState get_desired_state(float motor_speed, const BrushlessControlLoopState current_state);
 
@@ -238,11 +338,10 @@ class BrushlessControlLoop : public ControlLoop {
      * @brief update the rotor position estimator
      * @param estimator_inputs The inputs to the rotor position estimator
      * @param current_time_us The current time
-     * @param speed The motor speed
      * @return void
      */
     void update_rotor_position_estimator(bldc_rotor_estimator::ElectricalRotorPosEstimator::EstimatorInputs& estimator_inputs,
-                                         utime_t current_time_us, float speed);
+                                         utime_t current_time_us);
 
     /**
      * @brief Exit a state
@@ -278,6 +377,8 @@ class BrushlessControlLoop : public ControlLoop {
      * @param phase_commands The phase commands to be filled in
      */
     void run_trap(float speed, hwbridge::Bridge3Phase::phase_command_t phase_commands[3]);
+
+    /*! \endcond */
 };
 
 }  // namespace control_loop
