@@ -237,7 +237,7 @@ app_hal_status_E ElectricalRotorPosEstimatorFromHall::update(const ElectricalRot
             // adding or subtracting 30 degrees from the rotor position estimate depending on the
             // sign of the velocity. This will make the rotor position estimate more accurate
 
-            if (params_->enable_sector_position_offset_compensation) {
+            if (params_->enable_sector_position_offset_compensation && params_->enable_interpolation) {
                 if (velocity_ > 0.0f) {
                     rotor_position_ -= math::M_PI_FLOAT / 6.0f;
                 } else {
