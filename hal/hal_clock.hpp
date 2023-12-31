@@ -6,7 +6,10 @@
 
 namespace basilisk_hal {
 
-// Create a clock class that can be used to get the current time in microseconds via singleton pattern
+/**
+ * @brief Abstract class for a clock that keeps track of the time since boot
+ * @note This class should provide a way to get the current time in microseconds
+ */
 class HAL_CLOCK {
    public:
     HAL_CLOCK() = default;
@@ -39,7 +42,9 @@ class HAL_CLOCK {
      */
     static float get_dt_s(utime_t t1, utime_t t2) { return static_cast<float>(get_dt_us(t1, t2)) / kMicrosecondsPerSecond; }
 
-    // Add a constant for the number of microseconds in a second
+    /**
+     * @brief Number of microseconds per second
+     */
     static constexpr float kMicrosecondsPerSecond = 1000000.0f;
 };
 

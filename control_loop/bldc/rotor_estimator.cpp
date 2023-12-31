@@ -18,8 +18,8 @@ app_hal_status_E BldcSensorlessRotorSectorSensor::get_electrical_angle(float& an
     app_hal_status_E ret = APP_HAL_OK;
     do {
         // Get the bemf voltage
-        hwbridge::Bridge3Phase::phase_voltage_t bemf_voltage;
-        ret = bridge_.read_bemf(bemf_voltage);
+        hwbridge::Bridge3Phase::phase_voltage_t phase_voltage;
+        ret = bridge_.read_phase_voltage(phase_voltage);
         const utime_t current_time = clock_.get_time_us();
 
         if (ret != APP_HAL_OK) {
@@ -31,7 +31,7 @@ app_hal_status_E BldcSensorlessRotorSectorSensor::get_electrical_angle(float& an
             control_loop::Bldc6Step::determine_commutation_step_from_theta(estimated_electrical_angle_);
 
         // Check if a zero crossing has occurred
-        const bool zero_crossing = zero_crossing_detected(bemf_voltage, step);
+        const bool zero_crossing = zero_crossing_detected(phase_voltage, step);
 
         // If we detect a zero crossing, then we should store the time of the zero crossing
         // NOTE: time_of_last_zero_crossing_ is only set to zero when the rotor position estimator is reset
@@ -67,21 +67,21 @@ app_hal_status_E BldcSensorlessRotorSectorSensor::get_electrical_angle(float& an
 }
 
 bool BldcSensorlessRotorSectorSensor::zero_crossing_detected(
-    const hwbridge::Bridge3Phase::phase_voltage_t& bemf_voltage,
+    const hwbridge::Bridge3Phase::phase_voltage_t& phase_voltage,
     control_loop::Bldc6Step::commutation_step_t current_commutation_step) {
     float phase_sum = 0.0f;
     control_loop::Bldc6Step::CommutationSignal zero_crossing_signal = control_loop::Bldc6Step::CommutationSignal::Z_RISING;
     float undriven_phase_voltage = 0.0f;
 
-    const float bemf_voltages[hwbridge::Bridge3Phase::NUM_PHASES] = {bemf_voltage.u, bemf_voltage.v, bemf_voltage.w};
+    const float phase_voltages[hwbridge::Bridge3Phase::NUM_PHASES] = {phase_voltage.u, phase_voltage.v, phase_voltage.w};
 
     for (uint8_t i = 0; i < hwbridge::Bridge3Phase::NUM_PHASES; i++) {
         if ((current_commutation_step.signals[i] != control_loop::Bldc6Step::CommutationSignal::Z_FALLING) &&
             (current_commutation_step.signals[i] != control_loop::Bldc6Step::CommutationSignal::Z_RISING)) {
-            phase_sum += bemf_voltages[i];
+            phase_sum += phase_voltages[i];
         } else {
             zero_crossing_signal = current_commutation_step.signals[i];
-            undriven_phase_voltage = bemf_voltages[i];
+            undriven_phase_voltage = phase_voltages[i];
         }
     }
 

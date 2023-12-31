@@ -4,11 +4,9 @@
 
 namespace pid {
 
-// Create a PID controller that takes in a setpoint and a feedback value and returns a control value.
-// The class is templated so that it can be used with any type that supports the basic arithmetic operators.
-// The class should also take in initial P, I, and D gains as well as a maximum and minimum output value.
-// Integral windup should be taken as a construction parameter
-
+/**
+ * @brief discrete-time PID controller class
+ */
 template <typename T>
 class PID {
    public:
@@ -20,6 +18,9 @@ class PID {
      * @param min_output The maximum output value
      * @param max_output The minimum output value
      * @param integral_windup The integral windup value
+     * @param clock The clock object to be used for timing
+     * @param use_dt Flag to use dt in the integral and derivative terms (this makes the PID controller invariant to the sampling
+     * time by using dt in the integral and derivative terms)
      */
     PID(float kp, float ki, float kd, T min_output, T max_output, float integral_windup, basilisk_hal::HAL_CLOCK& clock,
         bool use_dt = true)
@@ -32,24 +33,63 @@ class PID {
           clock(clock),
           use_dt(use_dt) {}
 
-    // Reset the PID controller
+    /**
+     * @brief reset the PID controller
+     */
     void reset();
 
-    // PID getter functions (marked as const)
+    /**
+     * @brief Get the kp value
+     * @return The kp value
+     */
+
     float get_kp() const;
+    /**
+     * @brief Get the ki value
+     * @return The ki value
+     */
     float get_ki() const;
+
+    /**
+     * @brief Get the kd value
+     * @return The kd value
+     */
     float get_kd() const;
 
-    // PID setter functions
+    /**
+     * @brief set the kp value
+     * @param kp The kp value
+     */
     void set_kp(float kp);
+
+    /**
+     * @brief set the ki value
+     * @param ki The ki value
+     */
     void set_ki(float ki);
+
+    /**
+     * @brief set the kd value
+     * @param kd The kd value
+     */
     void set_kd(float kd);
 
-    // Set the maximum and minimum output values
+    /**
+     * @brief Set the max output value
+     * @param max_output The max output value
+     */
     void set_max_output(T max_output);
+
+    /**
+     * @brief Set the min output value
+     * @param min_output The min output value
+     */
     void set_min_output(T min_output);
 
-    // Set the integral windup value
+    /**
+     * @brief Set the integral windup value
+     * @param integral_windup The integral windup value as an absolute value
+     */
     void set_integral_windup(float integral_windup);
 
     // Calculate the control value given the setpoint and feedback value
@@ -57,6 +97,7 @@ class PID {
      * @brief Calculate the control value given the setpoint and feedback value
      * @param actual The actual value
      * @param setpoint The setpoint value
+     * @return The control value
      */
     T calculate(T actual, T setpoint);
 
