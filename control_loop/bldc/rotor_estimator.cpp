@@ -322,8 +322,8 @@ app_hal_status_E SensorlessRotorFluxObserver::update(const EstimatorInputs& inpu
         // Clarke transform the current
         math::alpha_beta_t i_ab = math::clarke_transform(inputs.phase_current.u, inputs.phase_current.v, inputs.phase_current.w);
         // Get the y_alpha and y_beta values
-        const float y_alpha = determine_flux_driving_voltage(stator_resistance, inputs.V_alpha, i_ab.alpha);
-        const float y_beta = determine_flux_driving_voltage(stator_resistance, inputs.V_beta, i_ab.beta);
+        const float y_alpha = determine_flux_driving_voltage(stator_resistance, inputs.V_alpha_beta.alpha, i_ab.alpha);
+        const float y_beta = determine_flux_driving_voltage(stator_resistance, inputs.V_alpha_beta.beta, i_ab.beta);
 
         // Get the eta values for the alpha and beta axes
         const float eta_alpha = determine_flux_deviation(x_alpha_, stator_inductance, i_ab.alpha);
