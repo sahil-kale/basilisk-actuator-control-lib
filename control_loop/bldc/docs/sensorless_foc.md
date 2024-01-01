@@ -104,7 +104,6 @@ i_{\beta}
 \cos \theta \\
 \sin \theta
 \end{bmatrix}
-\end{equation}
 ```
 
 We recognize that if we take the norm of this 2d $\eta$ vector, which has the rotor flux in both the alpha and beta frame, we'll actually get the permanent magnet flux (squared). 
