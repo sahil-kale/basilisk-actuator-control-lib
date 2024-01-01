@@ -82,8 +82,8 @@ A vector function defined to be the frame's rotor flux $\eta$ (for both alpha an
 
 ```math
 \begin{bmatrix}
-\eta_{\alpha}(x) \\
-\eta_{\beta}(x)
+\eta_{\alpha} \\
+\eta_{\beta}
 \end{bmatrix}
 =
 \begin{bmatrix}
