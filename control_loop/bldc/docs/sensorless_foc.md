@@ -78,6 +78,8 @@ i_{\beta}
 \end{equation}
 ```
 
+Importantly, the paper highlights that $\dot{x} = y$ - therefore, we can estimate x by integrating y.
+
 A vector function defined to be the frame's rotor flux $\eta$ (for both alpha and beta) is determined by subtracting the stator-induced flux (which is the frame current multiplied by the inductance) from the total flux (x). 
 
 ```math
@@ -98,7 +100,7 @@ i_{\beta}
 \end{bmatrix}
 ```
 
-We recognize that if we take the norm of this 2d $\eta$ vector, which has the rotor flux in both the alpha and beta frame, we'll actually get the permenant magent flux (squared). 
+We recognize that if we take the norm of this 2d $\eta$ vector, which has the rotor flux in both the alpha and beta frame, we'll actually get the permanent magnet flux (squared). 
 
 ```math
 \|\eta(\mathbf{x})\|^2 = \eta(x_{\alpha})^2 + \eta(x_{\beta})^2 = \psi_m^2$
@@ -108,7 +110,7 @@ I drew out a figure of the vectors in a particular motor situation and how this 
 
 ![Motor Flux Observer Vectors](https://github.com/sahil-kale/basilisk-actuator-control-lib/blob/main/assets/sensorless/sensorless_flux_observer_diagram.png)
 
-The paper in which the observer is defined (https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=ffaf8e3ad8cbfe675b57ba9e01729baf9e2043df, which is used in reference 4) defines an observer in the form of a gradient-search by making an observer that tries to minimize the error between the permenant magnet flux and the predicted flux. This term features an observer gain, gamma, that is meant to be tuned for the observer. The observer state variable, $\dot{\hat{x}}$, attempts to predict the change total flux in each alpha-beta frame. This can then be integrated to find estimates for the total flux in each frame alpha-beta. 
+The paper in which the observer is defined (https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=ffaf8e3ad8cbfe675b57ba9e01729baf9e2043df, which is used in reference 4) defines an observer in the form of a gradient-search by making an observer that tries to minimize the error between the permanent magnet flux and the predicted flux. This term features an observer gain, gamma, that is meant to be tuned for the observer. The observer state variable, $\dot{\hat{x}}$, attempts to predict the change total flux in each alpha-beta frame. This can then be integrated to find estimates for the total flux in each frame alpha-beta. 
 
 ```math
 \begin{equation}
