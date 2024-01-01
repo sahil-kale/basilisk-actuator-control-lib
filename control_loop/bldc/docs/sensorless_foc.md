@@ -84,8 +84,8 @@ A vector function defined to be the frame's rotor flux $\eta$ (for both alpha an
 
 ```math
 \begin{bmatrix}
-\eta_{\alpha} \\
-\eta_{\beta}
+\eta_{\alpha}(x_{\alpha}) \\
+\eta_{\beta}(x_{\beta})
 \end{bmatrix}
 =
 \begin{bmatrix}
@@ -98,6 +98,13 @@ L_s
 i_{\alpha} \\
 i_{\beta}
 \end{bmatrix}
+=
+\psi_m
+\begin{bmatrix}
+\cos \theta \\
+\sin \theta
+\end{bmatrix}
+\end{equation}
 ```
 
 We recognize that if we take the norm of this 2d $\eta$ vector, which has the rotor flux in both the alpha and beta frame, we'll actually get the permanent magnet flux (squared). 
