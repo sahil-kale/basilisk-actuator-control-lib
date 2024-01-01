@@ -10,9 +10,12 @@ The explainations here are my understanding and may not be correct given my rela
 In a variety of BLDC/PMSM motor applications, the angle of the rotor (and by extension, the electrical angle of the rotor by taking into account the number of pole pairs) is determined by means of an external sensor. However, in applications where the standstill operation is not a normal design condition, it may be an attractive choice to consider a sensorless control algorithm to the number of components. Further, sensorless algorithms can improve redundency in applications where a failed rotor can have grave consequences (such as a motor for an aircraft) by providing an alternative way of commutating the motor without the use of an external sensor.
 
 ## Observers
-The control problem considered for sensorless FOC is one where the alpha-beta frame currents, $i_{ab}$ (3 phase currents Clake transformed) and alpha-beta frame voltages $V_{ab}$ (feedforward applied phase voltages that are further clarke transformed) are known, and we would like to reconstruct the electrical angle $\theta$ for use in a field oriented control algorithm. 
+The control problem considered for sensorless FOC is one where the alpha-beta frame currents, $i_{ab}$ (3 phase currents Clake transformed) and alpha-beta frame voltages $V_{ab}$ (feedforward applied phase voltages that are further clarke transformed) are known, and we would like to reconstruct the electrical angle $\theta$ for use in a field oriented control algorithm. A diagram of the differences between a typical sensored FOC implementation and sensorless FOC implementation are shown below that describe the control problem:
+![Typical Sensored FOC](https://github.com/sahil-kale/basilisk-actuator-control-lib/blob/main/assets/typicalfoc.png)
 
-For the observers to work, parameters of the motor are also required to be known, such as the phase resistance and inductance, as well as permenant magnet flux linkage.
+![Typical Sensorless FOC](https://github.com/sahil-kale/basilisk-actuator-control-lib/blob/main/assets/sensorless/typical_sensorless_foc.png)
+
+For the observers to work, parameters of the motor are also required to be known, such as the phase resistance and inductance, as well as permenant magnet flux linkage. 
 
 ### Types of observers 
 In my research, I frequently came across 3 types of observers. I'll admit that the concepts of these have not intuitively clicked for me, but I will include them here alongside a brief overview of my understanding of these terms.
@@ -158,6 +161,13 @@ This paper assumes that there is no saliency in the rotor as it means the induct
 The paper also notes that they did not use an open-loop start up sequence and found that while they revered the speed, they suffered large amount of angle error as the observer did not converge. Speed buildup meant the angle error vanishes. For the implemention of sensorless control in this library, an open-loop control period will be defined in order to avoid the potential harmful impact of oscillating rotor angle estimates whenever the speed is low. Further, the sensorless estimator will self-report itself as being invalid as the rotor speed goes below a preset value, alerting the control loop to no longer trust the theta estimate and either resort to open loop control or throw an error accordingly. 
 
 The speed controller is also implemented in their suggested manner with a PI loop to do the integration as they advise against simply differentiating theta.
+
+#### Other Lessons
+Initially when I had implemented sensorless FOC, I noticed that the theta from the flux observer was always phase shifted 90 degrees. Turns out I happened to be implementing the PWM generation schema incorrectly and was not actually producing the Valpha/Vbeta I wanted - these inputs are used as feedforward for the estimator and setting those incorrectly meant that the estimator logic was acting on incorrect input.
+
+When initally trialing closed-loop control with the sensorless FOC algorithm, it was observed that if ValphaBeta is varying significantly or oscillates due to a high bandwidth current controller, the estimator would report an incorrect theta and start chattering between 0 and 2pi. Reducing the bandwidth of the current controller fixed the issue - I'm not entirely sure if I should expect this result with sensorless FOC, but it is there. 
+
+My handling of the open->closed loop control seems off (generates a huge current diff) - best re-thought out and make sure that I am actually doing what I expect. What worked awesome was by relying on sensorless FOC once the system was at speed - barely any rotor acceleration after the switchover events and it tracked absolutely awesome!! 
 
 ## Open Questions
 I'm not entirely sure in what situations which observer between SMO or Flux are better. I chose to implement the flux observer because I found the paper to be an easier read, but I not entirely sure which one is better. From 3) in the references section, the author claims that because "the rotor flux linkage is not a function of motor speed. The signal level remains constant at all speeds. Although they are mathematically related by just an integral transformation, the practical implication is that the flux observer can operate at lower speeds than a back EMF observer." This does make sense from the explaination, but I don't intuitively understand this concept just yet.
