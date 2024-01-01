@@ -262,6 +262,9 @@ class BrushlessControlLoop : public ControlLoop {
      * @param speed The desired speed of the motor (note: this is multiplied by the speed_to_iq_gain)
      * @note: speed is from -1 -> 1
      * @return The status of the control loop
+     * @attention This function should be called at the desired control loop frequency. For FOC, this is usually after phase
+     * current information becomes available, which is at the centre of the inverter PWM cycle. For Trapezodial PWM, this point is
+     * at the start of the PWM cycle. The frequency is usually around 15kHz, the same as the switching frequency of the inverter.
      */
     ControlLoopStatus run(float speed) override;
 
@@ -269,8 +272,11 @@ class BrushlessControlLoop : public ControlLoop {
      * @brief Run the control loop in current control mode
      * @param i_d_reference The desired d current
      * @param i_q_reference The desired q current
-     * @note this function shuold only be used when the control loop control type is FOC
+     * @note This function shuold only be used when the control loop control type is FOC
      * @return The status of the control loop
+     * @attention This function should be called at the FOC loop frequency at or after phase current information becomes available
+     * - this is usually around 15kHz and will be in the middle of the PWM cycle (phase is dependent on HW current sensing
+     * implementation)
      */
     ControlLoopStatus run_current_control(float i_d_reference, float i_q_reference);
 

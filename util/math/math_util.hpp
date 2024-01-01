@@ -107,6 +107,17 @@ T max(const T& a, const T& b) {
     return (a > b) ? a : b;
 }
 
+// Return the minimum of two values
+/**
+ * @brief Return the minimum of two values.
+ * @param a The first value
+ * @param b The second value
+ */
+template <typename T>
+T min(const T& a, const T& b) {
+    return (a < b) ? a : b;
+}
+
 }  // namespace math
 
 #endif  // MATH_UTIL_HPP
