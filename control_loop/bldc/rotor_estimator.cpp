@@ -310,15 +310,24 @@ app_hal_status_E SensorlessRotorFluxObserver::init(SensorlessRotorFluxObserverPa
 app_hal_status_E SensorlessRotorFluxObserver::update(const EstimatorInputs& inputs) {
     app_hal_status_E ret = APP_HAL_OK;
     do {
+        if (params_ == nullptr) {
+            ret = APP_HAL_ERROR;
+            break;
+        }
+
+        // Update the phase resistance and inductance values to use the equivalent Alpha-Beta parameters
+        const float stator_resistance = inputs.phase_resistance * 3.0 / 2.0;
+        const float stator_inductance = inputs.phase_inductance * 3.0 / 2.0;
+
         // Clarke transform the current
         math::alpha_beta_t i_ab = math::clarke_transform(inputs.phase_current.u, inputs.phase_current.v, inputs.phase_current.w);
         // Get the y_alpha and y_beta values
-        const float y_alpha = determine_flux_driving_voltage(inputs.phase_resistance, inputs.V_alpha, i_ab.alpha);
-        const float y_beta = determine_flux_driving_voltage(inputs.phase_resistance, inputs.V_beta, i_ab.beta);
+        const float y_alpha = determine_flux_driving_voltage(stator_resistance, inputs.V_alpha, i_ab.alpha);
+        const float y_beta = determine_flux_driving_voltage(stator_resistance, inputs.V_beta, i_ab.beta);
 
         // Get the eta values for the alpha and beta axes
-        const float eta_alpha = determine_flux_deviation(x_alpha_, inputs.phase_inductance, i_ab.alpha);
-        const float eta_beta = determine_flux_deviation(x_beta_, inputs.phase_inductance, i_ab.beta);
+        const float eta_alpha = determine_flux_deviation(x_alpha_, stator_inductance, i_ab.alpha);
+        const float eta_beta = determine_flux_deviation(x_beta_, stator_inductance, i_ab.beta);
 
         // Get the estimated flux linkage squared
         const float estimated_flux_linkage_squared = eta_alpha * eta_alpha + eta_beta * eta_beta;
@@ -338,7 +347,7 @@ app_hal_status_E SensorlessRotorFluxObserver::update(const EstimatorInputs& inpu
         x_beta_ += flux_dot_beta * dt;
 
         // Now, we should update the estimated electrical angle by using the flux values
-        theta_hat_ = determine_theta_hat_from_flux_states(x_alpha_, i_ab.alpha, x_beta_, i_ab.beta, inputs.phase_inductance);
+        theta_hat_ = determine_theta_hat_from_flux_states(x_alpha_, i_ab.alpha, x_beta_, i_ab.beta, stator_inductance);
 
         const float omega_previous_ = omega_;
         // Now, we should update the omega value
@@ -374,25 +383,25 @@ float SensorlessRotorFluxObserver::determine_flux_dot(const float& flux_driving_
     return x_dot;
 }
 
-float SensorlessRotorFluxObserver::determine_flux_driving_voltage(const float& phase_resistance, const float& V_frame,
+float SensorlessRotorFluxObserver::determine_flux_driving_voltage(const float& stator_resistance, const float& V_frame,
                                                                   const float& i_frame) {
     // equation 4 from the paper in same arg order.
-    float V_flux = V_frame - phase_resistance * i_frame;
+    float V_flux = V_frame - stator_resistance * i_frame;
     return V_flux;
 }
 
-float SensorlessRotorFluxObserver::determine_flux_deviation(float x_frame, float phase_inductance, float i_frame) {
+float SensorlessRotorFluxObserver::determine_flux_deviation(float x_frame, float stator_inductance, float i_frame) {
     // equation 6 from the paper in same arg order.
-    float eta = x_frame - phase_inductance * i_frame;
+    float eta = x_frame - stator_inductance * i_frame;
     return eta;
 }
 
 float SensorlessRotorFluxObserver::determine_theta_hat_from_flux_states(const float& x_alpha, const float& i_alpha,
                                                                         const float& x_beta, const float i_beta,
-                                                                        const float& phase_inductance) {
+                                                                        const float& stator_inductance) {
     // equation 9 from the paper in same arg order.
-    const float arg1 = x_beta - phase_inductance * i_beta;
-    const float arg2 = x_alpha - phase_inductance * i_alpha;
+    const float arg1 = x_beta - stator_inductance * i_beta;
+    const float arg2 = x_alpha - stator_inductance * i_alpha;
     float theta_hat = atan2f(arg1, arg2);
 
     // Implement a wraparound of the theta_hat value to be between 0 and 2pi

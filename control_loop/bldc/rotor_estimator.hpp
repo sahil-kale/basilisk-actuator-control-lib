@@ -416,7 +416,7 @@ class SensorlessRotorFluxObserver : public ElectricalRotorPosEstimator {
     /*! \cond PRIVATE */
     /**
      * @brief Determine the flux driving voltage (y) in the paper
-     * @param phase_resistance The phase resistance of the motor
+     * @param stator_resistance The stator resistance of the motor (defined as R_s in the paper, or 3/2*R_phase)
      * @param V_frame The applied voltage in the frame of reference of the rotor (alpha or beta)
      * @param i_frame The current in the frame of reference of the rotor (alpha or beta)
      * @return The flux driving voltage (y) in the paper
@@ -425,18 +425,18 @@ class SensorlessRotorFluxObserver : public ElectricalRotorPosEstimator {
      *       voltage drop across the phase resistance from the phase voltage from the
      *       V_alpha and V_beta applied voltages (can be treated like a regular DC motor in this frame)
      */
-    float determine_flux_driving_voltage(const float& phase_resistance, const float& V_frame, const float& i_frame);
+    float determine_flux_driving_voltage(const float& stator_resistance, const float& V_frame, const float& i_frame);
 
     /**
      * @brief Determine the flux deviation (eta)
      * @param x_frame The state variable x in the frame of reference of the rotor (alpha or beta)
-     * @param phase_inductance The phase inductance of the motor
+     * @param stator_inductance The stator inductance of the motor (defined as L_s in the paper, or 3/2 * L_phase)
      * @param i_frame The current in the frame of reference of the rotor (alpha or beta)
      * @return The flux deviation (eta)
      * @note Implements the equation (6) from the paper by calculating the flux deviation from the permanent magnet flux linkage
      * due to the inductance
      */
-    float determine_flux_deviation(float x_frame, float phase_inductance, float i_frame);
+    float determine_flux_deviation(float x_frame, float stator_inductance, float i_frame);
 
     /**
      * @brief Determine the state variable delta (x_dot)
@@ -458,11 +458,11 @@ class SensorlessRotorFluxObserver : public ElectricalRotorPosEstimator {
      * @param i_alpha The current in the alpha frame
      * @param x_beta The state variable x_beta
      * @param i_beta The current in the beta frame
-     * @param phase_inductance The phase inductance of the motor
+     * @param stator_inductance The stator inductance of the motor (defined as L_s in the paper, or 3/2 * L_phase)
      * @return The electrical angle of the rotor (theta_hat)
      */
     float determine_theta_hat_from_flux_states(const float& x_alpha, const float& i_alpha, const float& x_beta,
-                                               const float i_beta, const float& phase_inductance);
+                                               const float i_beta, const float& stator_inductance);
 
     /**
      * @brief Determine the velocity of the rotor (theta_hat_dot) using equations 11-13 from the paper
