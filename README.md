@@ -11,7 +11,7 @@ The following were, at one point, WIP, but are deprioritized in favour of a focu
 - Brushed Motor (Torque and Open-Loop Speed)
 
 ## Library Architecture
-![image](https://github.com/sahil-kale/basilisk-actuator-control-lib/assets/32375512/a86fd9e6-1148-4635-a11f-be8f48c2e8cb)
+![High Level Architecture](https://github.com/sahil-kale/basilisk-actuator-control-lib/assets/32375512/a86fd9e6-1148-4635-a11f-be8f48c2e8cb)
 
 The components shown in blue are implemented in this library; the user must implement the other modules as per their application. This affords flexibility when implementing the library as the user can adapt the various modules as required by the specific application.
 
