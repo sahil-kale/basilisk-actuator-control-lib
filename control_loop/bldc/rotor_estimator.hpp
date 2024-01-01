@@ -3,6 +3,7 @@
 #include "bridge_3phase.hpp"
 #include "brushless_6step_commutation.hpp"
 #include "hal_clock.hpp"
+#include "math_foc.hpp"
 
 namespace bldc_rotor_estimator {
 
@@ -43,15 +44,10 @@ class ElectricalRotorPosEstimator {
         hwbridge::Bridge3Phase::phase_current_t phase_current;
 
         /**
-         * @brief The phase voltages in the frame of reference of the rotor
-         * @todo Convert this to a alpha/beta frame type
+         * @brief The applied voltage in the alpha-beta frame of the previous control loop iteration fed-forward to the rotor
+         * position estimator
          */
-        float V_alpha = 0.0f;
-        /**
-         * @brief The phase voltages in the frame of reference of the rotor
-         * @todo Convert this to a alpha/beta frame type
-         */
-        float V_beta = 0.0f;
+        math::alpha_beta_t V_alpha_beta;
 
         /**
          * @brief The phase resistance of the motor (Ohms)

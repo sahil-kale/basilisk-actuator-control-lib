@@ -216,8 +216,7 @@ void BrushlessControlLoop::update_rotor_position_estimator(
         estimator_inputs.pm_flux_linkage = params_->foc_params.pm_flux_linkage;
 
         // Set the V alpha and V beta
-        estimator_inputs.V_alpha = V_alpha_beta_.alpha;
-        estimator_inputs.V_beta = V_alpha_beta_.beta;
+        estimator_inputs.V_alpha_beta = V_alpha_beta_;
 
         app_hal_status_E status = primary_rotor_position_estimator_.update(estimator_inputs);
 
