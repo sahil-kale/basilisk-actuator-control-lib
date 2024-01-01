@@ -54,8 +54,8 @@ math::direct_quad_t clamp_Vdq(math::direct_quad_t V_dq, float V_bus);
  * @brief Determine the duty cycles for the inverter using the FOC algorithm by doing inverse park and vector control algo
  * (inverse clarke or foc)
  * @param theta The rotor angle (radians)
- * @param Vdirect The alpha component of the voltage vector
- * @param Vquardature The beta component of the voltage vector
+ * @param Vdirect The alpha component of the voltage vector (phase to neutral)
+ * @param Vquardature The beta component of the voltage vector (phase to neutral)
  * @param bus_voltage The bus voltage
  * @param pwm_control_type The type of pwm control to use
  * @param phase_command_u The duty cycle for phase u
@@ -74,33 +74,29 @@ FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect
                                                       hwbridge::Bridge3Phase::phase_command_t& phase_command_w);
 
 /**
- * @brief The resultant duty cycles of the svpwm calculation
+ * @brief Perform a sine pulse width modulation on the given alpha/beta voltage values.
+ * @param V_alpha_beta The voltage vector to create the duty cycles for
+ * @param Vbus The bus voltage to use when creating the duty cycles for phase-to-neutral voltages
+ * @param max_duty_cycle The maximum duty cycle to use when creating the duty cycles for phase-to-neutral voltages
+ * @return abc_t The result of the sine pwm duty cycle calculation (0.0f to 1.0f)
  */
-class svpwm_duty_cycle {
-   public:
-    /**
-     * @brief The duty cycle for phase u
-     */
-    float dutyCycleU = 0.0f;
-    /**
-     * @brief The duty cycle for phase v
-     */
-    float dutyCycleV = 0.0f;
-    /**
-     * @brief The duty cycle for phase w
-     */
-    float dutyCycleW = 0.0f;
-};
+math::abc_t sine_pwm(math::alpha_beta_t V_alpha_beta, float Vbus, float max_duty_cycle = 1.0f);
 
 /**
- * @brief Perform a space vector pulse width modulation on the given alpha/beta voltage values.
- * @param Vd Voltage in the d frame
- * @param Vq Voltage in the q frame
- * @param theta_el The electrical angle of the rotor
- * @param Vbus The bus voltage
- * @return svpwm_duty_cycle The result of the svpwm
+ * @brief Perform a space vector pulse width modulation on the given alpha/beta voltage values based on the method proposed in
+ * https://www2.ece.ohio-state.edu/ems/PowerConverter/SpaceVector_PWM_Inverter.pdf
+ * @param V_alpha_beta The voltage vector to create the duty cycles for
+ * @param Vbus The bus voltage to clamp the voltage vector to
+ * @return abc_t The result of the svpwm duty cycle calculation
  */
-svpwm_duty_cycle svpwm(float Vd, float Vq, float theta_el, float Vbus);
+math::abc_t svpwm(math::alpha_beta_t V_alpha_beta, float Vbus);
+
+/**
+ * @brief Returns the sextant (sector) of the given voltage vector in the alpha/beta frame
+ * @param V_alpha_beta The voltage vector to determine the sector of
+ * @return uint8_t The sector of the voltage vector
+ */
+uint8_t svm_sector(math::alpha_beta_t V_alpha_beta);
 
 /**
  * @brief FOC Computation 'Frame' that can be used for debugging

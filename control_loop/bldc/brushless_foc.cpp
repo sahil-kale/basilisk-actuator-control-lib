@@ -4,6 +4,7 @@
 
 #include "math_foc.hpp"
 #include "math_util.hpp"
+#include "util.hpp"
 
 namespace control_loop {
 namespace BldcFoc {
@@ -24,35 +25,16 @@ FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect
 
     switch (pwm_control_type) {
         case BldcFoc::BrushlessFocPwmControlType::SPACE_VECTOR: {
-            svpwm_duty_cycle duty_cycles = svpwm(Vdirect, Vquadrature, theta, bus_voltage);
-            duty_cycle_u_h = duty_cycles.dutyCycleU;
-            duty_cycle_v_h = duty_cycles.dutyCycleV;
-            duty_cycle_w_h = duty_cycles.dutyCycleW;
+            math::abc_t duty_cycles = svpwm(inverse_park_transform, bus_voltage);
+            duty_cycle_u_h = duty_cycles.a;
+            duty_cycle_v_h = duty_cycles.b;
+            duty_cycle_w_h = duty_cycles.c;
         } break;
         case BldcFoc::BrushlessFocPwmControlType::SINE: {
-            // Do an inverse clarke transform
-            math::abc_t inverse_clarke_transform =
-                math::inverse_clarke_transform(inverse_park_transform.alpha, inverse_park_transform.beta);
-
-            // load the results into the phase commands
-            if (math::float_equals(bus_voltage, 0.0f)) {
-                // Set the duty cycles to 0
-                duty_cycle_u_h = 0.0f;
-                duty_cycle_v_h = 0.0f;
-                duty_cycle_w_h = 0.0f;
-                break;
-            }
-            // The inverse clarke transforms produce a line-line voltage that is both positive
-            // and negative. We can provide +- bus_voltage/2 to the high side and the low side
-            // and should scale the duty cycle accordingly
-            duty_cycle_u_h = inverse_clarke_transform.a / (bus_voltage / 2.0f);
-            duty_cycle_v_h = inverse_clarke_transform.b / (bus_voltage / 2.0f);
-            duty_cycle_w_h = inverse_clarke_transform.c / (bus_voltage / 2.0f);
-
-            // Duty cycles can be between -1 and 1, and those should linearly map to 0 -> 1
-            duty_cycle_u_h = (duty_cycle_u_h + max_duty_cycle) / (max_duty_cycle * 2.0f);
-            duty_cycle_v_h = (duty_cycle_v_h + max_duty_cycle) / (max_duty_cycle * 2.0f);
-            duty_cycle_w_h = (duty_cycle_w_h + max_duty_cycle) / (max_duty_cycle * 2.0f);
+            math::abc_t duty_cycles = sine_pwm(inverse_park_transform, bus_voltage, max_duty_cycle);
+            duty_cycle_u_h = duty_cycles.a;
+            duty_cycle_v_h = duty_cycles.b;
+            duty_cycle_w_h = duty_cycles.c;
 
         } break;
         default:
@@ -86,74 +68,144 @@ FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect
     return result;
 }
 
-svpwm_duty_cycle svpwm(float Vd, float Vq, float theta_el, float Vbus) {
-    svpwm_duty_cycle result;
+math::abc_t sine_pwm(math::alpha_beta_t V_alpha_beta, float Vbus, float max_duty_cycle) {
+    math::abc_t result;
     do {
+        math::abc_t inverse_clarke_transform = math::inverse_clarke_transform(V_alpha_beta.alpha, V_alpha_beta.beta);
+
+        // load the results into the phase commands
         if (math::float_equals(Vbus, 0.0f)) {
             break;
         }
-        // First, calcuate the magnitude of the voltage vector
-        float Vmag = sqrtf(Vd * Vd + Vq * Vq);
-        // Now, normalize the Vmag with the bus voltage
-        float Vmag_norm = Vmag / Vbus;
-        // Calculate the working theta that further adds the arctan of the voltage vector
-        float svpwm_theta = theta_el + atan2f(Vq, Vd);
-        // Wrap the working theta to be between 0 and 2pi
-        math::wraparound(svpwm_theta, 0.0f, 2.0f * math::M_PI_FLOAT);
-        // Calculate the sector
-        // NOTE: This is a 1-indexed sector as 0 and 7 are reseved as null sectors
-        uint8_t sector = static_cast<uint8_t>(svpwm_theta / (math::M_PI_FLOAT / 3.0f)) + 1;
+        // The inverse clarke transforms produce a line-line voltage that is both positive
+        // and negative. We can provide +- bus_voltage/2 to the high side and the low side
+        // and should scale the duty cycle accordingly
+        const float max_phase_to_neutral_voltage = (Vbus / 2.0f);
+        result.a = inverse_clarke_transform.a / max_phase_to_neutral_voltage;
+        result.b = inverse_clarke_transform.b / max_phase_to_neutral_voltage;
+        result.c = inverse_clarke_transform.c / max_phase_to_neutral_voltage;
 
-        // Calculate the time T0,T1,T2 by using the normalized voltage magnitude
-        // See https://www.youtube.com/watch?v=QMSWUMEAejg for the derivations of the equations below
-        // Note: Tz (or total period) is always 1.0f
-        // Vref/Vdc is accounted for with our Vmag_norm calculation above
-        float T1 = math::sqrt_3 * (sector * math::M_PI_FLOAT / 3.0f - svpwm_theta) * Vmag_norm;
-        float T2 = math::sqrt_3 * (svpwm_theta - (sector - 1) * math::M_PI_FLOAT / 3.0f) * Vmag_norm;
-        float T0 = 1.0f - T1 - T2;
+        // Duty cycles can be between -1 and 1, and those should linearly map to 0 -> 1
+        result.a = (result.a + max_duty_cycle) / (max_duty_cycle * 2.0f);
+        result.b = (result.b + max_duty_cycle) / (max_duty_cycle * 2.0f);
+        result.c = (result.c + max_duty_cycle) / (max_duty_cycle * 2.0f);
 
-        // Now, calculate the duty cycles based on the sector
+    } while (false);
+    return result;
+}
+
+math::abc_t svpwm(math::alpha_beta_t V_alpha_beta, float Vbus) {
+    math::abc_t result;
+    do {
+        // If the bus voltage is 0, then we can't do anything
+        if (math::float_equals(Vbus, 0.0f)) {
+            break;
+        }
+
+        // Determine the magnitude of the voltage vector
+        const float V_modulus = sqrtf(V_alpha_beta.alpha * V_alpha_beta.alpha + V_alpha_beta.beta * V_alpha_beta.beta);
+
+        // Determine alpha, the angle of the voltage vector
+        float alpha = atan2f(V_alpha_beta.beta, V_alpha_beta.alpha);
+
+        // atan2f returns a value between -pi and pi, but we want a value between 0 and 2pi
+        if (alpha < 0.0f) {
+            alpha += 2.0f * M_PI;
+        }
+
+        // Normalize our calculations to 1.0 time period, such that our switching times can be converted directly to duty cycles
+        constexpr float T_z = 1.0f;
+
+        const uint8_t sector = svm_sector(V_alpha_beta);
+
+        uint8_t sector_n_minus_1 = sector;
+        // The sector convention 'n' wraps around to 6
+        if (sector_n_minus_1 == 1) {
+            sector_n_minus_1 = 6;
+        } else {
+            sector_n_minus_1--;
+        }
+
+        // This is the term that is common to T1 and T2 for multiplication
+        const float timing_multiplier_const = math::sqrt_3 * T_z * V_modulus / Vbus;
+        const float T1 = timing_multiplier_const * (sinf(sector / 3.0f * M_PI - alpha));
+        const float T2 = timing_multiplier_const * (sinf(alpha - (sector_n_minus_1) / 3.0f * M_PI));
+        const float T0 = T_z - T1 - T2;
+
         switch (sector) {
             case 1:
-                result.dutyCycleU = T1 + T2 + T0 / 2.0f;
-                result.dutyCycleV = T2 + T0 / 2.0f;
-                result.dutyCycleW = T0 / 2.0f;
+                result.a = T1 + T2 + T0 / 2.0f;
+                result.b = T2 + T0 / 2.0f;
+                result.c = T0 / 2.0f;
                 break;
             case 2:
-                result.dutyCycleU = T1 + T0 / 2.0f;
-                result.dutyCycleV = T1 + T2 + T0 / 2.0f;
-                result.dutyCycleW = T0 / 2.0f;
+                result.a = T1 + T0 / 2.0f;
+                result.b = T1 + T2 + T0 / 2.0f;
+                result.c = T0 / 2.0f;
                 break;
             case 3:
-                result.dutyCycleU = T0 / 2.0f;
-                result.dutyCycleV = T1 + T2 + T0 / 2.0f;
-                result.dutyCycleW = T2 + T0 / 2.0f;
+                result.a = T0 / 2.0f;
+                result.b = T1 + T2 + T0 / 2.0f;
+                result.c = T2 + T0 / 2.0f;
                 break;
             case 4:
-                result.dutyCycleU = T0 / 2.0f;
-                result.dutyCycleV = T1 + T0 / 2.0f;
-                result.dutyCycleW = T1 + T2 + T0 / 2.0f;
+                result.a = T0 / 2.0f;
+                result.b = T1 + T0 / 2.0f;
+                result.c = T1 + T2 + T0 / 2.0f;
                 break;
             case 5:
-                result.dutyCycleU = T2 + T0 / 2.0f;
-                result.dutyCycleV = T0 / 2.0f;
-                result.dutyCycleW = T1 + T2 + T0 / 2.0f;
+                result.a = T2 + T0 / 2.0f;
+                result.b = T0 / 2.0f;
+                result.c = T1 + T2 + T0 / 2.0f;
                 break;
             case 6:
-                result.dutyCycleU = T1 + T2 + T0 / 2.0f;
-                result.dutyCycleV = T0 / 2.0f;
-                result.dutyCycleW = T1 + T0 / 2.0f;
+                result.a = T1 + T2 + T0 / 2.0f;
+                result.b = T0 / 2.0f;
+                result.c = T1 + T0 / 2.0f;
                 break;
+
             default:
-                // wrong parta' down buddy (as an old boss would say)
-                result.dutyCycleU = 0.0f;
-                result.dutyCycleV = 0.0f;
-                result.dutyCycleW = 0.0f;
+                // something went wrong...
+                result = math::abc_t();
                 break;
         }
-    } while (0);
+
+    } while (false);
 
     return result;
+}
+
+uint8_t svm_sector(math::alpha_beta_t V_alpha_beta) {
+    uint8_t sector = 0;
+    // Get the angle of the voltage vector
+    const float theta = atan2f(V_alpha_beta.beta, V_alpha_beta.alpha);
+    do {
+        if (theta >= 0.0f && theta < M_PI / 3.0f) {
+            sector = 1;
+            break;
+        }
+        if (theta >= M_PI / 3.0f && theta < 2.0f * M_PI / 3.0f) {
+            sector = 2;
+            break;
+        }
+        if (theta >= 2.0f * M_PI / 3.0f && theta < M_PI) {
+            sector = 3;
+            break;
+        }
+        if (theta >= -M_PI && theta < -2.0f * M_PI / 3.0f) {
+            sector = 4;
+            break;
+        }
+        if (theta >= -2.0f * M_PI / 3.0f && theta < -M_PI / 3.0f) {
+            sector = 5;
+            break;
+        }
+        if (theta >= -M_PI / 3.0f && theta < 0.0f) {
+            sector = 6;
+            break;
+        }
+    } while (false);
+    return sector;
 }
 
 math::direct_quad_t clamp_Vdq(math::direct_quad_t V_dq, float V_bus) {

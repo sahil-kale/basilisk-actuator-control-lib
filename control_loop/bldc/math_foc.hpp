@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "math_util.hpp"
+
 namespace math {
 
 /**
@@ -14,6 +16,18 @@ class alpha_beta_t {
     float alpha = 0.0f;
     /** Beta value of the transform */
     float beta = 0.0f;
+
+    /**
+     * @brief Equality operator for alpha_beta_t
+     * @param rhs The right hand side of the equality
+     * @return bool True if the values are equal, false otherwise
+     */
+    bool operator==(const alpha_beta_t& rhs) {
+        const bool alpha_equal = math::float_equals(alpha, rhs.alpha);
+        const bool beta_equal = math::float_equals(beta, rhs.beta);
+
+        return alpha_equal && beta_equal;
+    }
 };
 
 /**
@@ -25,6 +39,18 @@ class direct_quad_t {
     float direct = 0.0f;
     /** Quadrature transform */
     float quadrature = 0.0f;
+
+    /**
+     * @brief Equality operator for direct_quad_t
+     * @param rhs The right hand side of the equality
+     * @return bool True if the values are equal, false otherwise
+     */
+    bool operator==(const direct_quad_t& rhs) {
+        const bool direct_equal = math::float_equals(direct, rhs.direct);
+        const bool quadrature_equal = math::float_equals(quadrature, rhs.quadrature);
+
+        return direct_equal && quadrature_equal;
+    }
 };
 
 /**
@@ -38,6 +64,19 @@ class abc_t {
     float b = 0.0f;
     /** C phase value */
     float c = 0.0f;
+
+    /**
+     * @brief Equality operator for abc_t
+     * @param rhs The right hand side of the equality
+     * @return bool True if the values are equal, false otherwise
+     */
+    bool operator==(const abc_t& rhs) {
+        const bool a_equal = math::float_equals(a, rhs.a);
+        const bool b_equal = math::float_equals(b, rhs.b);
+        const bool c_equal = math::float_equals(c, rhs.c);
+
+        return a_equal && b_equal && c_equal;
+    }
 };
 
 /**
