@@ -1,5 +1,6 @@
 #ifndef BRUSHED_CONTROL_LOOP_HPP
 #define BRUSHED_CONTROL_LOOP_HPP
+#if 0
 #include <stdint.h>
 
 #include <array>
@@ -245,5 +246,7 @@ class BrushedControlLoop : public ControlLoop {
     /*! \endcond */
 };
 }  // namespace control_loop
+
+#endif
 
 #endif

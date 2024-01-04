@@ -1,5 +1,7 @@
 #ifndef STEPPER_CONTROL_LOOP_HPP
 #define STEPPER_CONTROL_LOOP_HPP
+
+#if 0
 #include <utility>
 
 #include "brushed_control_loop.hpp"
@@ -188,5 +190,7 @@ class StepperControlLoop : public ControlLoop {
 };
 
 }  // namespace control_loop
+
+#endif
 
 #endif
