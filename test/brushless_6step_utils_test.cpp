@@ -1,4 +1,4 @@
-#include "brushless_6step_commutation.hpp"
+#include "6step_util.hpp"
 #include "gtest/gtest.h"
 #include "math_util.hpp"
 
@@ -14,7 +14,7 @@ void test_commutation_step(const commutation_step_t& commutation_step, uint8_t e
 }
 
 // Test the angle to commutation step function
-TEST(Bldc6StepCommutationTest, test_angle_to_commutation) {
+TEST(Bldc6StepUtils, test_angle_to_commutation) {
     // Get the commutation step from the angle 0 radians
     auto commutation_step = determine_commutation_step_from_theta(0.0f);
     test_commutation_step(commutation_step, 0);
@@ -33,13 +33,20 @@ TEST(Bldc6StepCommutationTest, test_angle_to_commutation) {
 }
 
 // Test the generate commutation duty cycle function with the commutation step and commutation signal lookup
-TEST(Bldc6StepCommutationTest, test_6_step_duty_cycle) {
+TEST(Bldc6StepUtils, test_6_step_duty_cycle) {
     // Phase command struct
     hwbridge::Bridge3Phase::phase_command_t phase_command[3];
+    const float speed = 0.5f;
+    // Because we contract the phase command as a complementary switching pair, '0.5' is actually 0V phase-to-neutral
+    // As a result, we map the motor speed to the duty cycle as follows:
+    // 0.0f -> 0.5f
+    // -1.0f -> 0.0f
+    // 1.0f -> 1.0f
+    const float expected_high_side_duty_cycle = (speed + 1.0f) / 2.0f;
 
     for (uint8_t i = 0; i < num_commutation_steps; i++) {
         // Check that the phase command is correct for a motor speed of 1
-        determine_inverter_duty_cycles_trap(phase_command, commutation_steps[i], 1.0f);
+        determine_inverter_duty_cycles_trap(phase_command, commutation_steps[i], speed);
         // Grab the expected commutation signal
         auto expected_commutation_signal = commutation_steps[i];
         // Check the phase command for each phase
@@ -47,7 +54,7 @@ TEST(Bldc6StepCommutationTest, test_6_step_duty_cycle) {
             // Check the high signal duty cycle
             if (expected_commutation_signal.signals[j] == CommutationSignal::HIGH) {
                 // Expect the duty cycle to be 1
-                EXPECT_FLOAT_EQ(phase_command[j].duty_cycle_high_side, 1.0f);
+                EXPECT_FLOAT_EQ(phase_command[j].duty_cycle_high_side, expected_high_side_duty_cycle);
                 // Expect the low side to be inverted
                 EXPECT_FLOAT_EQ(phase_command[j].invert_low_side, true);
             }
@@ -71,5 +78,6 @@ TEST(Bldc6StepCommutationTest, test_6_step_duty_cycle) {
         }
     }
 }
+
 }  // namespace Bldc6Step
 }  // namespace control_loop

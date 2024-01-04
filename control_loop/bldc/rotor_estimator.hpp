@@ -1,7 +1,7 @@
 #ifndef ROTOR_ESTIMATOR_HPP
 #define ROTOR_ESTIMATOR_HPP
+#include "6step_util.hpp"
 #include "bridge_3phase.hpp"
-#include "brushless_6step_commutation.hpp"
 #include "hal_clock.hpp"
 #include "math_foc.hpp"
 

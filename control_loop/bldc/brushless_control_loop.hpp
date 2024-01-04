@@ -6,8 +6,8 @@
 #include <array>
 
 #include "bridge_3phase.hpp"
-#include "brushless_foc.hpp"
 #include "control_loop.hpp"
+#include "foc_util.hpp"
 #include "hal_clock.hpp"
 #include "math_foc.hpp"
 #include "pid.hpp"

@@ -1,4 +1,4 @@
-#include "brushless_6step_commutation.hpp"
+#include "6step_util.hpp"
 
 #include <cmath>
 
@@ -41,9 +41,20 @@ commutation_step_t determine_commutation_step_from_theta(float electrical_theta)
 
 void determine_inverter_duty_cycles_trap(hwbridge::Bridge3Phase::phase_command_t phase_command[3],
                                          Bldc6Step::commutation_step_t current_commutation_step, float motor_speed) {
+    // Clamp the motor speed to -1.0f to 1.0f after first abs'ing it
+    float abs_speed = fabs(motor_speed);
+    math::clamp(abs_speed, 0.0f, 1.0f);
     for (int i = 0; i < 3; i++) {
         if (current_commutation_step.signals[i] == Bldc6Step::CommutationSignal::HIGH) {
-            phase_command[i].duty_cycle_high_side = fabs(motor_speed);
+            // Because we contract the phase command as a complementary switching pair, '0.5' is actually 0V phase-to-neutral
+            // And the motor speed mapping can be thought of as commanding 'max' phase-to-neutral voltage
+            // As a result, we map the motor speed to the duty cycle as follows:
+            // | motor_speed | duty_cycle |
+            // | 0.0f        | 0.5f       |
+            // | 1.0f        | 1.0f       |
+            const float duty_cycle = (abs_speed + 1.0f) / 2.0f;
+
+            phase_command[i].duty_cycle_high_side = duty_cycle;
             phase_command[i].invert_low_side = true;
         } else if (current_commutation_step.signals[i] == Bldc6Step::CommutationSignal::LOW) {
             phase_command[i].duty_cycle_high_side = 0.0f;

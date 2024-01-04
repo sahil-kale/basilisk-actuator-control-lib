@@ -1,4 +1,4 @@
-#include "brushless_foc.hpp"
+#include "foc_util.hpp"
 
 #include <cmath>
 

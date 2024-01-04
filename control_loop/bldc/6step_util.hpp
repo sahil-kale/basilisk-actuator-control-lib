@@ -1,5 +1,5 @@
-#ifndef BRUSHLESS_6STEP_COMMUTATION_HPP
-#define BRUSHLESS_6STEP_COMMUTATION_HPP
+#ifndef SIX_STEP_UTIL_HPP
+#define SIX_STEP_UTIL_HPP
 
 #include "bridge_3phase.hpp"
 
@@ -65,4 +65,4 @@ void determine_inverter_duty_cycles_trap(hwbridge::Bridge3Phase::phase_command_t
 
 }  // namespace control_loop
 
-#endif  // BRUSHLESS_6STEP_COMMUTATION_HPP
+#endif  // 6STEP_UTIL_HPP
