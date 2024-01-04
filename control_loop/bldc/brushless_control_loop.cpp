@@ -56,63 +56,10 @@ BrushlessControlLoop::BrushlessControlLoopState BrushlessControlLoop::get_desire
     return desired_state;
 }
 
-void BrushlessControlLoop::BrushlessControlLoopStatus::reset() {
-    // Reset the status
-    status = ControlLoopStatus::ControlLoopBaseStatus::OK;
-
-    for (auto& error : errors) {
-        error = false;
-    }
-
-    for (auto& warning : warnings) {
-        warning = false;
-    }
-}
-
-void BrushlessControlLoop::BrushlessControlLoopStatus::compute_base_status() {
-    status = ControlLoopStatus::ControlLoopBaseStatus::OK;
-
-    // If there's a warning, then set the status to warning
-    for (auto warning : warnings) {
-        if (warning != false) {
-            status = ControlLoopStatus::ControlLoopBaseStatus::WARNING;
-            break;
-        }
-    }
-
-    // If there's an error, then set the status to error
-    for (auto error : errors) {
-        if (error != false) {
-            status = ControlLoopStatus::ControlLoopBaseStatus::ERROR;
-            break;
-        }
-    }
-}
-
-void BrushlessControlLoop::BrushlessControlLoopStatus::set_error(
-    const BrushlessControlLoopStatus::BrushlessControlLoopError& error, bool value) {
-    bool& error_ref = errors[static_cast<int>(error)];
-    // This is done to avoid the cost of a branch
-    if (error_ref != value) {
-        error_ref = value;
-        compute_base_status();
-    }
-}
-
-void BrushlessControlLoop::BrushlessControlLoopStatus::set_warning(
-    const BrushlessControlLoopStatus::BrushlessControlLoopWarning& warning, bool value) {
-    bool& warning_ref = warnings[static_cast<int>(warning)];
-    // This is done to avoid the cost of a branch
-    if (warning_ref != value) {
-        warning_ref = value;
-        compute_base_status();
-    }
-}
-
-ControlLoop::ControlLoopStatus BrushlessControlLoop::run_current_control(float i_d_reference, float i_q_reference) {
+ControlLoop::ControlLoopBaseStatus BrushlessControlLoop::run_current_control(float i_d_reference, float i_q_reference) {
     if (params_->commutation_type != BrushlessControlLoopCommutationType::FOC) {
         // Set a warning in the status
-        status_.set_error(BrushlessControlLoopStatus::BrushlessControlLoopError::CURRENT_CONTROL_NOT_SUPPORTED, true);
+        status_.set_error(BrushlessControlLoopError::CURRENT_CONTROL_NOT_SUPPORTED, true);
     } else {
         // Update the id reference
         i_d_reference_ = i_d_reference;
@@ -120,16 +67,16 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run_current_control(float i
         IGNORE(run(i_q_reference / params_->foc_params.speed_to_iq_gain));
     }
 
-    return status_;
+    return status_.status;
 }
 
-ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
+ControlLoop::ControlLoopBaseStatus BrushlessControlLoop::run(float speed) {
     // Get the current time
     utime_t current_time_us = clock_.get_time_us();
     do {
         if (params_ == nullptr) {
             // Set an error in the status
-            status_.set_error(BrushlessControlLoopStatus::BrushlessControlLoopError::PARAMS_NOT_SET, true);
+            status_.set_error(BrushlessControlLoopError::PARAMS_NOT_SET, true);
             break;
         }
 
@@ -181,20 +128,20 @@ ControlLoop::ControlLoopStatus BrushlessControlLoop::run(float speed) {
         app_hal_status_E status = this->bridge_.set_phase(phase_commands[0], phase_commands[1], phase_commands[2]);
 
         // Set an error in the status
-        status_.set_error(BrushlessControlLoopStatus::BrushlessControlLoopError::PHASE_COMMAND_FAILURE,
+        status_.set_error(BrushlessControlLoopError::PHASE_COMMAND_FAILURE,
                           static_cast<bool>(status != app_hal_status_E::APP_HAL_OK));
 
     } while (false);
     last_run_time_ = current_time_us;
 
     // If the control loop has an error, then we should issue the phase commands to stop the motor
-    if (status_.status == ControlLoopStatus::ControlLoopBaseStatus::ERROR) {
+    if (status_.status == ControlLoop::ControlLoopBaseStatus::ERROR) {
         // Set the duty cycles to 0
         hwbridge::Bridge3Phase::phase_command_t phase_commands[3] = {0, false};
         this->bridge_.set_phase(phase_commands[0], phase_commands[1], phase_commands[2]);
     }
 
-    return status_;
+    return status_.status;
 }
 
 void BrushlessControlLoop::update_rotor_position_estimator(
@@ -222,7 +169,7 @@ void BrushlessControlLoop::update_rotor_position_estimator(
 
         if (status != app_hal_status_E::APP_HAL_OK) {
             // Set an error in the status
-            status_.set_warning(BrushlessControlLoopStatus::BrushlessControlLoopWarning::ROTOR_ESTIMATOR_UPDATE_FAILURE, true);
+            status_.set_warning(BrushlessControlLoopWarning::ROTOR_ESTIMATOR_UPDATE_FAILURE, true);
             break;
         }
 
@@ -233,13 +180,12 @@ void BrushlessControlLoop::update_rotor_position_estimator(
             status = secondary_rotor_position_estimator_->update(estimator_inputs);
             if (status != app_hal_status_E::APP_HAL_OK) {
                 // Set an error in the status
-                status_.set_warning(BrushlessControlLoopStatus::BrushlessControlLoopWarning::ROTOR_ESTIMATOR_UPDATE_FAILURE,
-                                    true);
+                status_.set_warning(BrushlessControlLoopWarning::ROTOR_ESTIMATOR_UPDATE_FAILURE, true);
                 break;
             }
         }
 
-        status_.set_warning(BrushlessControlLoopStatus::BrushlessControlLoopWarning::ROTOR_ESTIMATOR_UPDATE_FAILURE, false);
+        status_.set_warning(BrushlessControlLoopWarning::ROTOR_ESTIMATOR_UPDATE_FAILURE, false);
     } while (false);
 }
 
@@ -312,9 +258,9 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
         // Get the bus voltage
         float bus_voltage = 0.0f;
         app_hal_status_E status = bridge_.read_bus_voltage(bus_voltage);
-        status_.set_error(BrushlessControlLoopStatus::BrushlessControlLoopError::BUS_VOLTAGE_READ_FAILURE,
+        status_.set_error(BrushlessControlLoopError::BUS_VOLTAGE_READ_FAILURE,
                           static_cast<bool>(status != app_hal_status_E::APP_HAL_OK));
-        if (status_.has_error(BrushlessControlLoopStatus::BrushlessControlLoopError::BUS_VOLTAGE_READ_FAILURE)) {
+        if (status_.has_error(BrushlessControlLoopError::BUS_VOLTAGE_READ_FAILURE)) {
             break;
         }
 
@@ -339,19 +285,16 @@ void BrushlessControlLoop::run_foc(float speed, utime_t current_time_us, utime_t
                 // If the primary rotor position estimator is valid, then use it
                 if (primary_rotor_position_estimator_.is_estimation_valid()) {
                     primary_rotor_position_estimator_.get_rotor_position(rotor_position_);
-                    status_.set_warning(
-                        BrushlessControlLoopStatus::BrushlessControlLoopWarning::PRIMARY_ROTOR_ESTIMATOR_NOT_VALID, false);
+                    status_.set_warning(BrushlessControlLoopWarning::PRIMARY_ROTOR_ESTIMATOR_NOT_VALID, false);
                 }
                 // Otherwise, if the secondary rotor position estimator is valid, then use it
                 else if ((secondary_rotor_position_estimator_ != nullptr) &&
                          (secondary_rotor_position_estimator_->is_estimation_valid())) {
                     secondary_rotor_position_estimator_->get_rotor_position(rotor_position_);
-                    status_.set_warning(
-                        BrushlessControlLoopStatus::BrushlessControlLoopWarning::PRIMARY_ROTOR_ESTIMATOR_NOT_VALID, true);
+                    status_.set_warning(BrushlessControlLoopWarning::PRIMARY_ROTOR_ESTIMATOR_NOT_VALID, true);
                 } else {
                     // Set an error in the status
-                    status_.set_error(BrushlessControlLoopStatus::BrushlessControlLoopError::NO_VALID_ROTOR_POSITION_ESTIMATOR,
-                                      true);
+                    status_.set_error(BrushlessControlLoopError::NO_VALID_ROTOR_POSITION_ESTIMATOR, true);
                     break;
                 }
             } break;
