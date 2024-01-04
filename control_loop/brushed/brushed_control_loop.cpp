@@ -1,5 +1,5 @@
 #include "brushed_control_loop.hpp"
-
+#if 0
 #include "control_loop.hpp"
 #include "math.h"
 #include "math_util.hpp"
@@ -238,3 +238,4 @@ ControlLoop::ControlLoopStatus BrushedControlLoop::run_constant_current(float cu
 }
 
 }  // namespace control_loop
+#endif

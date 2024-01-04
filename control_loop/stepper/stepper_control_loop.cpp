@@ -1,5 +1,6 @@
 #include "stepper_control_loop.hpp"
 
+#if 0
 #include "math.h"
 #include "math_util.hpp"
 #include "util.hpp"
@@ -125,3 +126,5 @@ std::pair<float, float> StepperControlLoop::determine_current_setpoints(float de
 }
 
 }  // namespace control_loop
+
+#endif
