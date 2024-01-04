@@ -123,114 +123,41 @@ class BrushlessControlLoop : public ControlLoop {
     };
 
     /**
-     * @brief The status of the control loop
+     * @brief The error conditions for the brushless control loop
      */
-    class BrushlessControlLoopStatus : public ControlLoopStatus {
-       public:
-        /**
-         * @brief The error conditions for the brushless control loop
-         */
-        enum class BrushlessControlLoopError : uint8_t {
-            NO_ERROR,
-            /// The control loop parameters are not set (the pointer is null)
-            PARAMS_NOT_SET,
-            /// The rotor estimation failed
-            ROTOR_ESTIMATION_FAILED,
-            /// There is no valid rotor position estimator (primary or secondary)
-            NO_VALID_ROTOR_POSITION_ESTIMATOR,
-            /// The current control mode is not supported as the control loop type is not FOC
-            CURRENT_CONTROL_NOT_SUPPORTED,
-            /// The bus voltage read failed while running the control loop with FOC
-            BUS_VOLTAGE_READ_FAILURE,
-            /// The phase duty cycle set command failed
-            PHASE_COMMAND_FAILURE,
-            /// The total number of errors
-            TOTAL_ERROR_COUNT,
-        };
-        /**
-         * @brief The warning conditions for the brushless control loop
-         */
-        enum class BrushlessControlLoopWarning : uint8_t {
-            /// No warning
-            NO_WARNING,
-            /// The primary rotor estimator is not valid
-            PRIMARY_ROTOR_ESTIMATOR_NOT_VALID,
-            /// The rotor estimator update failed
-            ROTOR_ESTIMATOR_UPDATE_FAILURE,
-            /// The total number of warnings
-            TOTAL_WARNING_COUNT,
-        };
-
-        BrushlessControlLoopStatus() : ControlLoopStatus() {}
-
-        /** The number of warnings for a brushless control loop */
-        static constexpr uint8_t kNumErrors = static_cast<uint8_t>(BrushlessControlLoopError::TOTAL_ERROR_COUNT);
-        /** The number of errors for a brushless control loop */
-        static constexpr uint8_t kNumWarnings = static_cast<uint8_t>(BrushlessControlLoopWarning::TOTAL_WARNING_COUNT);
-
-        // Make an array of the error and warning strings
-        // True means the error is set
-
-        /**
-         * @brief error array
-         * @note True means the error is set
-         */
-        std::array<bool, kNumErrors> errors = {false};
-
-        /**
-         * @brief warning array
-         * @note True means the warning is set
-         */
-        std::array<bool, kNumWarnings> warnings = {false};
-
-        /**
-         * @brief reset the status
-         * @return void
-         */
-        void reset();
-
-        /**
-         * @brief Set the error
-         * @param error The error to set
-         * @param state The state of the error
-         * @return void
-         */
-        void set_error(const BrushlessControlLoopError& error, bool state);
-
-        /**
-         * @brief Check if the error is set
-         * @param error The error to check
-         * @return True if the error is set
-         */
-        bool has_error(const BrushlessControlLoopError& error) const { return errors[static_cast<uint8_t>(error)]; }
-
-        /**
-         * @brief Set the warning
-         * @param warning The warning to set
-         * @param state The state of the warning
-         * @return void
-         */
-        void set_warning(const BrushlessControlLoopWarning& warning, bool state);
-
-        /**
-         * @brief Check if the warning is set
-         * @param warning The warning to check
-         * @return True if the warning is set
-         */
-        bool has_warning(const BrushlessControlLoopWarning& warning) const { return warnings[static_cast<uint8_t>(warning)]; }
-
-        /**
-         * @brief compute the base status returned by the class
-         * @return void
-         */
-        void compute_base_status();
+    enum class BrushlessControlLoopError : uint8_t {
+        /// The control loop parameters are not set (the pointer is null)
+        PARAMS_NOT_SET,
+        /// The rotor estimation failed
+        ROTOR_ESTIMATION_FAILED,
+        /// There is no valid rotor position estimator (primary or secondary)
+        NO_VALID_ROTOR_POSITION_ESTIMATOR,
+        /// The current control mode is not supported as the control loop type is not FOC
+        CURRENT_CONTROL_NOT_SUPPORTED,
+        /// The bus voltage read failed while running the control loop with FOC
+        BUS_VOLTAGE_READ_FAILURE,
+        /// The phase duty cycle set command failed
+        PHASE_COMMAND_FAILURE,
+        /// The total number of errors
+        TOTAL_ERROR_COUNT,
+    };
+    /**
+     * @brief The warning conditions for the brushless control loop
+     */
+    enum class BrushlessControlLoopWarning : uint8_t {
+        /// The primary rotor estimator is not valid
+        PRIMARY_ROTOR_ESTIMATOR_NOT_VALID,
+        /// The rotor estimator update failed
+        ROTOR_ESTIMATOR_UPDATE_FAILURE,
+        /// The total number of warnings
+        TOTAL_WARNING_COUNT,
     };
 
     /**
      * @brief Get the status of the control loop
      * @return The status of the control loop
      */
-    const BrushlessControlLoopStatus& get_status() const { return status_; }
+    const ControlLoopStatus<BrushlessControlLoopError, BrushlessControlLoopWarning>& get_status() const { return status_; }
 
     /**
      * @brief Construct a new BrushlessControlLoop object
@@ -266,7 +193,7 @@ class BrushlessControlLoop : public ControlLoop {
      * current information becomes available, which is at the centre of the inverter PWM cycle. For Trapezodial PWM, this point is
      * at the start of the PWM cycle. The frequency is usually around 15kHz, the same as the switching frequency of the inverter.
      */
-    ControlLoopStatus run(float speed) override;
+    ControlLoop::ControlLoopBaseStatus run(float speed) override;
 
     /**
      * @brief Run the control loop in current control mode
@@ -278,7 +205,7 @@ class BrushlessControlLoop : public ControlLoop {
      * - this is usually around 15kHz and will be in the middle of the PWM cycle (phase is dependent on HW current sensing
      * implementation)
      */
-    ControlLoopStatus run_current_control(float i_d_reference, float i_q_reference);
+    ControlLoop::ControlLoopBaseStatus run_current_control(float i_d_reference, float i_q_reference);
 
     /**
      * @brief Get the FOC debug variables of the most recent control loop iteration
@@ -298,7 +225,7 @@ class BrushlessControlLoop : public ControlLoop {
     bldc_rotor_estimator::ElectricalRotorPosEstimator* secondary_rotor_position_estimator_;
     // Control loop parameters
     BrushlessControlLoopParams* params_ = nullptr;
-    BrushlessControlLoopStatus status_;
+    ControlLoopStatus<BrushlessControlLoopError, BrushlessControlLoopWarning> status_;
 
     // Control loop state variables
     utime_t time_at_start_ = 0;
