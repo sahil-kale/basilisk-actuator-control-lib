@@ -2,6 +2,7 @@
 #define BRIDGE_3PHASE_HPP
 
 #include "hal_common.hpp"
+#include "math_util.hpp"
 
 namespace hwbridge {
 
@@ -33,6 +34,17 @@ class Bridge3Phase {
          * in allowing an abstracted bridge to allow a non-inverted output to be commanded to a duty cycle that is not 0.0f
          */
         bool invert_low_side;
+
+        /**
+         * @brief Equal operator
+         * @param rhs The right hand side of the operator
+         * @return bool True if the duty cycles and invert low side flags are equal
+         */
+        bool operator==(const phase_command_t& rhs) const {
+            const bool duty_cycle_high_side = math::float_equals(this->duty_cycle_high_side, rhs.duty_cycle_high_side);
+            const bool low_side_inversion_signal_equal = this->invert_low_side == rhs.invert_low_side;
+            return duty_cycle_high_side && low_side_inversion_signal_equal;
+        }
     };
 
     /**
@@ -54,6 +66,18 @@ class Bridge3Phase {
          * @brief Phase W voltage
          */
         float w = 0.0f;
+
+        /**
+         * @brief Equal operator
+         * @param rhs The right hand side of the operator
+         * @return bool True if the phase voltages are equal
+         */
+        bool operator==(const phase_voltage_t& rhs) const {
+            const bool u_equal = math::float_equals(this->u, rhs.u);
+            const bool v_equal = math::float_equals(this->v, rhs.v);
+            const bool w_equal = math::float_equals(this->w, rhs.w);
+            return u_equal && v_equal && w_equal;
+        }
     };
 
     /**

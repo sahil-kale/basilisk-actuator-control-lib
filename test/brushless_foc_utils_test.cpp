@@ -1,5 +1,4 @@
-#include "brushless_foc.hpp"
-
+#include "foc_util.hpp"
 #include "gtest/gtest.h"
 #include "math.h"
 #include "math_util.hpp"
@@ -9,7 +8,7 @@ using namespace ::testing;
 namespace control_loop {
 namespace BldcFoc {
 
-TEST(BldcFoc, test_theta_valpha_beta) {
+TEST(BldcFocUtils, test_theta_valpha_beta) {
     // Get the alpha and beta components of the voltage vector
     float Vdirect = 1.0f;
     float Vquadrature = 0.0f;
@@ -37,7 +36,7 @@ TEST(BldcFoc, test_theta_valpha_beta) {
 }
 
 // Test the bus voltage is 0 with sine pwm
-TEST(BldcFoc, test_theta_valpha_beta_bus_voltage_0_sine) {
+TEST(BldcFocUtils, test_theta_valpha_beta_bus_voltage_0_sine) {
     // Get the alpha and beta components of the voltage vector
     float Vdirect = 1.0f;
     float Vquadrature = 0.0f;
@@ -70,7 +69,7 @@ TEST(BldcFoc, test_theta_valpha_beta_bus_voltage_0_sine) {
 }
 
 // Test the bus voltage is 0 with svpwm
-TEST(BldcFoc, test_theta_valpha_beta_bus_voltage_0_svpwm) {
+TEST(BldcFocUtils, test_theta_valpha_beta_bus_voltage_0_svpwm) {
     // Get the alpha and beta components of the voltage vector
     float Vdirect = 1.0f;
     float Vquadrature = 0.0f;
@@ -103,7 +102,7 @@ TEST(BldcFoc, test_theta_valpha_beta_bus_voltage_0_svpwm) {
 }
 
 // Test the SVM sectors
-TEST(BldcFoc, test_svm_sectors) {
+TEST(BldcFocUtils, test_svm_sectors) {
     math::alpha_beta_t V_alpha_beta;
     // Test sector 1 (theta = 0)
     V_alpha_beta.alpha = 1.0f;
@@ -137,7 +136,7 @@ TEST(BldcFoc, test_svm_sectors) {
 }
 
 // Test the sine pwm generation
-TEST(BldcFoc, test_sine_pwm) {
+TEST(BldcFocUtils, test_sine_pwm) {
     math::abc_t duty_cycles;
     math::alpha_beta_t V_alpha_beta;
     const float Vbus = 2.0f;  // This allows us to make the magnitude of V_alpha_beta = 1.0f

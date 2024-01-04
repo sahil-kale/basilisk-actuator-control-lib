@@ -1,8 +1,8 @@
 #include "brushless_control_loop.hpp"
 
+#include "6step_util.hpp"
 #include "bridge_3phase.hpp"
-#include "brushless_6step_commutation.hpp"
-#include "brushless_foc.hpp"
+#include "foc_util.hpp"
 #include "math.h"
 #include "math_foc.hpp"
 #include "math_util.hpp"

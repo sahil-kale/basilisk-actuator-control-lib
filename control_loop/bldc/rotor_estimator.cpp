@@ -1,6 +1,6 @@
 #include "rotor_estimator.hpp"
 
-#include "brushless_6step_commutation.hpp"
+#include "6step_util.hpp"
 #include "math.h"
 #include "math_foc.hpp"
 #include "math_util.hpp"
