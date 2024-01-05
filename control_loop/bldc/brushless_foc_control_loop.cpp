@@ -239,6 +239,10 @@ void BrushlessFOCControlLoop::run_foc(BrushlessFOCControlLoop::FOCInputs foc_inp
                 // Advance the angle
                 foc_frame_vars_.commanded_rotor_theta = BldcFoc::advance_open_loop_angle(
                     foc_frame_vars_.commanded_rotor_theta, params_->open_loop_full_speed_theta_velocity, foc_inputs.dt);
+                // Make the Vq equal to the param'ed value for drive voltage
+                foc_frame_vars_.V_direct_quad.quadrature = params_->open_loop_quadrature_voltage;
+                // Make the Vd equal to 0
+                foc_frame_vars_.V_direct_quad.direct = 0.0f;
             } break;
             case BrushlessFOCControlLoopType::CLOSED_LOOP: {
                 // Run the PI controller
@@ -260,9 +264,9 @@ void BrushlessFOCControlLoop::run_foc(BrushlessFOCControlLoop::FOCInputs foc_inp
         }
 
         // Determine the appropriate duty cycles for the inverter
-        BldcFoc::FocDutyCycleResult result =
-            BldcFoc::determine_inverter_duty_cycles_foc(foc_inputs.theta_e, foc_frame_vars_.V_direct_quad, foc_inputs.bus_voltage,
-                                                        params_->foc_params.pwm_control_type, phase_commands);
+        BldcFoc::FocDutyCycleResult result = BldcFoc::determine_inverter_duty_cycles_foc(
+            foc_frame_vars_.commanded_rotor_theta, foc_frame_vars_.V_direct_quad, foc_inputs.bus_voltage,
+            params_->foc_params.pwm_control_type, phase_commands);
 
         // Set the debug vars
         foc_frame_vars_.foc_inputs = foc_inputs;
