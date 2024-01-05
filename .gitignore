@@ -38,5 +38,4 @@ cppcheckbuild/
 bazel-*
 
 .vscode/
-
-docs_html/
+docs
