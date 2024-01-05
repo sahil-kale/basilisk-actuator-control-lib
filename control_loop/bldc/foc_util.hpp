@@ -41,6 +41,15 @@ class FocDutyCycleResult {
 };
 
 /**
+ * @brief Advance the given angle by the given omega for the given dt
+ * @param theta The angle to advance (radians)
+ * @param omega The omega to advance the angle by (radians/second)
+ * @param dt The dt to advance the angle by (seconds)
+ * @return float The advanced angle (radians) [0, 2pi)
+ */
+float advance_open_loop_angle(float theta, float omega, float dt);
+
+/**
  * @brief Clamp the given DQ voltage vector to the given bus voltage
  * @param V_dq The voltage vector to clamp
  * @param V_bus The bus voltage
@@ -54,24 +63,19 @@ math::direct_quad_t clamp_Vdq(math::direct_quad_t V_dq, float V_bus);
  * @brief Determine the duty cycles for the inverter using the FOC algorithm by doing inverse park and vector control algo
  * (inverse clarke or foc)
  * @param theta The rotor angle (radians)
- * @param Vdirect The alpha component of the voltage vector (phase to neutral)
- * @param Vquardature The beta component of the voltage vector (phase to neutral)
+ * @param V_direct_quad The direct/quadrature voltage vector to convert to duty cycles (phase-to-neutral voltages)
  * @param bus_voltage The bus voltage
  * @param pwm_control_type The type of pwm control to use
- * @param phase_command_u The duty cycle for phase u
- * @param phase_command_v The duty cycle for phase v
- * @param phase_command_w The duty cycle for phase w
+ * @param phase_commands The phase commands to set the duty cycles for (array of 3, one for each phase, u-v-w)
  * @note The return duty cycles are between 0.0f and 1.0f, where 0.5 is 50% duty cycle and represents 0V (assumes complementary
  * pwm)
  * @note The max duty cycle is only used by the sine pwm control type. SVPWM will always use map from 0.0f to 1.0f
  *
- * @return The
+ * @return The result of the FOC duty cycle calculation
  */
-FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect, float Vquadrature, float bus_voltage,
+FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, math::direct_quad_t V_direct_quad, float bus_voltage,
                                                       BrushlessFocPwmControlType pwm_control_type,
-                                                      hwbridge::Bridge3Phase::phase_command_t& phase_command_u,
-                                                      hwbridge::Bridge3Phase::phase_command_t& phase_command_v,
-                                                      hwbridge::Bridge3Phase::phase_command_t& phase_command_w);
+                                                      hwbridge::Bridge3Phase::phase_command_t phase_commands[3]);
 
 /**
  * @brief Perform a sine pulse width modulation on the given alpha/beta voltage values.
@@ -97,43 +101,6 @@ math::abc_t svpwm(math::alpha_beta_t V_alpha_beta, float Vbus);
  * @return uint8_t The sector of the voltage vector
  */
 uint8_t svm_sector(math::alpha_beta_t V_alpha_beta);
-
-/**
- * @brief FOC Computation 'Frame' that can be used for debugging
- */
-class FOCDebugVars {
-   public:
-    // Inputs
-    /**
-     * @brief The timestamp of the FOC calculation. 0 is invalid
-     */
-    utime_t timestamp = 0;
-    /**
-     * @brief The electrical theta (radians) at the time of the FOC calculation
-     */
-    float theta_e = 0.0f;  // The electrical theta (radians)
-    /**
-     * @brief The Idq current vector at the time of the FOC calculation inferred from the phase currents
-     */
-    math::direct_quad_t i_direct_quad;
-
-    /**
-     * @brief The alpha/beta current vector at the time of the FOC calculation inferred from the phase currents
-     * @note This is the same as i_direct_quad, but rotated by theta_e. These are redundant, but useful for debugging if the
-     * transforms are off
-     */
-    math::alpha_beta_t i_alpha_beta;  // The alpha/beta current vector
-
-    // Outputs
-    /**
-     * @brief The direct and quadrature voltage vector at the time of the FOC calculation
-     */
-    math::direct_quad_t V_direct_quad;
-    /**
-     * @brief The duty cycle result of the FOC calculation
-     */
-    FocDutyCycleResult duty_cycle_result;  // The duty cycle result
-};
 
 }  // namespace BldcFoc
 

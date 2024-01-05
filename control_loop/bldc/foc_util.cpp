@@ -9,61 +9,64 @@
 namespace control_loop {
 namespace BldcFoc {
 
-FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, float Vdirect, float Vquadrature, float bus_voltage,
+FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, math::direct_quad_t V_direct_quad, float bus_voltage,
                                                       BrushlessFocPwmControlType pwm_control_type,
-                                                      hwbridge::Bridge3Phase::phase_command_t& phase_command_u,
-                                                      hwbridge::Bridge3Phase::phase_command_t& phase_command_v,
-                                                      hwbridge::Bridge3Phase::phase_command_t& phase_command_w) {
-    const float max_duty_cycle = 1.0f;
+                                                      hwbridge::Bridge3Phase::phase_command_t phase_commands[3]) {
     // Create the result
     FocDutyCycleResult result;
-    // Do an inverse Park transform
-    math::alpha_beta_t inverse_park_transform = math::inverse_park_transform(Vdirect, Vquadrature, theta);
-    float duty_cycle_u_h = 0.0f;
-    float duty_cycle_v_h = 0.0f;
-    float duty_cycle_w_h = 0.0f;
+    do {
+        const float max_duty_cycle = 1.0f;
+        float duty_cycle_u_h = 0.0f;
+        float duty_cycle_v_h = 0.0f;
+        float duty_cycle_w_h = 0.0f;
+        // Do an inverse Park transform
+        math::alpha_beta_t inverse_park_transform =
+            math::inverse_park_transform(V_direct_quad.direct, V_direct_quad.quadrature, theta);
 
-    switch (pwm_control_type) {
-        case BldcFoc::BrushlessFocPwmControlType::SPACE_VECTOR: {
-            math::abc_t duty_cycles = svpwm(inverse_park_transform, bus_voltage);
-            duty_cycle_u_h = duty_cycles.a;
-            duty_cycle_v_h = duty_cycles.b;
-            duty_cycle_w_h = duty_cycles.c;
-        } break;
-        case BldcFoc::BrushlessFocPwmControlType::SINE: {
-            math::abc_t duty_cycles = sine_pwm(inverse_park_transform, bus_voltage, max_duty_cycle);
-            duty_cycle_u_h = duty_cycles.a;
-            duty_cycle_v_h = duty_cycles.b;
-            duty_cycle_w_h = duty_cycles.c;
+        switch (pwm_control_type) {
+            case BldcFoc::BrushlessFocPwmControlType::SPACE_VECTOR: {
+                math::abc_t duty_cycles = svpwm(inverse_park_transform, bus_voltage);
+                duty_cycle_u_h = duty_cycles.a;
+                duty_cycle_v_h = duty_cycles.b;
+                duty_cycle_w_h = duty_cycles.c;
+            } break;
+            case BldcFoc::BrushlessFocPwmControlType::SINE: {
+                math::abc_t duty_cycles = sine_pwm(inverse_park_transform, bus_voltage, max_duty_cycle);
+                duty_cycle_u_h = duty_cycles.a;
+                duty_cycle_v_h = duty_cycles.b;
+                duty_cycle_w_h = duty_cycles.c;
 
-        } break;
-        default:
-            // Set the duty cycles to 0
-            duty_cycle_u_h = 0.0f;
-            duty_cycle_v_h = 0.0f;
-            duty_cycle_w_h = 0.0f;
-            break;
+            } break;
+            default:
+                // Set the duty cycles to 0
+                duty_cycle_u_h = 0.0f;
+                duty_cycle_v_h = 0.0f;
+                duty_cycle_w_h = 0.0f;
+                break;
+        }
+
+        // No matter what, the duty cycles should be between 0 and 1
+        math::clamp(duty_cycle_u_h, 0.0f, max_duty_cycle);
+        math::clamp(duty_cycle_v_h, 0.0f, max_duty_cycle);
+        math::clamp(duty_cycle_w_h, 0.0f, max_duty_cycle);
+
+        // Set the alpha and beta components of the voltage vector
+        result.V_alpha_beta = inverse_park_transform;
+
+        result.duty_cycle_u_h = duty_cycle_u_h;
+        result.duty_cycle_v_h = duty_cycle_v_h;
+        result.duty_cycle_w_h = duty_cycle_w_h;
+    } while (false);
+
+    if (phase_commands != nullptr) {
+        // Set the duty cycles
+        phase_commands[0].duty_cycle_high_side = result.duty_cycle_u_h;
+        phase_commands[0].invert_low_side = true;
+        phase_commands[1].duty_cycle_high_side = result.duty_cycle_v_h;
+        phase_commands[1].invert_low_side = true;
+        phase_commands[2].duty_cycle_high_side = result.duty_cycle_w_h;
+        phase_commands[2].invert_low_side = true;
     }
-
-    // No matter what, the duty cycles should be between 0 and 1
-    math::clamp(duty_cycle_u_h, 0.0f, max_duty_cycle);
-    math::clamp(duty_cycle_v_h, 0.0f, max_duty_cycle);
-    math::clamp(duty_cycle_w_h, 0.0f, max_duty_cycle);
-
-    // Set the alpha and beta components of the voltage vector
-    result.V_alpha_beta = inverse_park_transform;
-
-    result.duty_cycle_u_h = duty_cycle_u_h;
-    result.duty_cycle_v_h = duty_cycle_v_h;
-    result.duty_cycle_w_h = duty_cycle_w_h;
-
-    // Set the duty cycles
-    phase_command_u.duty_cycle_high_side = duty_cycle_u_h;
-    phase_command_u.invert_low_side = true;
-    phase_command_v.duty_cycle_high_side = duty_cycle_v_h;
-    phase_command_v.invert_low_side = true;
-    phase_command_w.duty_cycle_high_side = duty_cycle_w_h;
-    phase_command_w.invert_low_side = true;
 
     return result;
 }
@@ -220,6 +223,16 @@ math::direct_quad_t clamp_Vdq(math::direct_quad_t V_dq, float V_bus) {
     }
 
     return V_dq;
+}
+
+float advance_open_loop_angle(float theta, float omega, float dt) {
+    // Advance the angle by the omega for the dt
+    theta += omega * dt;
+
+    // Wrap the angle to be between 0 and 2pi
+    math::wraparound(theta, 0.0f, 2.0f * math::M_PI_FLOAT);
+
+    return theta;
 }
 
 }  // namespace BldcFoc

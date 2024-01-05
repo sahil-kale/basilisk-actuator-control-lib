@@ -12,7 +12,7 @@ class MOCK_BRIDGE_3PHASE : public Bridge3Phase {
                 (override));
     MOCK_METHOD(app_hal_status_E, init, (), (override));
     MOCK_METHOD(app_hal_status_E, read_phase_voltage, (phase_voltage_t & phase_voltage), (override));
-    MOCK_METHOD(app_hal_status_E, read_current, (phase_current_t & current), (override));
+    MOCK_METHOD(app_hal_status_E, read_phase_current, (phase_current_t & current), (override));
     MOCK_METHOD(app_hal_status_E, read_bus_voltage, (float& voltage), (override));
 };
 

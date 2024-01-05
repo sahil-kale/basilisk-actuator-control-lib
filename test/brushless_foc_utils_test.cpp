@@ -12,27 +12,26 @@ TEST(BldcFocUtils, test_theta_valpha_beta) {
     // Get the alpha and beta components of the voltage vector
     float Vdirect = 1.0f;
     float Vquadrature = 0.0f;
+    math::direct_quad_t V_direct_quad = {Vdirect, Vquadrature};
     float theta = 0.0f;
     float bus_voltage = 1.0f;
     BrushlessFocPwmControlType pwm_control_type = BrushlessFocPwmControlType::SINE;
 
-    // Create the phase commands
-    hwbridge::Bridge3Phase::phase_command_t phase_command_u;
-    hwbridge::Bridge3Phase::phase_command_t phase_command_v;
-    hwbridge::Bridge3Phase::phase_command_t phase_command_w;
+    // Create an array of phase commands
+    hwbridge::Bridge3Phase::phase_command_t phase_commands[3];
 
     // Determine the duty cycles
-    FocDutyCycleResult result = determine_inverter_duty_cycles_foc(theta, Vdirect, Vquadrature, bus_voltage, pwm_control_type,
-                                                                   phase_command_u, phase_command_v, phase_command_w);
+    FocDutyCycleResult result =
+        determine_inverter_duty_cycles_foc(theta, V_direct_quad, bus_voltage, pwm_control_type, phase_commands);
 
     // Check the alpha and beta components of the voltage vector
     EXPECT_FLOAT_EQ(result.V_alpha_beta.alpha, 1.0f);
     EXPECT_FLOAT_EQ(result.V_alpha_beta.beta, 0.0f);
 
     // Test that the duty cycles are equal
-    EXPECT_FLOAT_EQ(result.duty_cycle_u_h, phase_command_u.duty_cycle_high_side);
-    EXPECT_FLOAT_EQ(result.duty_cycle_v_h, phase_command_v.duty_cycle_high_side);
-    EXPECT_FLOAT_EQ(result.duty_cycle_w_h, phase_command_w.duty_cycle_high_side);
+    EXPECT_FLOAT_EQ(result.duty_cycle_u_h, phase_commands[0].duty_cycle_high_side);
+    EXPECT_FLOAT_EQ(result.duty_cycle_v_h, phase_commands[1].duty_cycle_high_side);
+    EXPECT_FLOAT_EQ(result.duty_cycle_w_h, phase_commands[2].duty_cycle_high_side);
 }
 
 // Test the bus voltage is 0 with sine pwm
@@ -40,27 +39,26 @@ TEST(BldcFocUtils, test_theta_valpha_beta_bus_voltage_0_sine) {
     // Get the alpha and beta components of the voltage vector
     float Vdirect = 1.0f;
     float Vquadrature = 0.0f;
+    math::direct_quad_t V_direct_quad = {Vdirect, Vquadrature};
     float theta = 0.0f;
     float bus_voltage = 0.0f;
     BrushlessFocPwmControlType pwm_control_type = BrushlessFocPwmControlType::SINE;
 
-    // Create the phase commands
-    hwbridge::Bridge3Phase::phase_command_t phase_command_u;
-    hwbridge::Bridge3Phase::phase_command_t phase_command_v;
-    hwbridge::Bridge3Phase::phase_command_t phase_command_w;
+    // Create an array of phase commands
+    hwbridge::Bridge3Phase::phase_command_t phase_commands[3];
 
     // Determine the duty cycles
-    FocDutyCycleResult result = determine_inverter_duty_cycles_foc(theta, Vdirect, Vquadrature, bus_voltage, pwm_control_type,
-                                                                   phase_command_u, phase_command_v, phase_command_w);
+    FocDutyCycleResult result =
+        determine_inverter_duty_cycles_foc(theta, V_direct_quad, bus_voltage, pwm_control_type, phase_commands);
 
     // Check the alpha and beta components of the voltage vector
     EXPECT_FLOAT_EQ(result.V_alpha_beta.alpha, 1.0f);
     EXPECT_FLOAT_EQ(result.V_alpha_beta.beta, 0.0f);
 
     // Test that the duty cycles are equal
-    EXPECT_FLOAT_EQ(result.duty_cycle_u_h, phase_command_u.duty_cycle_high_side);
-    EXPECT_FLOAT_EQ(result.duty_cycle_v_h, phase_command_v.duty_cycle_high_side);
-    EXPECT_FLOAT_EQ(result.duty_cycle_w_h, phase_command_w.duty_cycle_high_side);
+    EXPECT_FLOAT_EQ(result.duty_cycle_u_h, phase_commands[0].duty_cycle_high_side);
+    EXPECT_FLOAT_EQ(result.duty_cycle_v_h, phase_commands[1].duty_cycle_high_side);
+    EXPECT_FLOAT_EQ(result.duty_cycle_w_h, phase_commands[2].duty_cycle_high_side);
 
     // Test that the duty cycles are 0
     EXPECT_FLOAT_EQ(result.duty_cycle_u_h, 0.0f);
@@ -73,27 +71,26 @@ TEST(BldcFocUtils, test_theta_valpha_beta_bus_voltage_0_svpwm) {
     // Get the alpha and beta components of the voltage vector
     float Vdirect = 1.0f;
     float Vquadrature = 0.0f;
+    math::direct_quad_t V_direct_quad = {Vdirect, Vquadrature};
     float theta = 0.0f;
     float bus_voltage = 0.0f;
     BrushlessFocPwmControlType pwm_control_type = BrushlessFocPwmControlType::SPACE_VECTOR;
 
-    // Create the phase commands
-    hwbridge::Bridge3Phase::phase_command_t phase_command_u;
-    hwbridge::Bridge3Phase::phase_command_t phase_command_v;
-    hwbridge::Bridge3Phase::phase_command_t phase_command_w;
+    // Create an array of phase commands
+    hwbridge::Bridge3Phase::phase_command_t phase_commands[3];
 
     // Determine the duty cycles
-    FocDutyCycleResult result = determine_inverter_duty_cycles_foc(theta, Vdirect, Vquadrature, bus_voltage, pwm_control_type,
-                                                                   phase_command_u, phase_command_v, phase_command_w);
+    FocDutyCycleResult result =
+        determine_inverter_duty_cycles_foc(theta, V_direct_quad, bus_voltage, pwm_control_type, phase_commands);
 
     // Check the alpha and beta components of the voltage vector
     EXPECT_FLOAT_EQ(result.V_alpha_beta.alpha, 1.0f);
     EXPECT_FLOAT_EQ(result.V_alpha_beta.beta, 0.0f);
 
     // Test that the duty cycles are equal
-    EXPECT_FLOAT_EQ(result.duty_cycle_u_h, phase_command_u.duty_cycle_high_side);
-    EXPECT_FLOAT_EQ(result.duty_cycle_v_h, phase_command_v.duty_cycle_high_side);
-    EXPECT_FLOAT_EQ(result.duty_cycle_w_h, phase_command_w.duty_cycle_high_side);
+    EXPECT_FLOAT_EQ(result.duty_cycle_u_h, phase_commands[0].duty_cycle_high_side);
+    EXPECT_FLOAT_EQ(result.duty_cycle_v_h, phase_commands[1].duty_cycle_high_side);
+    EXPECT_FLOAT_EQ(result.duty_cycle_w_h, phase_commands[2].duty_cycle_high_side);
 
     // Test that the duty cycles are 0
     EXPECT_FLOAT_EQ(result.duty_cycle_u_h, 0.0f);
@@ -207,6 +204,27 @@ TEST(BldcFocUtils, test_sine_pwm) {
     EXPECT_FLOAT_EQ(duty_cycles.a, 0.75f);
     EXPECT_FLOAT_EQ(duty_cycles.b, 0.0f);
     EXPECT_FLOAT_EQ(duty_cycles.c, 0.75f);
+}
+
+// Test the open loop angle advancing
+TEST(BldcFocUtils, test_open_loop_angle_advancing) {
+    float theta = 0.0f;
+    float omega = 1.0f;
+    float dt = 1.0f;
+
+    EXPECT_FLOAT_EQ(advance_open_loop_angle(theta, omega, dt), 1.0f);
+
+    // Test wrapping around from 3PI/2 to PI/3 (delta of 5PI/6)
+    theta = 3.0f * M_PI / 2.0f;
+    omega = 5 * M_PI / 6;
+    dt = 1.0f;
+    EXPECT_FLOAT_EQ(advance_open_loop_angle(theta, omega, dt), M_PI / 3.0f);
+
+    // Test wrapping down (pi/3 to 3pi/2)
+    theta = M_PI / 3.0f;
+    omega = -5 * M_PI / 6;
+    dt = 1.0f;
+    EXPECT_FLOAT_EQ(advance_open_loop_angle(theta, omega, dt), 3.0f * M_PI / 2.0f);
 }
 
 }  // namespace BldcFoc
