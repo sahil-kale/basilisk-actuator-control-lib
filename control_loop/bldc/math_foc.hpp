@@ -12,6 +12,14 @@ namespace math {
  */
 class alpha_beta_t {
    public:
+    alpha_beta_t() = default;
+    /**
+     * @brief Construct a new alpha_beta_t object
+     * @param alpha The alpha value of the transform
+     * @param beta The beta value of the transform
+     */
+    alpha_beta_t(float alpha, float beta) : alpha(alpha), beta(beta) {}
+
     /** Alpha value of the transform */
     float alpha = 0.0f;
     /** Beta value of the transform */
@@ -22,7 +30,7 @@ class alpha_beta_t {
      * @param rhs The right hand side of the equality
      * @return bool True if the values are equal, false otherwise
      */
-    bool operator==(const alpha_beta_t& rhs) {
+    bool operator==(const alpha_beta_t& rhs) const {
         const bool alpha_equal = math::float_equals(alpha, rhs.alpha);
         const bool beta_equal = math::float_equals(beta, rhs.beta);
 
@@ -35,6 +43,13 @@ class alpha_beta_t {
  */
 class direct_quad_t {
    public:
+    direct_quad_t() = default;
+    /**
+     * @brief Construct a new direct_quad_t object
+     * @param direct The direct value of the transform
+     * @param quadrature The quadrature value of the transform
+     */
+    direct_quad_t(float direct, float quadrature) : direct(direct), quadrature(quadrature) {}
     /** Direct transform */
     float direct = 0.0f;
     /** Quadrature transform */
@@ -45,7 +60,7 @@ class direct_quad_t {
      * @param rhs The right hand side of the equality
      * @return bool True if the values are equal, false otherwise
      */
-    bool operator==(const direct_quad_t& rhs) {
+    bool operator==(const direct_quad_t& rhs) const {
         const bool direct_equal = math::float_equals(direct, rhs.direct);
         const bool quadrature_equal = math::float_equals(quadrature, rhs.quadrature);
 
@@ -70,7 +85,7 @@ class abc_t {
      * @param rhs The right hand side of the equality
      * @return bool True if the values are equal, false otherwise
      */
-    bool operator==(const abc_t& rhs) {
+    bool operator==(const abc_t& rhs) const {
         const bool a_equal = math::float_equals(a, rhs.a);
         const bool b_equal = math::float_equals(b, rhs.b);
         const bool c_equal = math::float_equals(c, rhs.c);

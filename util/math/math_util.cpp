@@ -15,5 +15,5 @@ float trapezoidal_integral(float x, float x_prev, float y, float y_prev) {
     return integral;
 }
 
-bool float_equals(float a, float b) { return fabs(a - b) < ACCEPTABLE_FLOAT_ERROR; }
+bool float_equals(const float a, const float b) { return fabs(a - b) < ACCEPTABLE_FLOAT_ERROR; }
 }  // namespace math

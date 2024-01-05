@@ -26,14 +26,14 @@ class Bridge3Phase {
          * @note The duty cycle is between 0.0f and 1.0f, where 0.5 is 50% duty cycle and represents 0V (assumes complementary
          * pwm)
          */
-        float duty_cycle_high_side;
+        float duty_cycle_high_side = 0.0f;
         /**
          * @brief Invert the low side PWM channel
          * @note The invert low side flag is used to invert the low side PWM channel (if complementary PWM is used)
          * @note Note that the invert low side flag, if set to false, is used to High-Z the bridge output. Caution should be used
          * in allowing an abstracted bridge to allow a non-inverted output to be commanded to a duty cycle that is not 0.0f
          */
-        bool invert_low_side;
+        bool invert_low_side = false;
 
         /**
          * @brief Equal operator
@@ -41,9 +41,9 @@ class Bridge3Phase {
          * @return bool True if the duty cycles and invert low side flags are equal
          */
         bool operator==(const phase_command_t& rhs) const {
-            const bool duty_cycle_high_side = math::float_equals(this->duty_cycle_high_side, rhs.duty_cycle_high_side);
+            const bool duty_cycle_high_side_equal = math::float_equals(this->duty_cycle_high_side, rhs.duty_cycle_high_side);
             const bool low_side_inversion_signal_equal = this->invert_low_side == rhs.invert_low_side;
-            return duty_cycle_high_side && low_side_inversion_signal_equal;
+            return duty_cycle_high_side_equal && low_side_inversion_signal_equal;
         }
     };
 
@@ -97,6 +97,18 @@ class Bridge3Phase {
          * @brief Phase W current
          */
         float w = 0.0f;
+
+        /**
+         * @brief Equal operator
+         * @param rhs The right hand side of the operator
+         * @return bool True if the phase currents are equal
+         */
+        bool operator==(const phase_current_t& rhs) const {
+            const bool u_equal = math::float_equals(this->u, rhs.u);
+            const bool v_equal = math::float_equals(this->v, rhs.v);
+            const bool w_equal = math::float_equals(this->w, rhs.w);
+            return u_equal && v_equal && w_equal;
+        }
     };
 
     /**
@@ -128,7 +140,7 @@ class Bridge3Phase {
      * @note this function can be called from a high frequency control loop and should be implemented as efficiently as possible
      * or employ some other system to pre-trigger a current reading that can then be read from a buffer
      */
-    virtual app_hal_status_E read_current(phase_current_t& current) = 0;
+    virtual app_hal_status_E read_phase_current(phase_current_t& current) = 0;
 
     /**
      * @brief Read the bus voltage from the bridge
