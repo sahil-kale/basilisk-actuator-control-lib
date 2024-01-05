@@ -1,7 +1,0 @@
-var searchData=
-[
-  ['max_5festimate_5fangle_5foverrun_102',['max_estimate_angle_overrun',['../classbldc__rotor__estimator_1_1ElectricalRotorPosEstimatorFromHall_1_1ElectricalRotorPosEstimatorFromHallParams.html#aaa6cb9ba021247798c2db7a4b1676353',1,'bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall::ElectricalRotorPosEstimatorFromHallParams']]],
-  ['max_5fmotor_5fspeed_103',['MAX_MOTOR_SPEED',['../classcontrol__loop_1_1ControlLoop.html#a8e887bdfeaeee697c56109c5a882cb41',1,'control_loop::ControlLoop']]],
-  ['minimum_5festimation_5fvelocity_104',['minimum_estimation_velocity',['../classbldc__rotor__estimator_1_1ElectricalRotorPosEstimatorFromHall_1_1ElectricalRotorPosEstimatorFromHallParams.html#a6fe59841862dc50fed14b177cdba3551',1,'bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall::ElectricalRotorPosEstimatorFromHallParams::minimum_estimation_velocity()'],['../classbldc__rotor__estimator_1_1SensorlessRotorFluxObserver_1_1SensorlessRotorFluxObserverParams.html#a52daa32da4bcc165a5a7d84c26dfb50c',1,'bldc_rotor_estimator::SensorlessRotorFluxObserver::SensorlessRotorFluxObserverParams::minimum_estimation_velocity()']]],
-  ['minimum_5fvel_5fabove_5fthreshold_5ftime_105',['minimum_vel_above_threshold_time',['../classbldc__rotor__estimator_1_1SensorlessRotorFluxObserver_1_1SensorlessRotorFluxObserverParams.html#ad5de317742452ab27db2eec5ec3ba981',1,'bldc_rotor_estimator::SensorlessRotorFluxObserver::SensorlessRotorFluxObserverParams']]]
-];
