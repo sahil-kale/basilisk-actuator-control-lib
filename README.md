@@ -23,6 +23,9 @@ The following commands are intended to be run on an Ubuntu 22.04 machine (and wh
 4. Run `bash scripts/format.sh` to format the source code.
 5. Run `bash scripts/linter.sh` to run the linter.
 
+### API Documentation
+API documentation is available [here](https://sahil-kale.github.io/basilisk-actuator-control-lib/)
+
 ### PR Submissions
 Submit PR's against `main`. PR's that modify the source code's functionality without a unit test will not be accepted unless determined that the functionality does not require one. CI will check test, lint, and format upon check-in.
 
