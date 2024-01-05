@@ -35,17 +35,18 @@ void BrushlessFOCControlLoop::init(BrushlessFOCControlLoop::BrushlessFOCControlL
 
 BrushlessFOCControlLoop::BrushlessFOCControlLoopState BrushlessFOCControlLoop::get_desired_state(
     float i_q_reference, const BrushlessFOCControlLoopState current_state) {
-    BrushlessFOCControlLoop::BrushlessFOCControlLoopState desired_state = current_state;
+    BrushlessFOCControlLoopState desired_state = current_state;
+    const bool i_q_reference_is_zero = math::float_equals(i_q_reference, 0.0f);
     switch (current_state) {
-        case BrushlessFOCControlLoop::BrushlessFOCControlLoopState::STOP: {
+        case BrushlessFOCControlLoopState::STOP: {
             // if the estimator reports that it is valid, then we should start the motor
-            if ((i_q_reference != 0)) {
-                desired_state = BrushlessFOCControlLoop::BrushlessFOCControlLoopState::RUN;
+            if (i_q_reference_is_zero == false) {
+                desired_state = BrushlessFOCControlLoopState::RUN;
             }
         } break;
-        case BrushlessFOCControlLoop::BrushlessFOCControlLoopState::RUN: {
-            if (i_q_reference == 0.0f) {
-                desired_state = BrushlessFOCControlLoop::BrushlessFOCControlLoopState::STOP;
+        case BrushlessFOCControlLoopState::RUN: {
+            if (i_q_reference_is_zero) {
+                desired_state = BrushlessFOCControlLoopState::STOP;
             }
         } break;
         default:

@@ -150,9 +150,9 @@ class BrushlessFOCControlLoop : public ControlLoop {
      * @brief Construct a new BrushlessFOCControlLoop object
      * @param motor The bridge on which a singular BLDC/PMSM motor is connected
      * @param clock The clock to use for the control loop
-     * @param rotor_position_estimators A pointer array to rotor position estimators to use in C-style array
+     * @param rotor_position_estimators A pointer array to rotor position estimators to use in C-style array. The angle estimate
+     * used by the controller is the lowest-indexed valid rotor position estimator in the array
      * @param num_rotor_position_estimators The number of rotor position estimators
-     * @note The secondary rotor position estimator is used when the primary rotor position estimator is not valid
      */
     BrushlessFOCControlLoop(hwbridge::Bridge3Phase& motor, basilisk_hal::HAL_CLOCK& clock,
                             bldc_rotor_estimator::ElectricalRotorPosEstimator* rotor_position_estimators[],
