@@ -1,7 +1,7 @@
 import subprocess
 
 # First, remove the html directory
-subprocess.call(["rm", "-r", "docs_html"])
+subprocess.call(["rm", "-r", "docs"])
 
 # Then, generate the documentation
 ret = subprocess.call(["doxygen", "Doxyfile"])

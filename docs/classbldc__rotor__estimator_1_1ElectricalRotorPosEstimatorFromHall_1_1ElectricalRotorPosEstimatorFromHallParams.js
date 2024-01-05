@@ -1,0 +1,8 @@
+var classbldc__rotor__estimator_1_1ElectricalRotorPosEstimatorFromHall_1_1ElectricalRotorPosEstimatorFromHallParams =
+[
+    [ "enable_interpolation", "classbldc__rotor__estimator_1_1ElectricalRotorPosEstimatorFromHall_1_1ElectricalRotorPosEstimatorFromHallParams.html#af3a9082470a5848eaef385776c7ced6f", null ],
+    [ "enable_sector_position_offset_compensation", "classbldc__rotor__estimator_1_1ElectricalRotorPosEstimatorFromHall_1_1ElectricalRotorPosEstimatorFromHallParams.html#ac6635e61654ef040f579f61202ac372b", null ],
+    [ "max_estimate_angle_overrun", "classbldc__rotor__estimator_1_1ElectricalRotorPosEstimatorFromHall_1_1ElectricalRotorPosEstimatorFromHallParams.html#aaa6cb9ba021247798c2db7a4b1676353", null ],
+    [ "minimum_estimation_velocity", "classbldc__rotor__estimator_1_1ElectricalRotorPosEstimatorFromHall_1_1ElectricalRotorPosEstimatorFromHallParams.html#a6fe59841862dc50fed14b177cdba3551", null ],
+    [ "num_hall_updates_to_start", "classbldc__rotor__estimator_1_1ElectricalRotorPosEstimatorFromHall_1_1ElectricalRotorPosEstimatorFromHallParams.html#aa08510ea77ddec48628d3bd9a6d12321", null ]
+];

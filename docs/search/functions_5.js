@@ -1,0 +1,19 @@
+var searchData=
+[
+  ['get_5fbus_5fvoltage_213',['get_bus_voltage',['../classhwbridge_1_1HBridge.html#a4cdb9e080df03711e54bb1b7c5480771',1,'hwbridge::HBridge']]],
+  ['get_5fcurrent_214',['get_current',['../classhwbridge_1_1HBridge.html#a23c3337b50b13e54bf6da0e97af6fd48',1,'hwbridge::HBridge']]],
+  ['get_5fdt_5fs_215',['get_dt_s',['../classbasilisk__hal_1_1HAL__CLOCK.html#ae2ec541bc271a40374a10eb7674773b1',1,'basilisk_hal::HAL_CLOCK']]],
+  ['get_5fdt_5fus_216',['get_dt_us',['../classbasilisk__hal_1_1HAL__CLOCK.html#ab54e24422f67d8617ee2da93a46372c7',1,'basilisk_hal::HAL_CLOCK']]],
+  ['get_5felectrical_5fangle_217',['get_electrical_angle',['../classbldc__rotor__estimator_1_1BldcRotorSectorSensor.html#aaf2ab889d3a4ecbbe6c15dc22f45e3ca',1,'bldc_rotor_estimator::BldcRotorSectorSensor::get_electrical_angle()'],['../classbldc__rotor__estimator_1_1BldcSensorlessRotorSectorSensor.html#a1b3698cc01e5cb02631b8e28a9d6b1f6',1,'bldc_rotor_estimator::BldcSensorlessRotorSectorSensor::get_electrical_angle()']]],
+  ['get_5ffoc_5fframe_5fcomputation_218',['get_foc_frame_computation',['../classcontrol__loop_1_1BrushlessFOCControlLoop.html#abacb43a1cd0b0ce2587be37b573660c3',1,'control_loop::BrushlessFOCControlLoop']]],
+  ['get_5fkd_219',['get_kd',['../classpid_1_1PID.html#ac26447ee0ee933d8aa5ddd96eedb58c8',1,'pid::PID']]],
+  ['get_5fki_220',['get_ki',['../classpid_1_1PID.html#aa2bd83d31318a12571fa7cbe4e539f16',1,'pid::PID']]],
+  ['get_5fkp_221',['get_kp',['../classpid_1_1PID.html#ad5d2bfa80f03af33be8583dd2f8145e9',1,'pid::PID']]],
+  ['get_5fraw_5fhall_5fangle_222',['get_raw_hall_angle',['../classbldc__rotor__estimator_1_1ElectricalRotorPosEstimatorFromHall.html#afa08332f7ca2b5fbd43129db7c4cc3eb',1,'bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall']]],
+  ['get_5frotor_5facceleration_223',['get_rotor_acceleration',['../classbldc__rotor__estimator_1_1ElectricalRotorPosEstimatorFromHall.html#a3aac992f49820791883e50e9d44af229',1,'bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall']]],
+  ['get_5frotor_5fposition_224',['get_rotor_position',['../classbldc__rotor__estimator_1_1ElectricalRotorPosEstimator.html#ae6602c56417b66a64c6c06f04eff3a63',1,'bldc_rotor_estimator::ElectricalRotorPosEstimator::get_rotor_position()'],['../classbldc__rotor__estimator_1_1ElectricalRotorPosEstimatorFromHall.html#ad6375f7896b5b8bcce3ad417ab762e7f',1,'bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall::get_rotor_position()'],['../classbldc__rotor__estimator_1_1SensorlessRotorFluxObserver.html#aa401908938453eda8bb7fd56d7fc4405',1,'bldc_rotor_estimator::SensorlessRotorFluxObserver::get_rotor_position()']]],
+  ['get_5frotor_5fvelocity_225',['get_rotor_velocity',['../classbldc__rotor__estimator_1_1ElectricalRotorPosEstimator.html#aaaaa81e5816cf932d2d4dbaaa145cbae',1,'bldc_rotor_estimator::ElectricalRotorPosEstimator::get_rotor_velocity()'],['../classbldc__rotor__estimator_1_1ElectricalRotorPosEstimatorFromHall.html#a7005ec5d1894a4dba10e5d1959d42b3b',1,'bldc_rotor_estimator::ElectricalRotorPosEstimatorFromHall::get_rotor_velocity()'],['../classbldc__rotor__estimator_1_1SensorlessRotorFluxObserver.html#a6de294471b59073c49cffa7f1f5e99eb',1,'bldc_rotor_estimator::SensorlessRotorFluxObserver::get_rotor_velocity()']]],
+  ['get_5fstatus_226',['get_status',['../classcontrol__loop_1_1Brushless6StepControlLoop.html#a3367d485723338826f999b37a9f89754',1,'control_loop::Brushless6StepControlLoop::get_status()'],['../classcontrol__loop_1_1BrushlessFOCControlLoop.html#a5f3977df12c1275ecdba056397eb251e',1,'control_loop::BrushlessFOCControlLoop::get_status()']]],
+  ['get_5ftime_5fs_227',['get_time_s',['../classbasilisk__hal_1_1HAL__CLOCK.html#a331bfeffcfeb289e79d9e16ce228c739',1,'basilisk_hal::HAL_CLOCK']]],
+  ['get_5ftime_5fus_228',['get_time_us',['../classbasilisk__hal_1_1HAL__CLOCK.html#a99a422b7dd9aed57b348321ff53a6679',1,'basilisk_hal::HAL_CLOCK']]]
+];
