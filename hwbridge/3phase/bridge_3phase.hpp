@@ -21,6 +21,15 @@ class Bridge3Phase {
      */
     class phase_command_t {
        public:
+        phase_command_t() = default;
+        /**
+         * @brief Construct a phase command
+         * @param duty_cycle_high_side Duty cycle for the high side PWM channel assuming complementary PWM
+         * @param invert_low_side Invert the low side PWM channel (used to High-Z the bridge output)
+         * @note The duty cycle is between 0.0f and 1.0f, where 0.5 is 50% duty cycle and represents 0V (assumes complementary
+         */
+        phase_command_t(float duty_cycle_high_side, bool invert_low_side)
+            : duty_cycle_high_side(duty_cycle_high_side), invert_low_side(invert_low_side) {}
         /**
          * @brief Duty cycle for the high side PWM channel assuming complementary PWM
          * @note The duty cycle is between 0.0f and 1.0f, where 0.5 is 50% duty cycle and represents 0V (assumes complementary
