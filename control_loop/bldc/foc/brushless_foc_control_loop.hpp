@@ -7,6 +7,7 @@
 
 #include "bridge_3phase.hpp"
 #include "control_loop.hpp"
+#include "foc_controller.hpp"
 #include "foc_util.hpp"
 #include "hal_clock.hpp"
 #include "math_foc.hpp"
@@ -14,6 +15,8 @@
 #include "rotor_estimator.hpp"
 
 namespace control_loop {
+
+using namespace BldcFoc;
 
 /**
  * @brief A control loop for a brushless motor
@@ -28,16 +31,6 @@ class BrushlessFOCControlLoop : public ControlLoop {
         STOP,
         /// @brief The control loop is running
         RUN,
-    };
-
-    /**
-     * @brief The type of control loop control
-     */
-    enum class BrushlessFOCControlLoopType {
-        /// The control loop is open loop (not relying on rotor position estimation)
-        OPEN_LOOP,
-        /// The current control loop is in closed loop control
-        CLOSED_LOOP,
     };
 
     /**
@@ -85,14 +78,9 @@ class BrushlessFOCControlLoop : public ControlLoop {
         float i_d_reference_default;
 
         /**
-         * @brief The cutoff frequency of the low pass filter for the current controller (Hz)
-         */
-        float current_lpf_fc;
-
-        /**
          * @brief The PWM control type to use for the FOC control loop
          */
-        BldcFoc::BrushlessFocPwmControlType pwm_control_type;
+        BrushlessFocPwmControlType pwm_control_type;
     };
 
     /**
@@ -105,7 +93,7 @@ class BrushlessFOCControlLoop : public ControlLoop {
          */
         BrushlessFocControLoopParams foc_params;
         /// @brief The open loop full speed theta velocity (rad/s)
-        float open_loop_full_speed_theta_velocity;
+        float open_loop_theta_velocity;
         /// @brief The magnitude of the direct voltage vector to apply in open loop mode
         float open_loop_quadrature_voltage;
     };
@@ -161,8 +149,7 @@ class BrushlessFOCControlLoop : public ControlLoop {
           clock_(clock),
           rotor_position_estimators_(rotor_position_estimators),
           num_rotor_position_estimators_(num_rotor_position_estimators),
-          pid_q_current_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, clock),
-          pid_d_current_(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, clock),
+          foc_controller_(clock),
           foc_frame_vars_() {}
 
     /**
@@ -196,61 +183,10 @@ class BrushlessFOCControlLoop : public ControlLoop {
     ControlLoop::ControlLoopBaseStatus run_current_control(float i_d_reference, float i_q_reference);
 
     /**
-     * @brief Inputs to the FOC control loop
-     */
-    class FOCInputs {
-       public:
-        /// @brief timestamp of the FOC calculation
-        utime_t timestamp = 0;
-        /// @brief The time since the last FOC calculation (seconds)
-        float dt = 0.0f;
-        /// @brief The rotor position at the time of the FOC calculation (radians)
-        float theta_e = 0.0f;
-        /// @brief Whether the rotor position is valid at the time of the FOC calculation
-        bool rotor_position_valid = false;
-
-        /// @brief The DC bus voltage at the time of the FOC calculation (Volts)
-        float bus_voltage = 0.0f;
-        /// @brief Whether the DC bus voltage is valid at the time of the FOC calculation
-        bool bus_voltage_valid = false;
-
-        /// @brief Whether the current measurements and derived calculations are valid at the time of the FOC calculation
-        bool current_measurements_valid = false;
-        /// @brief The alpha/beta current vector at the time of the FOC calculation inferred from the phase currents (A)
-        math::alpha_beta_t i_alpha_beta;
-        /// @brief The the direct/quadrature current at the time of the FOC calculation (A)
-        math::direct_quad_t i_direct_quad;
-
-        /// @brief The desired direct/quadrature current reference at the time of the FOC calculation (A)
-        math::direct_quad_t i_direct_quad_ref;
-    };
-
-    /**
-     * @brief FOC Computation 'Frame' that contains the inputs and outputs of the FOC computation
-     */
-    class FOCFrameVars {
-       public:
-        /// @brief The inputs to the FOC computation
-        FOCInputs foc_inputs;
-
-        // Outputs
-        /// @brief The control loop type that was used in this FOC computation
-        BrushlessFOCControlLoopType control_loop_type = BrushlessFOCControlLoopType::OPEN_LOOP;
-        /** @brief The  angle that was used for the FOC computation (radians)
-         *  @note in open loop, this is the open loop angle, in closed loop, this is simply the same as the rotor position
-         */
-        float commanded_rotor_theta = 0.0f;
-        /// @brief The direct and quadrature voltage vector at the time of the FOC calculation
-        math::direct_quad_t V_direct_quad;
-        /// @brief The duty cycle computation result of the frame
-        BldcFoc::FocDutyCycleResult duty_cycle_result;
-    };
-
-    /**
      * @brief Get the FOC frame variables of the most recent control loop iteration
      * @return The FOC frame computation of the most recent control loop iteration
      */
-    FOCFrameVars get_foc_frame_computation() const;
+    FOCController::FOCFrameVars get_foc_frame_computation() const;
 
     ~BrushlessFOCControlLoop() = default;
 
@@ -266,24 +202,16 @@ class BrushlessFOCControlLoop : public ControlLoop {
     BrushlessFOCControlLoopParams* params_ = nullptr;
     BrushlessFOCControlLoopStatus status_;
 
+    // Controllers
+    FOCController foc_controller_;
+
     // Control loop state variables
     utime_t last_run_time_ = 0;
-    float rotor_position_open_loop_start_ = 0.0f;
-
-    // Create 2 PID controllers for the Q and D currents
-    pid::PID<float> pid_q_current_;
-    pid::PID<float> pid_d_current_;
 
     // FOC debug variables
-    FOCFrameVars foc_frame_vars_;  // Control Loop FOC frame variables - these need to persist for the next control loop iteration
-                                   // as the ValphaBeta and VdirectQuad is used for feedforward control
-
-    /**
-     * @brief Run the FOC control loop
-     * @param foc_inputs The inputs to the FOC control loop
-     * @param phase_commands The phase commands to be filled in
-     */
-    void run_foc(FOCInputs foc_inputs, hwbridge::Bridge3Phase::phase_command_t phase_commands[3]);
+    FOCController::FOCFrameVars
+        foc_frame_vars_;  // Control Loop FOC frame variables - these need to persist for the next control loop iteration
+                          // as the ValphaBeta and VdirectQuad is used for feedforward control
 
     /**
      * @brief Get the desired state of the control loop
@@ -293,13 +221,6 @@ class BrushlessFOCControlLoop : public ControlLoop {
      * @return The desired state of the control loop
      */
     BrushlessFOCControlLoopState get_desired_state(float i_q_reference, const BrushlessFOCControlLoopState current_state);
-
-    /**
-     * @brief Get the desired control loop type
-     * @param is_any_estimator_valid Whether any of the rotor position estimators are valid
-     * @return The desired control loop type
-     */
-    BrushlessFOCControlLoopType get_desired_control_loop_type(bool is_any_estimator_valid);
 
     /**
      * @brief update the rotor position estimator
@@ -363,11 +284,12 @@ class BrushlessFOCControlLoop : public ControlLoop {
      * @param i_direct_quad_ref The direct/quadrature current reference
      * @return The FOC inputs for the current control frame
      */
-    FOCInputs update_foc_inputs(utime_t current_time_us, utime_t last_run_time_us,
-                                bldc_rotor_estimator::ElectricalRotorPosEstimator* rotor_position_estimators[],
-                                size_t num_rotor_position_estimators, hwbridge::Bridge3Phase& bridge,
-                                BrushlessFOCControlLoopStatus& status, math::alpha_beta_t V_alpha_beta,
-                                const BrushlessFOCControlLoopParams* params, math::direct_quad_t i_direct_quad_ref);
+    FOCController::FOCInputs update_foc_inputs(utime_t current_time_us, utime_t last_run_time_us,
+                                               bldc_rotor_estimator::ElectricalRotorPosEstimator* rotor_position_estimators[],
+                                               size_t num_rotor_position_estimators, hwbridge::Bridge3Phase& bridge,
+                                               BrushlessFOCControlLoopStatus& status, math::alpha_beta_t V_alpha_beta,
+                                               const BrushlessFOCControlLoopParams* params,
+                                               math::direct_quad_t i_direct_quad_ref);
 
     /*! \endcond */
 };
