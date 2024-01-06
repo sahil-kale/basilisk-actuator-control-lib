@@ -23,6 +23,9 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/libs/googletest ${CMAKE_CURRENT_BIN
 # Glob recurse the sources inside control_loop/
 file(GLOB_RECURSE CONTROL_LOOP_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/control_loop/*.cpp)
 
+# Glob recurse the sources inside hwbridge/3phase/
+file(GLOB_RECURSE HWBRIDGE_3PHASE_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/hwbridge/3phase/*.cpp)
+
 # Glob recurse the sources inside utils/
 file(GLOB_RECURSE UTILS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/util/*.cpp)
 
@@ -51,7 +54,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/util/math)
 # Mocks
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/test/mocks)
 
-add_library(MAIN_SOURCES ${CONTROL_LOOP_SOURCES} ${UTILS_SOURCES})
+add_library(MAIN_SOURCES ${CONTROL_LOOP_SOURCES} ${UTILS_SOURCES} ${HWBRIDGE_3PHASE_SOURCES})
 # Set pedantic and pedantic-errors flags for MAIN_SOURCES
 target_compile_options(MAIN_SOURCES PRIVATE -pedantic -pedantic-errors)
 
