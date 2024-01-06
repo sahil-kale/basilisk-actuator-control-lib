@@ -31,13 +31,10 @@ class BrushlessFOCControlLoopTest : public BrushlessFOCControlLoop {
 
         .speed_to_iq_gain = 0.0f,
         .i_d_reference_default = 0.0f,
-
-        .current_lpf_fc = 0.0f,
-
-        .pwm_control_type = BldcFoc::BrushlessFocPwmControlType::SINE};
+        .pwm_control_type = BldcFoc::BrushlessFocPwmControlType::SPACE_VECTOR};
 
     BrushlessFOCControlLoop::BrushlessFOCControlLoopParams test_params_{
-        .foc_params = foc_params_, .open_loop_full_speed_theta_velocity = 0.0f, .open_loop_quadrature_voltage = 0.0f};
+        .foc_params = foc_params_, .open_loop_theta_velocity = 1.0f, .open_loop_quadrature_voltage = 1.0f};
 
     BrushlessFOCControlLoopTest(bldc_rotor_estimator::ElectricalRotorPosEstimator& rotor_position_estimator,
                                 basilisk_hal::HAL_CLOCK& clock)
@@ -103,7 +100,7 @@ TEST(BrushlessFOCControlLoopTest, test_phase_current_read_failure) {
     math::alpha_beta_t V_alpha_beta;
     bldc_rotor_estimator::ElectricalRotorPosEstimator* rotor_sensors[1] = {&rotor_sensor};
     math::direct_quad_t i_direct_quad_ref;
-    BrushlessFOCControlLoop::FOCInputs foc_inputs =
+    FOCController::FOCInputs foc_inputs =
         test_control_loop.update_foc_inputs(time, 0, rotor_sensors, 1, test_control_loop.bridge, status, V_alpha_beta,
                                             &test_control_loop.test_params_, i_direct_quad_ref);
 
@@ -151,7 +148,7 @@ TEST(BrushlessFOCControlLoopTest, test_foc_update_input_nominal) {
     math::direct_quad_t i_direct_quad_ref;
     i_direct_quad_ref.direct = 1.0f;
     i_direct_quad_ref.quadrature = 1.0f;
-    BrushlessFOCControlLoop::FOCInputs foc_inputs =
+    FOCController::FOCInputs foc_inputs =
         test_control_loop.update_foc_inputs(time, 0, rotor_sensors, 1, test_control_loop.bridge, status, V_alpha_beta,
                                             &test_control_loop.test_params_, i_direct_quad_ref);
 
@@ -185,6 +182,13 @@ TEST(BrushlessFOCControlLoopTest, test_foc_update_input_nominal) {
     // Expect the dt to be passed through
     EXPECT_FLOAT_EQ(foc_inputs.dt, 1 / (1e6));
 
+    // Test the PWM control type
+    EXPECT_EQ(foc_inputs.pwm_control_type, test_control_loop.test_params_.foc_params.pwm_control_type);
+
+    // Test the open loop theta velocity and voltage
+    EXPECT_EQ(foc_inputs.open_loop_theta_velocity, test_control_loop.test_params_.open_loop_theta_velocity);
+    EXPECT_EQ(foc_inputs.open_loop_quadrature_voltage, test_control_loop.test_params_.open_loop_quadrature_voltage);
+
     EXPECT_EQ(status, ControlLoop::ControlLoopBaseStatus::OK);
 }
 
@@ -208,7 +212,7 @@ TEST(BrushlessFOCControlLoopTest, test_foc_update_input_invalid_rotor_sensor) {
     const utime_t time = 1U;
     bldc_rotor_estimator::ElectricalRotorPosEstimator* rotor_sensors[1] = {&rotor_sensor};
     math::direct_quad_t i_direct_quad_ref;
-    BrushlessFOCControlLoop::FOCInputs foc_inputs =
+    FOCController::FOCInputs foc_inputs =
         test_control_loop.update_foc_inputs(time, 0, rotor_sensors, 1, test_control_loop.bridge, status, V_alpha_beta,
                                             &test_control_loop.test_params_, i_direct_quad_ref);
 
@@ -448,7 +452,7 @@ TEST(BrushlessFOCControlLoopTest, test_bus_voltage_read_failure) {
     // Define a rotor sensor array
     bldc_rotor_estimator::ElectricalRotorPosEstimator* rotor_sensors[1] = {&rotor_sensor};
     math::direct_quad_t i_direct_quad_ref;
-    BrushlessFOCControlLoop::FOCInputs foc_inputs =
+    FOCController::FOCInputs foc_inputs =
         test_control_loop.update_foc_inputs(time, 0, rotor_sensors, 1, test_control_loop.bridge, status, V_alpha_beta,
                                             &test_control_loop.test_params_, i_direct_quad_ref);
 

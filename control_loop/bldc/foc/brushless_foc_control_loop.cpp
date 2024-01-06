@@ -9,6 +9,7 @@
 #include "util.hpp"
 
 namespace control_loop {
+using namespace BldcFoc;
 
 // Define the init function
 void BrushlessFOCControlLoop::init(BrushlessFOCControlLoop::BrushlessFOCControlLoopParams* params) {
@@ -17,10 +18,6 @@ void BrushlessFOCControlLoop::init(BrushlessFOCControlLoop::BrushlessFOCControlL
         if (reset_position_estimators(rotor_position_estimators_, num_rotor_position_estimators_) == false) {
             break;  // Don't initialize if there was an issue resetting the rotor position estimators
         }
-
-        // Reset the PID controllers
-        pid_d_current_.reset();
-        pid_q_current_.reset();
 
         // reset the status
         status_.reset();
@@ -81,7 +78,7 @@ ControlLoop::ControlLoopBaseStatus BrushlessFOCControlLoop::run_current_control(
         i_direct_quad_ref.quadrature = i_q_reference;
 
         // Update the FOC inputs
-        BrushlessFOCControlLoop::FOCInputs foc_inputs =
+        FOCController::FOCInputs foc_inputs =
             update_foc_inputs(current_time_us, last_run_time_, rotor_position_estimators_, num_rotor_position_estimators_,
                               bridge_, status_, foc_frame_vars_.duty_cycle_result.V_alpha_beta, params_, i_direct_quad_ref);
 
@@ -106,7 +103,7 @@ ControlLoop::ControlLoopBaseStatus BrushlessFOCControlLoop::run_current_control(
                 if (status_ == ControlLoop::ControlLoopBaseStatus::ERROR) {
                     break;
                 }
-                run_foc(foc_inputs, phase_commands);
+                foc_frame_vars_ = foc_controller_.run_foc(foc_inputs, phase_commands);
             } break;
 
             default:
@@ -197,24 +194,16 @@ void BrushlessFOCControlLoop::enter_state(const BrushlessFOCControlLoopState& cu
     IGNORE(current_state);
     switch (desired_state) {
         case BrushlessFOCControlLoop::BrushlessFOCControlLoopState::RUN: {
-            // reset the PID controllers
-            pid_d_current_.reset();
-            pid_q_current_.reset();
-
             // Set the PI gains
             const float kp = params_->foc_params.current_control_bandwidth_rad_per_sec * params_->foc_params.phase_inductance;
-            const float ki = params_->foc_params.phase_resistance / params_->foc_params.phase_inductance *
-                             kp;  // multiplied by kp to create a series PI controller
+            float ki = params_->foc_params.phase_resistance / params_->foc_params.phase_inductance *
+                       kp;  // multiplied by kp to create a series PI controller
 
-            pid_d_current_.set_kp(kp);
-            pid_q_current_.set_kp(kp);
             if (params_->foc_params.disable_ki == false) {
-                pid_d_current_.set_ki(ki);
-                pid_q_current_.set_ki(ki);
-            } else {
-                pid_d_current_.set_ki(0.0f);
-                pid_q_current_.set_ki(0.0f);
+                ki = 0.0f;
             }
+
+            foc_controller_.init(kp, ki);
 
             // reset the rotor position estimator
             const bool position_estimators_reset_succesfully =
@@ -223,67 +212,12 @@ void BrushlessFOCControlLoop::enter_state(const BrushlessFOCControlLoopState& cu
             IGNORE(position_estimators_reset_succesfully);
 
             // Reset the internal state
-            foc_frame_vars_ = FOCFrameVars();
+            foc_frame_vars_ = FOCController::FOCFrameVars();
         } break;
         case BrushlessFOCControlLoop::BrushlessFOCControlLoopState::STOP:
         default:
             break;
     }
-}
-
-void BrushlessFOCControlLoop::run_foc(BrushlessFOCControlLoop::FOCInputs foc_inputs,
-                                      hwbridge::Bridge3Phase::phase_command_t phase_commands[3]) {
-    do {
-        foc_frame_vars_.control_loop_type = get_desired_control_loop_type(foc_inputs.rotor_position_valid);
-        switch (foc_frame_vars_.control_loop_type) {
-            case BrushlessFOCControlLoopType::OPEN_LOOP: {
-                // Advance the angle
-                foc_frame_vars_.commanded_rotor_theta = BldcFoc::advance_open_loop_angle(
-                    foc_frame_vars_.commanded_rotor_theta, params_->open_loop_full_speed_theta_velocity, foc_inputs.dt);
-                // Make the Vq equal to the param'ed value for drive voltage
-                foc_frame_vars_.V_direct_quad.quadrature = params_->open_loop_quadrature_voltage;
-                // Make the Vd equal to 0
-                foc_frame_vars_.V_direct_quad.direct = 0.0f;
-            } break;
-            case BrushlessFOCControlLoopType::CLOSED_LOOP: {
-                // Run the PI controller
-                const float q_voltage_delta =
-                    pid_q_current_.calculate(foc_inputs.i_direct_quad.quadrature, foc_inputs.i_direct_quad_ref.quadrature);
-                const float d_voltage_delta =
-                    pid_d_current_.calculate(foc_inputs.i_direct_quad.direct, foc_inputs.i_direct_quad_ref.direct);
-                foc_frame_vars_.V_direct_quad.quadrature += q_voltage_delta;
-                foc_frame_vars_.V_direct_quad.direct += d_voltage_delta;
-
-                // Clamp the Vq and Vd
-                foc_frame_vars_.V_direct_quad = BldcFoc::clamp_Vdq(foc_frame_vars_.V_direct_quad, foc_inputs.bus_voltage);
-
-                // Keep this around for the open loop case
-                foc_frame_vars_.commanded_rotor_theta = foc_inputs.theta_e;
-            } break;
-            default:
-                break;
-        }
-
-        // Determine the appropriate duty cycles for the inverter
-        BldcFoc::FocDutyCycleResult result = BldcFoc::determine_inverter_duty_cycles_foc(
-            foc_frame_vars_.commanded_rotor_theta, foc_frame_vars_.V_direct_quad, foc_inputs.bus_voltage,
-            params_->foc_params.pwm_control_type, phase_commands);
-
-        // Set the debug vars
-        foc_frame_vars_.foc_inputs = foc_inputs;
-        foc_frame_vars_.duty_cycle_result = result;
-
-    } while (false);
-}
-
-BrushlessFOCControlLoop::BrushlessFOCControlLoopType BrushlessFOCControlLoop::get_desired_control_loop_type(
-    bool is_any_estimator_valid) {
-    BrushlessFOCControlLoop::BrushlessFOCControlLoopType desired_control_loop_type =
-        BrushlessFOCControlLoop::BrushlessFOCControlLoopType::OPEN_LOOP;
-    if (is_any_estimator_valid) {
-        desired_control_loop_type = BrushlessFOCControlLoop::BrushlessFOCControlLoopType::CLOSED_LOOP;
-    }
-    return desired_control_loop_type;
 }
 
 bool BrushlessFOCControlLoop::reset_position_estimators(
@@ -317,12 +251,12 @@ bool BrushlessFOCControlLoop::reset_position_estimators(
     return ret;
 }
 
-BrushlessFOCControlLoop::FOCInputs BrushlessFOCControlLoop::update_foc_inputs(
+FOCController::FOCInputs BrushlessFOCControlLoop::update_foc_inputs(
     utime_t current_time_us, utime_t last_run_time_us,
     bldc_rotor_estimator::ElectricalRotorPosEstimator* rotor_position_estimators[], size_t num_rotor_position_estimators,
     hwbridge::Bridge3Phase& bridge, BrushlessFOCControlLoopStatus& status, math::alpha_beta_t V_alpha_beta,
     const BrushlessFOCControlLoopParams* params, math::direct_quad_t i_direct_quad_ref) {
-    BrushlessFOCControlLoop::FOCInputs foc_inputs;
+    FOCController::FOCInputs foc_inputs;
     do {
         foc_inputs.timestamp = current_time_us;
         foc_inputs.dt = (current_time_us - last_run_time_us) / 1e6f;
@@ -360,11 +294,18 @@ BrushlessFOCControlLoop::FOCInputs BrushlessFOCControlLoop::update_foc_inputs(
 
         foc_inputs.i_direct_quad_ref = i_direct_quad_ref;
 
+        // Set the open loop params
+        foc_inputs.open_loop_theta_velocity = params->open_loop_theta_velocity;
+        foc_inputs.open_loop_quadrature_voltage = params->open_loop_quadrature_voltage;
+
+        // Set the PWM control type
+        foc_inputs.pwm_control_type = params->foc_params.pwm_control_type;
+
     } while (false);
 
     return foc_inputs;
 }
 
-BrushlessFOCControlLoop::FOCFrameVars BrushlessFOCControlLoop::get_foc_frame_computation() const { return foc_frame_vars_; }
+FOCController::FOCFrameVars BrushlessFOCControlLoop::get_foc_frame_computation() const { return foc_frame_vars_; }
 
 }  // namespace control_loop
