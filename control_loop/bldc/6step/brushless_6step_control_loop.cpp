@@ -58,7 +58,7 @@ ControlLoop::ControlLoopBaseStatus Brushless6StepControlLoop::run(float speed) {
     if (status_.status == ControlLoop::ControlLoopBaseStatus::ERROR) {
         hwbridge::Bridge3Phase::phase_command_t zero_duty_cycle;
         zero_duty_cycle.duty_cycle_high_side = 0.0f;
-        zero_duty_cycle.invert_low_side = false;
+        zero_duty_cycle.enable = false;
 
         phase_command_[0] = zero_duty_cycle;
         phase_command_[1] = zero_duty_cycle;
