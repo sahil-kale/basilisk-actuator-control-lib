@@ -10,6 +10,25 @@ namespace pid {
 template <typename T>
 class PID {
    public:
+    /// @brief Gains struct to hold the PID gains
+    class Gains {
+       public:
+        Gains() = default;
+        /**
+         * @brief Construct a new Gains object
+         * @param kp The proportional gain
+         * @param ki The integral gain
+         * @param kd The derivative gain
+         */
+        Gains(float kp, float ki, float kd) : kp(kp), ki(ki), kd(kd) {}
+        /// @brief The proportional gain
+        float kp = 0.0f;
+        /// @brief The integral gain
+        float ki = 0.0f;
+        /// @brief The derivative gain
+        float kd = 0.0f;
+    };
+
     /**
      * @brief Construct a new PID object
      * @param kp The proportional gain
@@ -27,6 +46,26 @@ class PID {
         : kp(kp),
           ki(ki),
           kd(kd),
+          max_output(max_output),
+          min_output(min_output),
+          integral_windup(integral_windup),
+          clock(clock),
+          use_dt(use_dt) {}
+
+    /**
+     * @brief Construct a new PID object
+     * @param gains The gains struct
+     * @param min_output The maximum output value
+     * @param max_output The minimum output value
+     * @param integral_windup The integral windup value
+     * @param clock The clock object to be used for timing
+     * @param use_dt Flag to use dt in the integral and derivative terms (this makes the PID controller invariant to the sampling
+     * time by using dt in the integral and derivative terms)
+     */
+    PID(Gains gains, T min_output, T max_output, float integral_windup, basilisk_hal::HAL_CLOCK& clock, bool use_dt = true)
+        : kp(gains.kp),
+          ki(gains.ki),
+          kd(gains.kd),
           max_output(max_output),
           min_output(min_output),
           integral_windup(integral_windup),

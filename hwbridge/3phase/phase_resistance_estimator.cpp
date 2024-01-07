@@ -100,7 +100,7 @@ PhaseResistanceEstimatorController::State PhaseResistanceEstimatorController::de
         case State::MEASUREMENT_IN_PROGRESS: {
             const utime_t measurement_end_time = measurement_start_time_ + params_.measurement_duration;
             if (current_time >= measurement_end_time) {
-                const float current_diff = fabs(params_.target_current - input.phase_currents.u);
+                const float current_diff = fabsf(params_.target_current - input.phase_currents.u);
                 const bool is_current_within_tolerance = (current_diff <= params_.current_tolerance);
                 if (is_current_within_tolerance) {
                     ret = State::ESTIMATE_COMPLETE;
