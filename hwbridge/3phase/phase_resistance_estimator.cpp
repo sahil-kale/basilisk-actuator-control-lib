@@ -5,6 +5,17 @@
 #include "math_util.hpp"
 
 namespace hwbridge {
+void PhaseResistanceEstimatorController::init(const Params& params) {
+    params_ = params;
+    state_ = State::NOT_STARTED;
+    brake_start_time_ = 0;
+    measurement_start_time_ = 0;
+    commanded_voltage_ = 0.0f;
+    current_controller_.set_kp(params_.current_kp);
+    current_controller_.set_ki(params_.current_ki);
+    current_controller_.set_kd(0.0f);
+    current_controller_.reset();
+}
 
 PhaseResistanceEstimatorController::Result PhaseResistanceEstimatorController::run_phase_resistance_estimator(Input input) {
     Result result;

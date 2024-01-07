@@ -22,19 +22,33 @@ class BrushlessFOCControlLoopTest : public BrushlessFOCControlLoop {
     BrushlessFOCControlLoop::BrushlessFocControLoopParams foc_params_{
         .current_control_bandwidth_rad_per_sec = 0.0f,
 
-        .phase_resistance = 0.0f,
-        .phase_inductance = 0.0f,
-        .pm_flux_linkage = 0.0f,
+        .phase_resistance = 1.0f,
+        .phase_resistance_valid = true,
 
-        .foc_start_timeout_period_us = 0,
+        .phase_inductance = 1.0f,
+        .phase_inductance_valid = true,
+
+        .pm_flux_linkage = 0.0f,
         .disable_ki = false,
 
         .speed_to_iq_gain = 0.0f,
         .i_d_reference_default = 0.0f,
-        .pwm_control_type = BldcFoc::BrushlessFocPwmControlType::SPACE_VECTOR};
+        .pwm_control_type = BldcFoc::BrushlessFocPwmControlType::SPACE_VECTOR,
+    };
 
-    BrushlessFOCControlLoop::BrushlessFOCControlLoopParams test_params_{
-        .foc_params = foc_params_, .open_loop_theta_velocity = 1.0f, .open_loop_quadrature_voltage = 1.0f};
+    BrushlessFOCControlLoop::Params test_params_{
+        .foc_params = foc_params_,
+        .open_loop_theta_velocity = 1.0f,
+        .open_loop_quadrature_voltage = 1.0f,
+        .phase_inductance_estimator_params = {.brake_duration = 1, .measurement_duration = 100},
+        .phase_resistance_estimator_params = {.brake_duration = 1,
+                                              .measurement_duration = 10000,
+                                              .target_current = 1,
+                                              .current_tolerance = 0.1,
+                                              .max_voltage = 0.0f,
+                                              .current_kp = 1.0f,
+                                              .current_ki = 0.0f},
+    };
 
     BrushlessFOCControlLoopTest(bldc_rotor_estimator::ElectricalRotorPosEstimator& rotor_position_estimator,
                                 basilisk_hal::HAL_CLOCK& clock)
@@ -58,13 +72,16 @@ TEST(BrushlessFOCControlLoopTest, test_stop_to_start_to_run) {
 
     // Call the desired state function with a time of 0, time at start of 0, and a motor speed of 0
     // Ensure that the desired state is stop
-    EXPECT_EQ(test_control_loop.get_desired_state(0, BrushlessFOCControlLoop::BrushlessFOCControlLoopState::STOP),
-              BrushlessFOCControlLoop::BrushlessFOCControlLoopState::STOP);
+    BrushlessFOCControlLoop::BrushlessFOCControlLoopStatus status = BrushlessFOCControlLoop::BrushlessFOCControlLoopStatus();
+    EXPECT_EQ(
+        test_control_loop.get_desired_state(0, BrushlessFOCControlLoop::State::STOP, test_control_loop.test_params_, status),
+        BrushlessFOCControlLoop::State::STOP);
 
     // Call the desired state function with a time of foc_start_timeout_period -1, time at start of 0, and a motor speed of 0.1,
     // with the rotor estimator valid Ensure that the desired state is run
-    EXPECT_EQ(test_control_loop.get_desired_state(0.1, BrushlessFOCControlLoop::BrushlessFOCControlLoopState::STOP),
-              BrushlessFOCControlLoop::BrushlessFOCControlLoopState::RUN);
+    EXPECT_EQ(
+        test_control_loop.get_desired_state(0.1, BrushlessFOCControlLoop::State::STOP, test_control_loop.test_params_, status),
+        BrushlessFOCControlLoop::State::RUN);
 }
 
 // Test the state machine transition from run to stop
@@ -79,8 +96,9 @@ TEST(BrushlessFOCControlLoopTest, test_run_to_stop) {
 
     // Call the desired state function with a time of 0, time at start of 0, and a motor speed of 0
     // Ensure that the desired state is stop
-    EXPECT_EQ(test_control_loop.get_desired_state(0, BrushlessFOCControlLoop::BrushlessFOCControlLoopState::RUN),
-              BrushlessFOCControlLoop::BrushlessFOCControlLoopState::STOP);
+    BrushlessFOCControlLoop::BrushlessFOCControlLoopStatus status = BrushlessFOCControlLoop::BrushlessFOCControlLoopStatus();
+    EXPECT_EQ(test_control_loop.get_desired_state(0, BrushlessFOCControlLoop::State::RUN, test_control_loop.test_params_, status),
+              BrushlessFOCControlLoop::State::STOP);
 }
 
 // Test that a phase current read failure sets the error appropriately
@@ -460,6 +478,107 @@ TEST(BrushlessFOCControlLoopTest, test_bus_voltage_read_failure) {
 
     // Expect that the error is set
     EXPECT_TRUE(status.has_error(BrushlessFOCControlLoop::BrushlessFOCControlLoopError::BUS_VOLTAGE_READ_FAILURE));
+}
+
+// Test that the desired state is calibrating if either the phase resistance or phase inductance is indicated as invalid
+TEST(BrushlessFOCControlLoopTest, test_desired_state_calibrating) {
+    // Create an absolute rotor position estimator
+    NiceMock<bldc_rotor_estimator::MOCK_ROTOR_ABSOLUTE_SENSOR> rotor_sensor;
+
+    // instantiate a brushless foc control loop test class
+    BrushlessFOCControlLoopTest test_control_loop(rotor_sensor, mock_clock);
+
+    BrushlessFOCControlLoop::Params test_params = test_control_loop.test_params_;
+    test_params.foc_params.phase_inductance_valid = false;
+
+    // Get the desired state
+    BrushlessFOCControlLoop::BrushlessFOCControlLoopStatus status = BrushlessFOCControlLoop::BrushlessFOCControlLoopStatus();
+    BrushlessFOCControlLoop::State desired_state =
+        test_control_loop.get_desired_state(0.1, BrushlessFOCControlLoop::State::STOP, test_params, status);
+
+    // Expect the desired state to be calibrating
+    EXPECT_EQ(desired_state, BrushlessFOCControlLoop::State::CALIBRATION);
+
+    // Set the phase inductance to be valid, and the phase resistance to be invalid
+    test_params.foc_params.phase_inductance_valid = true;
+    test_params.foc_params.phase_resistance_valid = false;
+
+    // Get the desired state
+    desired_state = test_control_loop.get_desired_state(0.1, BrushlessFOCControlLoop::State::STOP, test_params, status);
+
+    // Expect the desired state to be calibrating
+    EXPECT_EQ(desired_state, BrushlessFOCControlLoop::State::CALIBRATION);
+}
+
+// Test calibration -> run transition if both the phase resistance and phase inductance are valid
+TEST(BrushlessFOCControlLoopTest, test_desired_state_calibration_to_run) {
+    // Create an absolute rotor position estimator
+    NiceMock<bldc_rotor_estimator::MOCK_ROTOR_ABSOLUTE_SENSOR> rotor_sensor;
+
+    // instantiate a brushless foc control loop test class
+    BrushlessFOCControlLoopTest test_control_loop(rotor_sensor, mock_clock);
+
+    BrushlessFOCControlLoop::Params test_params = test_control_loop.test_params_;
+
+    // Get the desired state
+    BrushlessFOCControlLoop::BrushlessFOCControlLoopStatus status = BrushlessFOCControlLoop::BrushlessFOCControlLoopStatus();
+    BrushlessFOCControlLoop::State desired_state =
+        test_control_loop.get_desired_state(0.1, BrushlessFOCControlLoop::State::CALIBRATION, test_params, status);
+
+    // Expect the desired state to be run
+    EXPECT_EQ(desired_state, BrushlessFOCControlLoop::State::RUN);
+}
+
+// Test calibration to stop transition if both are valid but the iq reference is 0
+TEST(BrushlessFOCControlLoopTest, test_desired_state_calibration_to_stop_after_valid_calibration) {
+    // Create an absolute rotor position estimator
+    NiceMock<bldc_rotor_estimator::MOCK_ROTOR_ABSOLUTE_SENSOR> rotor_sensor;
+
+    // instantiate a brushless foc control loop test class
+    BrushlessFOCControlLoopTest test_control_loop(rotor_sensor, mock_clock);
+
+    BrushlessFOCControlLoop::Params test_params = test_control_loop.test_params_;
+
+    // Set the iq reference to 0
+    test_params.open_loop_quadrature_voltage = 0.0f;
+
+    // Get the desired state
+    BrushlessFOCControlLoop::BrushlessFOCControlLoopStatus status = BrushlessFOCControlLoop::BrushlessFOCControlLoopStatus();
+    BrushlessFOCControlLoop::State desired_state =
+        test_control_loop.get_desired_state(0.0, BrushlessFOCControlLoop::State::CALIBRATION, test_params, status);
+
+    // Expect the desired state to be run
+    EXPECT_EQ(desired_state, BrushlessFOCControlLoop::State::STOP);
+}
+
+// Test that a failed phase estimation causes the desired state to go from calibration to stop
+TEST(BrushlessFOCControlLoopTest, test_desired_state_calibration_to_stop_after_failed_calibration) {
+    // Create an absolute rotor position estimator
+    NiceMock<bldc_rotor_estimator::MOCK_ROTOR_ABSOLUTE_SENSOR> rotor_sensor;
+
+    // instantiate a brushless foc control loop test class
+    BrushlessFOCControlLoopTest test_control_loop(rotor_sensor, mock_clock);
+
+    BrushlessFOCControlLoop::Params test_params = test_control_loop.test_params_;
+
+    test_params.foc_params.phase_resistance_valid = true;
+    test_params.foc_params.phase_inductance_valid = false;
+
+    // Get the desired state
+    BrushlessFOCControlLoop::BrushlessFOCControlLoopStatus status = BrushlessFOCControlLoop::BrushlessFOCControlLoopStatus();
+    status.set_error(BrushlessFOCControlLoop::BrushlessFOCControlLoopError::PHASE_INDUCTANCE_ESTIMATOR_FAILURE, true);
+    BrushlessFOCControlLoop::State desired_state =
+        test_control_loop.get_desired_state(0.1, BrushlessFOCControlLoop::State::CALIBRATION, test_params, status);
+
+    EXPECT_EQ(desired_state, BrushlessFOCControlLoop::State::STOP);
+
+    status.set_error(BrushlessFOCControlLoop::BrushlessFOCControlLoopError::PHASE_INDUCTANCE_ESTIMATOR_FAILURE, false);
+    status.set_error(BrushlessFOCControlLoop::BrushlessFOCControlLoopError::PHASE_RESISTANCE_ESTIMATOR_FAILURE, true);
+
+    // Get the desired state
+    desired_state = test_control_loop.get_desired_state(0.1, BrushlessFOCControlLoop::State::CALIBRATION, test_params, status);
+
+    EXPECT_EQ(desired_state, BrushlessFOCControlLoop::State::STOP);
 }
 
 }  // namespace control_loop

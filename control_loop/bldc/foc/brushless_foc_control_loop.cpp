@@ -12,7 +12,7 @@ namespace control_loop {
 using namespace BldcFoc;
 
 // Define the init function
-void BrushlessFOCControlLoop::init(BrushlessFOCControlLoop::BrushlessFOCControlLoopParams* params) {
+void BrushlessFOCControlLoop::init(Params* params) {
     do {
         // Initialize the rotor position estimator
         if (reset_position_estimators(rotor_position_estimators_, num_rotor_position_estimators_) == false) {
@@ -23,29 +23,50 @@ void BrushlessFOCControlLoop::init(BrushlessFOCControlLoop::BrushlessFOCControlL
         status_.reset();
 
         // Set the state to stop
-        state_ = BrushlessFOCControlLoop::BrushlessFOCControlLoopState::STOP;
+        state_ = State::STOP;
 
         // Set the internal params pointer
         params_ = params;
     } while (false);
 }
 
-BrushlessFOCControlLoop::BrushlessFOCControlLoopState BrushlessFOCControlLoop::get_desired_state(
-    float i_q_reference, const BrushlessFOCControlLoopState current_state) {
-    BrushlessFOCControlLoopState desired_state = current_state;
+BrushlessFOCControlLoop::State BrushlessFOCControlLoop::get_desired_state(float i_q_reference, const State current_state,
+                                                                          const Params& params,
+                                                                          const BrushlessFOCControlLoopStatus& status) {
+    State desired_state = current_state;
     const bool i_q_reference_is_zero = math::float_equals(i_q_reference, 0.0f);
     switch (current_state) {
-        case BrushlessFOCControlLoopState::STOP: {
-            // if the estimator reports that it is valid, then we should start the motor
+        case State::STOP: {
             if (i_q_reference_is_zero == false) {
-                desired_state = BrushlessFOCControlLoopState::RUN;
+                // We want to start the motor
+                if (params.foc_params.phase_resistance_valid && params.foc_params.phase_inductance_valid) {
+                    desired_state = State::RUN;
+                } else {
+                    desired_state = State::CALIBRATION;
+                }
             }
         } break;
-        case BrushlessFOCControlLoopState::RUN: {
+        case State::RUN: {
             if (i_q_reference_is_zero) {
-                desired_state = BrushlessFOCControlLoopState::STOP;
+                desired_state = State::STOP;
             }
         } break;
+        case State::CALIBRATION: {
+            const bool phase_resistance_failed =
+                status.has_error(BrushlessFOCControlLoopError::PHASE_RESISTANCE_ESTIMATOR_FAILURE);
+            const bool phase_inductance_failed =
+                status.has_error(BrushlessFOCControlLoopError::PHASE_INDUCTANCE_ESTIMATOR_FAILURE);
+            const bool phase_estimation_failed = phase_resistance_failed || phase_inductance_failed;
+            if (params.foc_params.phase_resistance_valid && params.foc_params.phase_inductance_valid) {
+                if (i_q_reference_is_zero) {
+                    desired_state = State::STOP;
+                } else {
+                    desired_state = State::RUN;
+                }
+            } else if (phase_estimation_failed) {
+                desired_state = State::STOP;
+            }
+        }
         default:
             // Unknown state
             break;
@@ -83,7 +104,7 @@ ControlLoop::ControlLoopBaseStatus BrushlessFOCControlLoop::run_current_control(
                               bridge_, status_, foc_frame_vars_.duty_cycle_result.V_alpha_beta, params_, i_direct_quad_ref);
 
         // Get the current state and the desired state
-        BrushlessFOCControlLoop::BrushlessFOCControlLoopState desired_state = get_desired_state(i_q_reference, state_);
+        State desired_state = get_desired_state(i_q_reference, state_, *params_, status_);
 
         // If the desired state is different from the current state, then we need to transition
         if (desired_state != state_) {
@@ -96,16 +117,18 @@ ControlLoop::ControlLoopBaseStatus BrushlessFOCControlLoop::run_current_control(
         }
         // Run the state machine
         switch (state_) {
-            case BrushlessFOCControlLoop::BrushlessFOCControlLoopState::STOP:
+            case State::STOP:
                 break;
 
-            case BrushlessFOCControlLoop::BrushlessFOCControlLoopState::RUN: {
+            case State::RUN: {
                 if (status_ == ControlLoop::ControlLoopBaseStatus::ERROR) {
                     break;
                 }
                 foc_frame_vars_ = foc_controller_.run_foc(foc_inputs, phase_commands);
             } break;
-
+            case State::CALIBRATION: {
+                run_calibration(foc_inputs, phase_commands);
+            } break;
             default:
                 break;
         }
@@ -132,10 +155,53 @@ ControlLoop::ControlLoopBaseStatus BrushlessFOCControlLoop::run_current_control(
     return status_.status;
 }
 
+void BrushlessFOCControlLoop::run_calibration(FOCController::FOCInputs inputs,
+                                              hwbridge::Bridge3Phase::phase_command_t phase_commands[3]) {
+    using namespace hwbridge;
+    // Turn the FOC alpha/beta inputs into 3 phase current inputs
+    const math::abc_t i_abc = math::inverse_clarke_transform(inputs.i_alpha_beta.alpha, inputs.i_alpha_beta.beta);
+    const Bridge3Phase::phase_current_t phase_currents = {i_abc.a, i_abc.b, i_abc.c};
+
+    if (params_->foc_params.phase_inductance_valid == false) {
+        // Run the phase inductance estimator
+        PhaseInductanceEstimatorController::Input input;
+        input.phase_currents = phase_currents;
+        input.bus_voltage = inputs.bus_voltage;
+        PhaseInductanceEstimatorController::Result result = phase_inductance_estimator_.run_phase_inductance_estimator(input);
+        params_->foc_params.phase_inductance = result.phase_inductance;
+        params_->foc_params.phase_inductance_valid = result.is_phase_inductance_valid;
+
+        phase_commands[0] = result.phase_commands[0];
+        phase_commands[1] = result.phase_commands[1];
+        phase_commands[2] = result.phase_commands[2];
+
+        status_.set_error(BrushlessFOCControlLoopError::PHASE_INDUCTANCE_ESTIMATOR_FAILURE,
+                          result.is_phase_inductance_valid == false);
+    } else if (params_->foc_params.phase_resistance_valid == false) {
+        PhaseResistanceEstimatorController::Input input;
+        // Turn the FOC inputs into
+        input.phase_currents = phase_currents;
+        input.bus_voltage = inputs.bus_voltage;
+        // Run the phase resistance estimator
+        PhaseResistanceEstimatorController::Result result = phase_resistance_estimator_.run_phase_resistance_estimator(input);
+
+        // Set the phase resistance
+        params_->foc_params.phase_resistance = result.phase_resistance;
+        params_->foc_params.phase_resistance_valid = result.is_phase_resistance_valid;
+
+        phase_commands[0] = result.phase_commands[0];
+        phase_commands[1] = result.phase_commands[1];
+        phase_commands[2] = result.phase_commands[2];
+
+        status_.set_error(BrushlessFOCControlLoopError::PHASE_RESISTANCE_ESTIMATOR_FAILURE,
+                          result.is_phase_resistance_valid == false);
+    }
+}
+
 void BrushlessFOCControlLoop::update_rotor_position_estimator(
     bldc_rotor_estimator::ElectricalRotorPosEstimator::EstimatorInputs& estimator_inputs, utime_t current_time_us,
-    hwbridge::Bridge3Phase::phase_current_t phase_currents, const BrushlessFOCControlLoop::BrushlessFOCControlLoopParams* params,
-    math::alpha_beta_t V_alpha_beta, BrushlessFOCControlLoopStatus& status, float& theta,
+    hwbridge::Bridge3Phase::phase_current_t phase_currents, const Params* params, math::alpha_beta_t V_alpha_beta,
+    BrushlessFOCControlLoopStatus& status, float& theta,
     bldc_rotor_estimator::ElectricalRotorPosEstimator* rotor_position_estimators[], size_t num_rotor_position_estimators) {
     do {
         estimator_inputs.time = current_time_us;
@@ -183,17 +249,15 @@ void BrushlessFOCControlLoop::update_rotor_position_estimator(
     } while (false);
 }
 
-void BrushlessFOCControlLoop::exit_state(const BrushlessFOCControlLoopState& current_state,
-                                         const BrushlessFOCControlLoopState& desired_state) {
+void BrushlessFOCControlLoop::exit_state(const State& current_state, const State& desired_state) {
     IGNORE(current_state);
     IGNORE(desired_state);
 }
 
-void BrushlessFOCControlLoop::enter_state(const BrushlessFOCControlLoopState& current_state,
-                                          const BrushlessFOCControlLoopState& desired_state) {
+void BrushlessFOCControlLoop::enter_state(const State& current_state, const State& desired_state) {
     IGNORE(current_state);
     switch (desired_state) {
-        case BrushlessFOCControlLoop::BrushlessFOCControlLoopState::RUN: {
+        case State::RUN: {
             // Set the PI gains
             const float kp = params_->foc_params.current_control_bandwidth_rad_per_sec * params_->foc_params.phase_inductance;
             float ki = params_->foc_params.phase_resistance / params_->foc_params.phase_inductance *
@@ -214,7 +278,11 @@ void BrushlessFOCControlLoop::enter_state(const BrushlessFOCControlLoopState& cu
             // Reset the internal state
             foc_frame_vars_ = FOCController::FOCFrameVars();
         } break;
-        case BrushlessFOCControlLoop::BrushlessFOCControlLoopState::STOP:
+        case State::CALIBRATION: {
+            phase_resistance_estimator_.init(params_->phase_resistance_estimator_params);
+            phase_inductance_estimator_.init(params_->phase_inductance_estimator_params);
+        } break;
+        case State::STOP:
         default:
             break;
     }
@@ -254,12 +322,12 @@ bool BrushlessFOCControlLoop::reset_position_estimators(
 FOCController::FOCInputs BrushlessFOCControlLoop::update_foc_inputs(
     utime_t current_time_us, utime_t last_run_time_us,
     bldc_rotor_estimator::ElectricalRotorPosEstimator* rotor_position_estimators[], size_t num_rotor_position_estimators,
-    hwbridge::Bridge3Phase& bridge, BrushlessFOCControlLoopStatus& status, math::alpha_beta_t V_alpha_beta,
-    const BrushlessFOCControlLoopParams* params, math::direct_quad_t i_direct_quad_ref) {
+    hwbridge::Bridge3Phase& bridge, BrushlessFOCControlLoopStatus& status, math::alpha_beta_t V_alpha_beta, const Params* params,
+    math::direct_quad_t i_direct_quad_ref) {
     FOCController::FOCInputs foc_inputs;
     do {
         foc_inputs.timestamp = current_time_us;
-        foc_inputs.dt = (current_time_us - last_run_time_us) / 1e6f;
+        foc_inputs.dt = static_cast<float>(current_time_us - last_run_time_us) / 1e6f;
         hwbridge::Bridge3Phase::phase_current_t phase_currents;
         app_hal_status_E hal_status = bridge.read_phase_current(phase_currents);
 

@@ -3,6 +3,14 @@
 #include "math_util.hpp"
 
 namespace hwbridge {
+
+void PhaseInductanceEstimatorController::init(Params params) {
+    params_ = params;
+    state_ = State::NOT_STARTED;
+    brake_start_time_ = 0;
+    measurement_start_time_ = 0;
+}
+
 PhaseInductanceEstimatorController::Result PhaseInductanceEstimatorController::run_phase_inductance_estimator(
     PhaseInductanceEstimatorController::Input input) {
     Result result;

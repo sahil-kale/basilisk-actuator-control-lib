@@ -42,7 +42,7 @@ commutation_step_t determine_commutation_step_from_theta(float electrical_theta)
 void determine_inverter_duty_cycles_trap(hwbridge::Bridge3Phase::phase_command_t phase_command[3],
                                          Bldc6Step::commutation_step_t current_commutation_step, float motor_speed) {
     // Clamp the motor speed to -1.0f to 1.0f after first abs'ing it
-    float abs_speed = fabs(motor_speed);
+    float abs_speed = fabsf(motor_speed);
     math::clamp(abs_speed, 0.0f, 1.0f);
     for (int i = 0; i < 3; i++) {
         if (current_commutation_step.signals[i] == Bldc6Step::CommutationSignal::HIGH) {

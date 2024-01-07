@@ -113,7 +113,7 @@ math::abc_t svpwm(math::alpha_beta_t V_alpha_beta, float Vbus) {
 
         // atan2f returns a value between -pi and pi, but we want a value between 0 and 2pi
         if (alpha < 0.0f) {
-            alpha += 2.0f * M_PI;
+            alpha += 2.0f * math::M_PI_FLOAT;
         }
 
         // Normalize our calculations to 1.0 time period, such that our switching times can be converted directly to duty cycles
@@ -131,8 +131,8 @@ math::abc_t svpwm(math::alpha_beta_t V_alpha_beta, float Vbus) {
 
         // This is the term that is common to T1 and T2 for multiplication
         const float timing_multiplier_const = math::sqrt_3 * T_z * V_modulus / Vbus;
-        const float T1 = timing_multiplier_const * (sinf(sector / 3.0f * M_PI - alpha));
-        const float T2 = timing_multiplier_const * (sinf(alpha - (sector_n_minus_1) / 3.0f * M_PI));
+        const float T1 = timing_multiplier_const * (sinf(sector / 3.0f * math::M_PI_FLOAT - alpha));
+        const float T2 = timing_multiplier_const * (sinf(alpha - (sector_n_minus_1) / 3.0f * math::M_PI_FLOAT));
         const float T0 = T_z - T1 - T2;
 
         switch (sector) {
@@ -183,27 +183,27 @@ uint8_t svm_sector(math::alpha_beta_t V_alpha_beta) {
     // Get the angle of the voltage vector
     const float theta = atan2f(V_alpha_beta.beta, V_alpha_beta.alpha);
     do {
-        if (theta >= 0.0f && theta < M_PI / 3.0f) {
+        if (theta >= 0.0f && theta < math::M_PI_FLOAT / 3.0f) {
             sector = 1;
             break;
         }
-        if (theta >= M_PI / 3.0f && theta < 2.0f * M_PI / 3.0f) {
+        if (theta >= math::M_PI_FLOAT / 3.0f && theta < 2.0f * math::M_PI_FLOAT / 3.0f) {
             sector = 2;
             break;
         }
-        if (theta >= 2.0f * M_PI / 3.0f && theta < M_PI) {
+        if (theta >= 2.0f * math::M_PI_FLOAT / 3.0f && theta < math::M_PI_FLOAT) {
             sector = 3;
             break;
         }
-        if (theta >= -M_PI && theta < -2.0f * M_PI / 3.0f) {
+        if (theta >= -math::M_PI_FLOAT && theta < -2.0f * math::M_PI_FLOAT / 3.0f) {
             sector = 4;
             break;
         }
-        if (theta >= -2.0f * M_PI / 3.0f && theta < -M_PI / 3.0f) {
+        if (theta >= -2.0f * math::M_PI_FLOAT / 3.0f && theta < -math::M_PI_FLOAT / 3.0f) {
             sector = 5;
             break;
         }
-        if (theta >= -M_PI / 3.0f && theta < 0.0f) {
+        if (theta >= -math::M_PI_FLOAT / 3.0f && theta < 0.0f) {
             sector = 6;
             break;
         }

@@ -12,7 +12,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_GMOCK ON)
 # Add a library with just the sources
 #enable Werror, Wextra, Wall, pedantic, and pedantic-errors
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wextra -Wall -Og -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Og -g -Werror -Wextra -Wall")
 
 # enable testing
 enable_testing()
@@ -56,7 +56,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/test/mocks)
 
 add_library(MAIN_SOURCES ${CONTROL_LOOP_SOURCES} ${UTILS_SOURCES} ${HWBRIDGE_3PHASE_SOURCES})
 # Set pedantic and pedantic-errors flags for MAIN_SOURCES
-target_compile_options(MAIN_SOURCES PRIVATE -pedantic -pedantic-errors)
+# TODO : enable -Wconversion
+target_compile_options(MAIN_SOURCES PRIVATE -pedantic -pedantic-errors -Wfloat-equal -Wredundant-decls  -Wswitch-default  -pedantic)
 
 add_executable(${This} ${TEST_SOURCES})
 

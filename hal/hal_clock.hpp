@@ -24,7 +24,7 @@ class HAL_CLOCK {
      * @brief Get the current time in seconds
      * @return The current time in seconds
      */
-    float get_time_s() { return get_time_us() / kMicrosecondsPerSecond; }
+    float get_time_s() { return static_cast<float>(get_time_us()) / kMicrosecondsPerSecond; }
 
     /**
      * @brief Get the time difference between two times in microseconds
