@@ -55,16 +55,16 @@ TEST(Bldc6StepUtils, test_6_step_duty_cycle) {
             if (expected_commutation_signal.signals[j] == CommutationSignal::HIGH) {
                 // Expect the duty cycle to be 1
                 EXPECT_FLOAT_EQ(phase_command[j].duty_cycle_high_side, expected_high_side_duty_cycle);
-                // Expect the low side to be inverted
-                EXPECT_FLOAT_EQ(phase_command[j].invert_low_side, true);
+                // Expect the low side to be enabled
+                EXPECT_FLOAT_EQ(phase_command[j].enable, true);
             }
 
             // Check the low signal duty cycle
             if (expected_commutation_signal.signals[j] == CommutationSignal::LOW) {
                 // Expect the duty cycle to be 0
                 EXPECT_FLOAT_EQ(phase_command[j].duty_cycle_high_side, 0.0f);
-                // Expect the low side to be inverted
-                EXPECT_FLOAT_EQ(phase_command[j].invert_low_side, true);
+                // Expect the low side to be enabled
+                EXPECT_FLOAT_EQ(phase_command[j].enable, true);
             }
 
             const bool is_high_z = (expected_commutation_signal.signals[j] == CommutationSignal::Z_FALLING) ||
@@ -72,8 +72,8 @@ TEST(Bldc6StepUtils, test_6_step_duty_cycle) {
             if (is_high_z) {
                 // Expect the duty cycle to be 0
                 EXPECT_FLOAT_EQ(phase_command[j].duty_cycle_high_side, 0.0f);
-                // Expect the low side to be inverted
-                EXPECT_FLOAT_EQ(phase_command[j].invert_low_side, false);
+                // Expect the low side to be enabled
+                EXPECT_FLOAT_EQ(phase_command[j].enable, false);
             }
         }
     }

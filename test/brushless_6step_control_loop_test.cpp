@@ -67,7 +67,7 @@ TEST(Brushless6StepControlLoopTest, test_rotor_position_estimator_failure) {
     // Expect a call to set the duty cycles to 0
     hwbridge::Bridge3Phase::phase_command_t zero_duty_cycle;
     zero_duty_cycle.duty_cycle_high_side = 0.0f;
-    zero_duty_cycle.invert_low_side = false;
+    zero_duty_cycle.enable = false;
 
     EXPECT_CALL(bridge, set_phase(zero_duty_cycle, zero_duty_cycle, zero_duty_cycle))
         .WillOnce(Return(app_hal_status_E::APP_HAL_OK));
@@ -99,7 +99,7 @@ TEST(Brushless6StepControlLoopTest, test_rotor_position_estimator_get_angle_fail
     // Expect a call to set the duty cycles to 0
     hwbridge::Bridge3Phase::phase_command_t zero_duty_cycle;
     zero_duty_cycle.duty_cycle_high_side = 0.0f;
-    zero_duty_cycle.invert_low_side = false;
+    zero_duty_cycle.enable = false;
 
     EXPECT_CALL(bridge, set_phase(zero_duty_cycle, zero_duty_cycle, zero_duty_cycle))
         .WillOnce(Return(app_hal_status_E::APP_HAL_OK));

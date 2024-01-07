@@ -61,11 +61,11 @@ FocDutyCycleResult determine_inverter_duty_cycles_foc(float theta, math::direct_
     if (phase_commands != nullptr) {
         // Set the duty cycles
         phase_commands[0].duty_cycle_high_side = result.duty_cycle_u_h;
-        phase_commands[0].invert_low_side = true;
+        phase_commands[0].enable = true;
         phase_commands[1].duty_cycle_high_side = result.duty_cycle_v_h;
-        phase_commands[1].invert_low_side = true;
+        phase_commands[1].enable = true;
         phase_commands[2].duty_cycle_high_side = result.duty_cycle_w_h;
-        phase_commands[2].invert_low_side = true;
+        phase_commands[2].enable = true;
     }
 
     return result;

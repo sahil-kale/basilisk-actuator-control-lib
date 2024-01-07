@@ -55,13 +55,13 @@ void determine_inverter_duty_cycles_trap(hwbridge::Bridge3Phase::phase_command_t
             const float duty_cycle = (abs_speed + 1.0f) / 2.0f;
 
             phase_command[i].duty_cycle_high_side = duty_cycle;
-            phase_command[i].invert_low_side = true;
+            phase_command[i].enable = true;
         } else if (current_commutation_step.signals[i] == Bldc6Step::CommutationSignal::LOW) {
             phase_command[i].duty_cycle_high_side = 0.0f;
-            phase_command[i].invert_low_side = true;
+            phase_command[i].enable = true;
         } else {
             phase_command[i].duty_cycle_high_side = 0.0f;
-            phase_command[i].invert_low_side = false;
+            phase_command[i].enable = false;
         }
     }
 }

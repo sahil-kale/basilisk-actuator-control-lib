@@ -17,7 +17,7 @@ class Bridge3Phase {
     virtual ~Bridge3Phase() = default;
 
     /**
-     * @brief Phase command typedef to hold the duty cycle and invert low side flag
+     * @brief Phase command typedef to hold the duty cycle and enable flag
      */
     class phase_command_t {
        public:
@@ -25,11 +25,10 @@ class Bridge3Phase {
         /**
          * @brief Construct a phase command
          * @param duty_cycle_high_side Duty cycle for the high side PWM channel assuming complementary PWM
-         * @param invert_low_side Invert the low side PWM channel (used to High-Z the bridge output)
+         * @param enable Enable the phase output. If false, the phase output should be High-Z
          * @note The duty cycle is between 0.0f and 1.0f, where 0.5 is 50% duty cycle and represents 0V (assumes complementary
          */
-        phase_command_t(float duty_cycle_high_side, bool invert_low_side)
-            : duty_cycle_high_side(duty_cycle_high_side), invert_low_side(invert_low_side) {}
+        phase_command_t(float duty_cycle_high_side, bool enable) : duty_cycle_high_side(duty_cycle_high_side), enable(enable) {}
         /**
          * @brief Duty cycle for the high side PWM channel assuming complementary PWM
          * @note The duty cycle is between 0.0f and 1.0f, where 0.5 is 50% duty cycle and represents 0V (assumes complementary
@@ -37,22 +36,19 @@ class Bridge3Phase {
          */
         float duty_cycle_high_side = 0.0f;
         /**
-         * @brief Invert the low side PWM channel
-         * @note The invert low side flag is used to invert the low side PWM channel (if complementary PWM is used)
-         * @note Note that the invert low side flag, if set to false, is used to High-Z the bridge output. Caution should be used
-         * in allowing an abstracted bridge to allow a non-inverted output to be commanded to a duty cycle that is not 0.0f
+         * @brief Enable the phase output. If false, the phase output should be High-Z
          */
-        bool invert_low_side = false;
+        bool enable = false;
 
         /**
          * @brief Equal operator
          * @param rhs The right hand side of the operator
-         * @return bool True if the duty cycles and invert low side flags are equal
+         * @return bool True if the duty cycles and enable side flags are equal
          */
         bool operator==(const phase_command_t& rhs) const {
             const bool duty_cycle_high_side_equal = math::float_equals(this->duty_cycle_high_side, rhs.duty_cycle_high_side);
-            const bool low_side_inversion_signal_equal = this->invert_low_side == rhs.invert_low_side;
-            return duty_cycle_high_side_equal && low_side_inversion_signal_equal;
+            const bool enable_bridge_output = this->enable == rhs.enable;
+            return duty_cycle_high_side_equal && enable_bridge_output;
         }
     };
 
