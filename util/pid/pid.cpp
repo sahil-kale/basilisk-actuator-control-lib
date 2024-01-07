@@ -3,6 +3,10 @@
 #include "math_util.hpp"
 
 namespace pid {
+// Disable -Wconversion for this file because of the template type 'int' being used
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wfloat-conversion"
 
 // PID getter functions (marked as const)
 template <typename T>
@@ -99,5 +103,7 @@ void PID<T>::set_integral_windup(float integral_windup) {
 
 template class PID<float>;
 template class PID<int>;
+
+#pragma GCC diagnostic pop
 
 }  // namespace pid

@@ -56,8 +56,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/test/mocks)
 
 add_library(MAIN_SOURCES ${CONTROL_LOOP_SOURCES} ${UTILS_SOURCES} ${HWBRIDGE_3PHASE_SOURCES})
 # Set pedantic and pedantic-errors flags for MAIN_SOURCES
-# TODO : enable -Wconversion
-target_compile_options(MAIN_SOURCES PRIVATE -pedantic -pedantic-errors -Wfloat-equal -Wredundant-decls  -Wswitch-default  -pedantic)
+target_compile_options(MAIN_SOURCES PRIVATE -pedantic -pedantic-errors -Wfloat-equal -Wredundant-decls  -Wswitch-default  -pedantic -Wconversion)
 
 add_executable(${This} ${TEST_SOURCES})
 
