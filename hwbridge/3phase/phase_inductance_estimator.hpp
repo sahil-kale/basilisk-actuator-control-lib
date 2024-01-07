@@ -15,9 +15,9 @@ class PhaseInductanceEstimatorController {
     class Params {
        public:
         /// @brief The duration of the time the rotor phases should be grounded (us)
-        utime_t brake_duration;
+        utime_t brake_duration = 0;
         /// @brief The duration of the time the rotor phases should be driven with a square wave (us)
-        utime_t measurement_duration;
+        utime_t measurement_duration = 0;
     };
 
     /**
