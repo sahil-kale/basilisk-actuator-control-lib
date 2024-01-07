@@ -47,14 +47,14 @@ T PID<T>::calculate(T actual, T setpoint) {
     // Calculate the integral term
     integral += error * dt;
     // Clamp the integral term
-    if (integral_windup != 0) {
+    if (math::float_equals(integral_windup, 0) == false) {
         math::clamp(integral, -integral_windup, integral_windup);
     }
 
     float derivative = 0;
 
     // Calculate the derivative term
-    if (dt != 0) {
+    if (math::float_equals(dt, 0) == false) {
         derivative = (error - previous_error) / dt;
     }
     // Store the error for the next time
@@ -64,7 +64,9 @@ T PID<T>::calculate(T actual, T setpoint) {
     T output = error * kp + integral * ki + derivative * kd;
 
     // Clamp the output
-    if ((max_output != 0) || (min_output != 0)) {
+    const bool max_output_set = math::float_equals(max_output, 0) == false;
+    const bool min_output_set = math::float_equals(min_output, 0) == false;
+    if ((max_output_set) || (min_output_set)) {
         math::clamp(output, min_output, max_output);
     }
     return output;

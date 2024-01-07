@@ -90,6 +90,14 @@ class Bridge3Phase {
      */
     class phase_current_t {
        public:
+        phase_current_t() = default;
+        /**
+         * @brief Construct a phase current
+         * @param u Phase U current
+         * @param v Phase V current
+         * @param w Phase W current
+         */
+        phase_current_t(float u, float v, float w) : u(u), v(v), w(w) {}
         /**
          * @brief Phase U current
          */

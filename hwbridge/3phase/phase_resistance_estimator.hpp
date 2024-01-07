@@ -88,6 +88,12 @@ class PhaseResistanceEstimatorController {
           current_controller_(params_.current_kp, params_.current_ki, 0.0f, 0.0f, params_.max_voltage, 0.0f, clock_) {}
 
     /**
+     * @brief Initialize (or reset) the Phase Resistance Estimator
+     * @param params Parameters for the Phase Resistance Estimator
+     */
+    void init(const Params& params);
+
+    /**
      * @brief Run the Phase Resistance Estimator
      * @param input The inputs to the Phase Resistance Estimator
      * @return The result of the Phase Resistance Estimator

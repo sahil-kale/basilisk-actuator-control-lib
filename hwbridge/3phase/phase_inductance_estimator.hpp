@@ -67,6 +67,12 @@ class PhaseInductanceEstimatorController {
     PhaseInductanceEstimatorController(basilisk_hal::HAL_CLOCK& clock, Params params) : params_(params), clock_(clock) {}
 
     /**
+     * @brief Initialize (or reset) the Phase Inductance Estimator
+     * @param params Parameters for the Phase Inductance Estimator
+     */
+    void init(Params params);
+
+    /**
      * @brief Run the Phase Inductance Estimator
      * @param input The input to the Phase Inductance Estimator
      * @return The result of the Phase Inductance Estimator

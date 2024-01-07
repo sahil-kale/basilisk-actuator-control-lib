@@ -316,8 +316,8 @@ app_hal_status_E SensorlessRotorFluxObserver::update(const EstimatorInputs& inpu
         }
 
         // Update the phase resistance and inductance values to use the equivalent Alpha-Beta parameters
-        const float stator_resistance = inputs.phase_resistance * 3.0 / 2.0;
-        const float stator_inductance = inputs.phase_inductance * 3.0 / 2.0;
+        const float stator_resistance = inputs.phase_resistance * 3.0f / 2.0f;
+        const float stator_inductance = inputs.phase_inductance * 3.0f / 2.0f;
 
         // Clarke transform the current
         math::alpha_beta_t i_ab = math::clarke_transform(inputs.phase_current.u, inputs.phase_current.v, inputs.phase_current.w);

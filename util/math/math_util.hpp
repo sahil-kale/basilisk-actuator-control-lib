@@ -8,12 +8,12 @@
 
 namespace math {
 
-constexpr float sqrt_3 = 1.7320508075688772;
-constexpr float sqrt_3_over_3 = 0.5773502691896258;
+constexpr float sqrt_3 = 1.7320508075688772f;
+constexpr float sqrt_3_over_3 = 0.5773502691896258f;
 
 constexpr float M_PI_FLOAT = static_cast<float>(M_PI);
 
-constexpr float ACCEPTABLE_FLOAT_ERROR = 0.000001;
+constexpr float ACCEPTABLE_FLOAT_ERROR = 0.000001f;
 
 // Make a floated function to determine whether two floats are equal
 /**
