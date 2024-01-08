@@ -160,7 +160,7 @@ void init_and_ready_to_finish_measurement_in_progress(basilisk_hal::MOCK_HAL_CLO
 
     PhaseInductanceEstimatorControllerPublic::Input input;
     input.bus_voltage = 24.0f;
-    input.phase_currents.u = 1.0f;
+    input.phase_currents.u = -1.0f;
     input.phase_currents.v = 0.0f;
     input.phase_currents.w = 0.0f;
 
@@ -172,7 +172,7 @@ void init_and_ready_to_finish_measurement_in_progress(basilisk_hal::MOCK_HAL_CLO
     // Set the clock to be just after the measurement duration has elapsed
     const utime_t faked_time_3 = faked_time + params.measurement_duration;
     EXPECT_CALL(mock_clock, get_time_us()).WillRepeatedly(Return(faked_time_3));
-    input.phase_currents.u = 1.0f;
+    input.phase_currents.u = -1.0f;
 }
 
 // Test that we transition from MEASUREMENT_IN_PROGRESS to ESTIMATE_COMPLETE after the measurement duration has elapsed
@@ -230,7 +230,7 @@ TEST(PhaseInductanceEstimatorControllerTest, test_measurement_in_progress_to_est
     EXPECT_CALL(mock_clock, get_time_us()).WillRepeatedly(Return(faked_time_3));
 
     // Run the controller again
-    input.phase_currents.u = 1.6f;
+    input.phase_currents.u = -1.6f;
     result = controller.run_phase_inductance_estimator(input);
 
     // Check that the state is ESTIMATE_COMPLETE
@@ -280,7 +280,7 @@ TEST(PhaseInductanceEstimatorControllerTest, test_measurement_in_progress_to_err
     init_and_ready_to_finish_measurement_in_progress(mock_clock, controller, params);
     PhaseInductanceEstimatorControllerPublic::Input input;
     input.bus_voltage = 0.0f;
-    input.phase_currents.u = 1.0f;
+    input.phase_currents.u = -1.0f;
     input.phase_currents.v = 0.0f;
     input.phase_currents.w = 0.0f;
 

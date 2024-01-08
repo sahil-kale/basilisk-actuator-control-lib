@@ -57,7 +57,8 @@ PhaseInductanceEstimatorController::Result PhaseInductanceEstimatorController::r
             // Calculate the phase inductance
             // TODO: Perhaps take an average of the bus voltage during the measurement period? But it's likely super fast anyways
             const float bus_voltage = input.bus_voltage;
-            const float current = input.phase_currents.u;
+            const float current =
+                input.phase_currents.u * -1.0f;  // Negative current as positive current is going into the stator neutral
             // V = 3/2*L_s * di/dt
             // L_s = 2/3 * V / di/dt
             // Note: the L_s is the phase inductance in a 3-phase system. When we measure the current in the singular phase that

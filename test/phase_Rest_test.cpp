@@ -174,7 +174,7 @@ TEST(PhaseResistanceEstimatorControllerTest, test_measurement_in_progress_to_est
     EXPECT_CALL(mock_clock, get_time_us()).WillRepeatedly(Return(faked_time_2));
 
     // Make the current the same as the target current
-    input.phase_currents.u = params.target_current;
+    input.phase_currents.u = -params.target_current;
     result = controller.run_phase_resistance_estimator(input);
 
     // Check that the state is MEASUREMENT_IN_PROGRESS
@@ -224,7 +224,7 @@ TEST(PhaseResistanceEstimatorController, test_current_not_within_margin) {
     EXPECT_CALL(mock_clock, get_time_us()).WillRepeatedly(Return(faked_time_2));
 
     // Make the current the same as the target current minus the margin plus a little bit
-    input.phase_currents.u = params.target_current - (params.current_tolerance + 0.01f);
+    input.phase_currents.u = -(params.target_current - (params.current_tolerance + 0.01f));
 
     result = controller.run_phase_resistance_estimator(input);
 
