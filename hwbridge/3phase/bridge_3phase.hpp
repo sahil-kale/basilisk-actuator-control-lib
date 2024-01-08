@@ -57,25 +57,19 @@ class Bridge3Phase {
      */
     class phase_voltage_t {
        public:
-        /**
-         * @brief Phase U voltage
-         */
+        /// @brief Phase U voltage
         float u = 0.0f;
 
-        /**
-         * @brief Phase V voltage
-         */
+        /// @brief Phase V voltage
         float v = 0.0f;
 
-        /**
-         * @brief Phase W voltage
-         */
+        /// @brief Phase W voltage
         float w = 0.0f;
 
         /**
          * @brief Equal operator
          * @param rhs The right hand side of the operator
-         * @return bool True if the phase voltages are equal
+         * @return True if the phase voltages are equal, false otherwise
          */
         bool operator==(const phase_voltage_t& rhs) const {
             const bool u_equal = math::float_equals(this->u, rhs.u);
@@ -87,34 +81,29 @@ class Bridge3Phase {
 
     /**
      * @brief Phase current readings in Amps
+     * @note Convention is that positive current is going into the stator neutral point
      */
     class phase_current_t {
        public:
         phase_current_t() = default;
         /**
          * @brief Construct a phase current
-         * @param u Phase U current
-         * @param v Phase V current
-         * @param w Phase W current
+         * @param u Phase U current (A)
+         * @param v Phase V current (A)
+         * @param w Phase W current (A)
          */
         phase_current_t(float u, float v, float w) : u(u), v(v), w(w) {}
-        /**
-         * @brief Phase U current
-         */
+        /// @brief Phase U current (A)
         float u = 0.0f;
-        /**
-         * @brief Phase V current
-         */
+        /// @brief Phase V current (A)
         float v = 0.0f;
-        /**
-         * @brief Phase W current
-         */
+        /// @brief Phase W current (A)
         float w = 0.0f;
 
         /**
          * @brief Equal operator
          * @param rhs The right hand side of the operator
-         * @return bool True if the phase currents are equal
+         * @return True if the phase currents are equal, false otherwise
          */
         bool operator==(const phase_current_t& rhs) const {
             const bool u_equal = math::float_equals(this->u, rhs.u);
