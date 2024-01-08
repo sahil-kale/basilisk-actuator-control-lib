@@ -79,6 +79,12 @@ class PhaseInductanceEstimatorController {
      */
     Result run_phase_inductance_estimator(Input input);
 
+    /**
+     * @brief Get the state of the Phase Inductance Estimator
+     * @return The state of the Phase Inductance Estimator
+     */
+    State get_state() const { return state_; }
+
    protected:
     /*! \cond PRIVATE */
     /**

@@ -581,4 +581,23 @@ TEST(BrushlessFOCControlLoopTest, test_desired_state_calibration_to_stop_after_f
     EXPECT_EQ(desired_state, BrushlessFOCControlLoop::State::STOP);
 }
 
+// Test that if the current state is stop and a reference is given, but the status has an error, the desired state is stop
+TEST(BrushlessFOCControlLoopTest, test_desired_state_stop_to_stop_after_error) {
+    // Create an absolute rotor position estimator
+    NiceMock<bldc_rotor_estimator::MOCK_ROTOR_ABSOLUTE_SENSOR> rotor_sensor;
+
+    // instantiate a brushless foc control loop test class
+    BrushlessFOCControlLoopTest test_control_loop(rotor_sensor, mock_clock);
+
+    BrushlessFOCControlLoop::Params test_params = test_control_loop.test_params_;
+
+    // Get the desired state
+    BrushlessFOCControlLoop::BrushlessFOCControlLoopStatus status = BrushlessFOCControlLoop::BrushlessFOCControlLoopStatus();
+    status.set_error(BrushlessFOCControlLoop::BrushlessFOCControlLoopError::PHASE_INDUCTANCE_ESTIMATOR_FAILURE, true);
+    BrushlessFOCControlLoop::State desired_state =
+        test_control_loop.get_desired_state(0.1, BrushlessFOCControlLoop::State::STOP, test_params, status);
+
+    EXPECT_EQ(desired_state, BrushlessFOCControlLoop::State::STOP);
+}
+
 }  // namespace control_loop
