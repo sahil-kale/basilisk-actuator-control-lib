@@ -100,6 +100,12 @@ class PhaseResistanceEstimatorController {
      */
     Result run_phase_resistance_estimator(Input input);
 
+    /**
+     * @brief Get the state of the Phase Resistance Estimator
+     * @return The state of the Phase Resistance Estimator
+     */
+    State get_state() const { return state_; }
+
    protected:
     /*! \cond PRIVATE */
     /**

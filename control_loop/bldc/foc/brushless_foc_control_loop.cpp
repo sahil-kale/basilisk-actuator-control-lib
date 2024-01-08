@@ -37,7 +37,8 @@ BrushlessFOCControlLoop::State BrushlessFOCControlLoop::get_desired_state(float 
     const bool i_q_reference_is_zero = math::float_equals(i_q_reference, 0.0f);
     switch (current_state) {
         case State::STOP: {
-            if (i_q_reference_is_zero == false) {
+            const bool has_error = (status == ControlLoop::ControlLoopBaseStatus::ERROR);
+            if ((i_q_reference_is_zero == false) && (has_error == false)) {
                 // We want to start the motor
                 if (params.foc_params.phase_resistance_valid && params.foc_params.phase_inductance_valid) {
                     desired_state = State::RUN;
