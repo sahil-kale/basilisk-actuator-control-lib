@@ -177,7 +177,7 @@ void BrushlessFOCControlLoop::run_calibration(FOCController::FOCInputs inputs,
         phase_commands[2] = result.phase_commands[2];
 
         status_.set_error(BrushlessFOCControlLoopError::PHASE_INDUCTANCE_ESTIMATOR_FAILURE,
-                          result.is_phase_inductance_valid == false);
+                          result.state == PhaseInductanceEstimatorController::State::ERROR);
     } else if (params_->foc_params.phase_resistance_valid == false) {
         PhaseResistanceEstimatorController::Input input;
         // Turn the FOC inputs into
@@ -195,7 +195,7 @@ void BrushlessFOCControlLoop::run_calibration(FOCController::FOCInputs inputs,
         phase_commands[2] = result.phase_commands[2];
 
         status_.set_error(BrushlessFOCControlLoopError::PHASE_RESISTANCE_ESTIMATOR_FAILURE,
-                          result.is_phase_resistance_valid == false);
+                          result.state == PhaseResistanceEstimatorController::State::ERROR);
     }
 }
 
